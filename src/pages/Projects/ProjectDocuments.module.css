@@ -1,0 +1,110 @@
+.wrap    { padding: 16px; }
+.loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty   { color: var(--text-sec); padding: 40px 0; text-align: center; font-size: 14px; }
+
+.toolbar   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.filterRow { display: flex; gap: 6px; flex-wrap: wrap; }
+.filterBtn { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; cursor: pointer; }
+.active    { background: var(--navy); border-color: var(--navy); color: #fff; }
+.addBtn    { background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+.docList { display: flex; flex-direction: column; gap: 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 14px; }
+
+.docRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+.docRow:last-child { border-bottom: none; }
+
+.docInfo { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 200px; }
+.docIcon { color: var(--blue); flex-shrink: 0; margin-top: 2px; }
+.docName { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.docSub  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.catBadge { background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.docDate  { font-size: 12px; color: var(--text-muted); }
+
+/* Access toggles */
+.accessToggles { display: flex; gap: 5px; flex-wrap: wrap; }
+.toggleBtn {
+  padding: 3px 10px;
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.toggleBtn:hover { border-color: var(--green); color: var(--green); }
+.toggleOn { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+/* Row actions */
+.rowActions { display: flex; align-items: center; gap: 6px; }
+.downloadBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--red);
+  text-decoration: none; padding: 6px 14px;
+  border: 1.5px solid var(--red); border-radius: var(--radius-sm);
+  white-space: nowrap; transition: background 0.12s;
+}
+.downloadBtn:hover { background: var(--red-light); }
+.deleteBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  background: none; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-sec); cursor: pointer; flex-shrink: 0;
+}
+.deleteBtn:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
+
+/* Modal */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.modalHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modalTitle   { font-size: 15px; font-weight: 700; color: var(--text); }
+.modalClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+.modalActions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cancelBtn    { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.submitBtn    { background: var(--navy); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.submitBtn:disabled { opacity: .6; cursor: default; }
+.deleteConfirmBtn { background: var(--red); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.deleteConfirmBtn:disabled { opacity: .6; cursor: default; }
+
+.formRow   { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.formLbl   { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.formInput { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; width: 100%; box-sizing: border-box; }
+.opt       { font-weight: 400; color: var(--text-sec); }
+
+.accessGrid   { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; margin-top: 4px; }
+.accessOption { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-sec); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; cursor: pointer; }
+
+.confirmText { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-sec); }
+.confirmText svg { color: var(--amber); flex-shrink: 0; }
+
+/* File drop zone */
+.dropZone {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 24px 16px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.dropZone:hover { border-color: var(--navy); background: var(--surface); }
+.dropZoneHasFile { border-color: var(--green); background: var(--green-bg); border-style: solid; }
+.dropPrompt { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-sec); }
+.dropPrompt svg { color: var(--text-muted); }
+.dropPrompt p { font-size: 13px; }
+.fileSelected { display: flex; align-items: center; gap: 10px; }
+.fileSelected svg { color: var(--green); flex-shrink: 0; }
+.fileName { font-size: 13px; font-weight: 500; color: var(--text); }
+.fileSize { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* Progress bar */
+.progressWrap { position: relative; background: var(--border); border-radius: 4px; height: 6px; margin-bottom: 12px; overflow: hidden; }
+.progressBar  { position: absolute; left: 0; top: 0; height: 100%; background: var(--green); border-radius: 4px; transition: width .3s ease; }
+.progressLabel { display: block; font-size: 11px; color: var(--text-sec); margin-top: 4px; text-align: center; }

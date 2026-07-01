@@ -1,0 +1,95 @@
+.page { max-width: 1000px; }
+
+.header { margin-bottom: 20px; }
+.title { font-size: 22px; font-weight: 700; color: var(--text); margin: 0 0 2px; }
+.sub   { font-size: 13px; color: var(--text-sec); }
+
+.loadingWrap { display: flex; justify-content: center; padding: 80px; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border); border-top-color: var(--red);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty */
+.empty { text-align: center; padding: 80px 24px; color: var(--text-sec); }
+.emptyIcon { width: 44px; height: 44px; margin: 0 auto 14px; color: var(--border); display: block; }
+.empty h3 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.empty p  { font-size: 14px; }
+
+/* Doc list */
+.docList { display: flex; flex-direction: column; gap: 0; }
+
+.docRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+.docRow:last-child { border-bottom: none; }
+
+.docInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+}
+.docIcon { color: var(--blue); flex-shrink: 0; margin-top: 2px; }
+.docName { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.docMeta { font-size: 12px; color: var(--text-muted); }
+
+/* Access toggles */
+.accessToggles {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.toggleBtn {
+  padding: 3px 10px;
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.toggleBtn:hover { border-color: var(--green); color: var(--green); }
+.toggleOn {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* Download button */
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+.downloadBtn:hover { background: var(--red-light); }
+
+/* RA Library */
+.raEmpty { padding: 24px 0; color: var(--text-muted); font-size: 13px; }
+.raEmpty p    { margin-bottom: 4px; font-weight: 500; }
+.raEmpty span { font-size: 12px; }
+.miniSpinner {
+  width: 20px; height: 20px; margin: 16px auto;
+  border: 2px solid var(--border); border-top-color: var(--red);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}

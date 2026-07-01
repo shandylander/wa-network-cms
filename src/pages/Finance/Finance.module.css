@@ -1,0 +1,81 @@
+.page         { padding: 24px; max-width: 900px; }
+.pageHeader   { margin-bottom: 20px; }
+.pageTitle    { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.pageSub      { font-size: 13px; color: var(--text-sec); }
+
+.loading      { display: flex; align-items: center; justify-content: center; padding: 80px; }
+.spinner      { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty        { color: var(--text-sec); font-size: 14px; padding: 20px 0; }
+.accessDenied { padding: 48px; text-align: center; color: var(--text-sec); font-size: 14px; }
+
+/* Tabs */
+.tabs    { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tabBtn  { padding: 8px 18px; font-size: 13px; font-weight: 500; border: none; background: none; color: var(--text-sec); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 6px 6px 0 0; transition: color .15s, border-color .15s; }
+.tabBtn:hover { color: var(--text); }
+.tabActive { color: var(--red); border-bottom-color: var(--red); background: var(--red-light); }
+
+/* Stats grid */
+.statsGrid    { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.statTile     { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; align-items: flex-start; gap: 12px; }
+.statIcon     { padding: 8px; border-radius: 8px; display: flex; flex-shrink: 0; }
+.statValue    { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 2px; }
+.statLabel    { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.statSub      { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+
+/* Tile colours */
+.tile_blue   .statIcon { background: var(--blue-bg);   color: var(--blue); }
+.tile_green  .statIcon { background: var(--green-bg);  color: var(--green); }
+.tile_amber  .statIcon { background: var(--amber-bg);  color: var(--amber); }
+.tile_red    .statIcon { background: var(--red-light); color: var(--red); }
+.tile_purple .statIcon { background: var(--purple-bg); color: var(--purple); }
+
+/* Sections */
+.section      { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.sectionTitle { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.sectionSub   { font-size: 12px; color: var(--text-sec); margin-bottom: 16px; }
+
+/* Mini list (recent petty cash) */
+.miniList  { display: flex; flex-direction: column; gap: 8px; }
+.miniRow   { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.miniRow:last-child { border-bottom: none; }
+.miniDesc  { font-size: 13px; font-weight: 500; color: var(--text); }
+.miniMeta  { font-size: 11px; color: var(--text-sec); }
+.miniRight { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.miniAmt   { font-size: 13px; font-weight: 700; color: var(--text); }
+
+.statusBadge   { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; text-transform: capitalize; }
+.status_pending  { background: var(--amber-bg);  color: var(--amber); }
+.status_approved { background: var(--green-bg);  color: var(--green); }
+.status_rejected { background: var(--red-light); color: var(--red); }
+
+/* Claims */
+.claimsGrid   { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.claimRow     { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); background: #fff; }
+.claimRow:last-child { border-bottom: none; }
+.claimTotal   { background: var(--navy); }
+.claimLabel   { font-size: 13px; color: var(--text); }
+.claimTotal .claimLabel { color: #fff; font-weight: 600; }
+.claimAmt     { font-size: 14px; font-weight: 700; color: var(--text); }
+.claimAmtBold { font-size: 16px; font-weight: 700; color: #fff; }
+.claimNote    { font-size: 12px; color: var(--text-sec); }
+
+/* Payroll */
+.payrollCard  { text-align: center; padding: 28px; }
+.payrollMonth { font-size: 13px; color: var(--text-sec); margin-bottom: 4px; }
+.payrollAmt   { font-size: 36px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+.payrollSub   { font-size: 12px; color: var(--text-sec); }
+
+/* Petty Cash summary in finance */
+.pcSummaryRow { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.pcSumCard    { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; min-width: 160px; }
+.pcSumLbl     { font-size: 11px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.pcSumAmt     { font-size: 22px; font-weight: 700; line-height: 1; }
+
+.overviewWrap { }
+
+@media (max-width: 600px) {
+  .page      { padding: 14px; }
+  .statsGrid { grid-template-columns: 1fr 1fr; }
+  .claimRow  { flex-direction: column; align-items: flex-start; gap: 4px; }
+}

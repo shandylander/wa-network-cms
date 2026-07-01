@@ -1,0 +1,95 @@
+.page {
+  min-height: 100vh;
+  background: var(--navy);
+  background-image: radial-gradient(ellipse at 30% 70%, rgba(204,0,0,0.10) 0%, transparent 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+
+.logoWa   { font-size: 28px; font-weight: 700; color: var(--red); }
+.logoText { font-size: 11px; font-weight: 600; color: var(--navy); letter-spacing: 0.08em; }
+
+.alert {
+  display: flex;
+  gap: 12px;
+  background: var(--amber-bg);
+  border: 1px solid rgba(217,123,0,0.2);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 28px;
+}
+
+.alertIcon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.alertTitle { font-size: 13px; font-weight: 600; color: var(--amber); margin-bottom: 3px; }
+.alertDesc  { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+
+.field { margin-bottom: 20px; }
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.pinRow { display: flex; gap: 10px; }
+
+.pinBox {
+  width: 60px;
+  height: 60px;
+  flex: none;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pinBox:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+
+.error {
+  font-size: 13px;
+  color: var(--red-dark);
+  background: var(--red-light);
+  border: 1px solid rgba(204,0,0,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.signOut {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  padding: 8px;
+}
+.signOut:hover { color: var(--text-sec); }

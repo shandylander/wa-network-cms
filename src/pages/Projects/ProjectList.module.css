@@ -1,0 +1,87 @@
+.page { max-width: 1100px; }
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.title { font-size: 22px; font-weight: 700; color: var(--text); margin: 0 0 2px; }
+.sub   { font-size: 13px; color: var(--text-sec); }
+
+/* Project cards */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.12s;
+}
+.card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cardType {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cardName   { font-size: 17px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+.cardClient { font-size: 13px; color: var(--text-sec); margin: 0 0 14px; }
+.cardMeta   { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.cardArrow  { font-size: 13px; font-weight: 600; color: var(--red); }
+
+/* Empty state */
+.empty { text-align: center; padding: 80px 24px; color: var(--text-sec); }
+.emptyIcon { width: 48px; height: 48px; margin: 0 auto 16px; color: var(--border); display: block; }
+.empty h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.empty p  { font-size: 14px; }
+
+/* Loading */
+.loadingWrap { display: flex; justify-content: center; padding: 80px; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Form */
+.form { display: flex; flex-direction: column; }
+.formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 4px; }
+.field { display: flex; flex-direction: column; }
+.label { font-size: 12px; font-weight: 500; color: var(--text-sec); margin-bottom: 5px; }
+.input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--card);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+.input:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.formActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+@media (max-width: 600px) {
+  .formGrid { grid-template-columns: 1fr; }
+}

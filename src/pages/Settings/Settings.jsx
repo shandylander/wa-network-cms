@@ -1,0 +1,45 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { UsersIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import styles from './Settings.module.css';
+
+const SETTING_CARDS = [
+  {
+    to: '/settings/users',
+    Icon: UsersIcon,
+    title: 'User Management',
+    desc: 'Create accounts, reset PINs, and manage user roles.',
+  },
+  {
+    to: '/settings/permissions',
+    Icon: ShieldCheckIcon,
+    title: 'Permissions',
+    desc: 'View the role permission matrix.',
+    disabled: true,
+  },
+];
+
+export default function Settings() {
+  return (
+    <div className={styles.page}>
+      <div className={styles.grid}>
+        {SETTING_CARDS.map(({ to, Icon, title, desc, disabled }) => (
+          disabled ? (
+            <div key={to} className={[styles.card, styles.disabled].join(' ')}>
+              <Icon className={styles.cardIcon} />
+              <h3 className={styles.cardTitle}>{title}</h3>
+              <p className={styles.cardDesc}>{desc}</p>
+              <span className={styles.soon}>Coming soon</span>
+            </div>
+          ) : (
+            <Link key={to} to={to} className={styles.card}>
+              <Icon className={styles.cardIcon} />
+              <h3 className={styles.cardTitle}>{title}</h3>
+              <p className={styles.cardDesc}>{desc}</p>
+            </Link>
+          )
+        ))}
+      </div>
+    </div>
+  );
+}

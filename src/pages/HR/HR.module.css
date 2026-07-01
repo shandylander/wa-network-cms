@@ -1,0 +1,222 @@
+/* ── Page shell ─────────────────────────────────────────────────── */
+.page    { display: flex; flex-direction: column; height: 100%; }
+.content { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* ── Tab bar ────────────────────────────────────────────────────── */
+.tabBar {
+  display: flex; gap: 4px; padding: 12px 20px 0;
+  border-bottom: 1px solid var(--border); background: var(--card);
+}
+.tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 500; border: none;
+  background: none; color: var(--text-sec); cursor: pointer;
+  border-radius: 6px 6px 0 0; border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.tab:hover  { color: var(--text); }
+.tabActive  { color: var(--red); border-bottom-color: var(--red); background: var(--red-light); }
+
+/* ── Shared ─────────────────────────────────────────────────────── */
+.spinner {
+  width: 28px; height: 28px; border: 3px solid var(--border);
+  border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading    { display: flex; justify-content: center; align-items: center; padding: 60px; }
+.empty      { color: var(--text-sec); font-size: 14px; padding: 32px 0; text-align: center; }
+
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modalTitle   { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.modalHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modalClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+.modalActions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cancelBtn    { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.submitBtn    { background: var(--navy); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.submitBtn:disabled { opacity: .6; cursor: default; }
+
+.formRow       { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.formRowGroup  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.formLbl       { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.formInput     { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.formTextarea  { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); resize: vertical; font-family: inherit; width: 100%; box-sizing: border-box; }
+.optional      { font-weight: 400; color: var(--text-sec); }
+.formCheck     { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+.halfDayPicker { display: flex; gap: 8px; margin-top: 6px; }
+.daysPreview   { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 12px; margin-top: -4px; }
+
+/* Type selector */
+.typeSelector { display: flex; flex-wrap: wrap; gap: 6px; }
+.typeBtn      { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all .15s; }
+.typeBtn:hover { border-color: var(--navy); color: var(--navy); }
+.typeBtnActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* Leave type badges */
+.typeBadge   { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .04em; flex-shrink: 0; }
+.typeAL      { background: var(--blue-bg);   color: var(--blue); }
+.typeMC      { background: var(--green-bg);  color: var(--green); }
+.typeNPL     { background: var(--amber-bg);  color: var(--amber); }
+.typeOIL     { background: var(--purple-bg); color: var(--purple); }
+
+/* Status badges */
+.statusBadge    { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+.statusgreen    { background: var(--green-bg);  color: var(--green); }
+.statusamber    { background: var(--amber-bg);  color: var(--amber); }
+.statusred      { background: var(--red-light); color: var(--red); }
+.statusdefault  { background: var(--surface);   color: var(--text-sec); }
+
+/* ── My Leave ───────────────────────────────────────────────────── */
+.myLeaveWrap   { max-width: 680px; }
+.balanceGrid   { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.balanceCard   { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.balanceLbl    { font-size: 11px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.balanceNum    { font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+.balanceUnit   { font-size: 13px; font-weight: 400; color: var(--text-sec); }
+.balanceBar    { height: 4px; background: var(--surface); border-radius: 2px; margin-bottom: 4px; display: flex; overflow: hidden; }
+.balanceBarFill    { height: 100%; border-radius: 2px; transition: width .3s; }
+.balanceBarPending { height: 100%; background: var(--amber); opacity: .5; }
+.balanceMeta   { font-size: 11px; color: var(--text-sec); }
+
+.applyHeader   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.sectionTitle  { font-size: 14px; font-weight: 600; color: var(--text); }
+.applyBtn      { background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+.appList       { display: flex; flex-direction: column; gap: 8px; }
+.appCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.appCardLeft   { display: flex; align-items: flex-start; gap: 10px; }
+.appCardRight  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.appDates      { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.appReason     { font-size: 12px; color: var(--text-sec); }
+.appReject     { font-size: 12px; color: var(--red); margin-top: 2px; }
+.cancelAppBtn  { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 4px 7px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; }
+
+/* Apply modal */
+.applyModal    { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,.18); max-height: 90vh; overflow-y: auto; }
+.mcLink        { font-size: 12px; color: var(--blue); text-decoration: none; }
+
+/* ── Approval Queue ─────────────────────────────────────────────── */
+.queueWrap       { }
+.queueFilterBar  { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.queueFilter     { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
+.queueFilterActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+.queueList       { display: flex; flex-direction: column; gap: 8px; }
+.queueCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.queueCardPending { border-left: 3px solid var(--amber); }
+.queueCardMain   { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.queueLeft       { display: flex; align-items: flex-start; gap: 10px; flex: 1; }
+.queueRight      { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+.queueName       { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.queueDates      { font-size: 13px; color: var(--text); margin-bottom: 2px; }
+.queueReason     { font-size: 12px; color: var(--text-sec); }
+.queueReject     { font-size: 12px; color: var(--red); margin-top: 2px; }
+
+.approveBtn  { background: var(--green); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.rejectBtn   { background: none; border: 1px solid var(--red); color: var(--red); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.approveBtn:disabled, .rejectBtn:disabled { opacity: .6; cursor: default; }
+
+.rejectModal       { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+.rejectSubtitle    { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; }
+.rejectConfirmBtn  { background: var(--red); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* ── Leave Settings ─────────────────────────────────────────────── */
+.settingsWrap      { }
+.settingsInfo      { font-size: 13px; color: var(--text-sec); margin-bottom: 16px; }
+.settingsTableWrap { overflow-x: auto; }
+.settingsTable     { width: 100%; border-collapse: collapse; font-size: 13px; }
+.settingsTable th  { background: var(--surface); color: var(--text-sec); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+.thCenter          { text-align: center !important; }
+.settingsTable td  { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.tdCenter          { text-align: center; }
+.tdAction          { text-align: right; }
+.dirtyRow td       { background: #fffbf0; }
+.staffName         { font-weight: 600; color: var(--text); }
+.staffId           { font-size: 11px; color: var(--text-sec); margin-top: 1px; }
+.rolePill          { font-size: 11px; background: var(--surface); color: var(--text-sec); padding: 2px 8px; border-radius: 4px; }
+.teamCell          { font-size: 12px; color: var(--text-sec); }
+.entInput          { width: 64px; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 14px; font-weight: 700; text-align: center; color: var(--text); background: var(--card); }
+.entInput:focus    { border-color: var(--navy); outline: none; }
+.saveEntBtn        { background: var(--surface); border: 1px solid var(--border); color: var(--text-sec); padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.saveEntBtnDirty   { background: var(--navy); border-color: var(--navy); color: #fff; }
+.saveEntBtn:disabled { opacity: .6; cursor: default; }
+
+/* ── Salary Config ──────────────────────────────────────────────── */
+.salaryConfigWrap  { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+.cfgStaffList      { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cfgStaffItem      { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.cfgStaffItem:last-child { border-bottom: none; }
+.cfgStaffItem:hover { background: var(--surface); }
+.cfgStaffActive    { background: var(--red-light) !important; }
+.cfgStaffName      { font-size: 13px; font-weight: 600; color: var(--text); }
+.cfgStaffPay       { font-size: 11px; color: var(--text-sec); }
+.cfgStaffPaySet    { color: var(--green); font-weight: 600; }
+.cfgForm           { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.cfgFormTitle      { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.cfgGrid           { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.cfgList           { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.cfgListLabel      { font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.cfgListRow        { display: flex; gap: 8px; align-items: center; }
+.cfgListLabel2     { font-size: 12px; color: var(--text-sec); flex: 1; }
+.cfgListInput      { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 13px; color: var(--text); background: #fff; width: 120px; }
+.cfgRemoveBtn      { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; padding: 4px; }
+.cfgRemoveBtn:hover { color: var(--red); }
+.cfgAddRowBtn      { background: none; border: 1px dashed var(--border); color: var(--text-sec); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.cfgAddRowBtn:hover { border-color: var(--navy); color: var(--navy); }
+.cfgToggle         { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+.cfgSaveBtn        { background: var(--red); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+.cfgSaveBtn:disabled { opacity: .6; cursor: default; }
+.cfgEmpty          { padding: 48px; text-align: center; color: var(--text-sec); font-size: 14px; }
+
+/* ── Payslip Generator ──────────────────────────────────────────── */
+.payslipWrap       { }
+.payslipToolbar    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.monthPicker       { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.genBtn            { background: var(--navy); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.finaliseBtn       { background: var(--green); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.printBtn          { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+.payslipTableWrap  { overflow-x: auto; margin-bottom: 16px; }
+.payslipTable      { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+.payslipTable th   { background: var(--surface); color: var(--text-sec); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.payslipTable td   { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.payslipTable tr:last-child td { border-bottom: none; }
+.tdRight           { text-align: right; font-variant-numeric: tabular-nums; }
+.netPayCell        { font-weight: 700; color: var(--navy); }
+
+.payslipCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; max-width: 560px; }
+.payslipCardTitle  { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.payslipCardSub    { font-size: 13px; color: var(--text-sec); margin-bottom: 16px; }
+.payslipSection    { margin-bottom: 12px; }
+.payslipSectionHd  { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.payslipLine       { display: flex; justify-content: space-between; font-size: 13px; color: var(--text); padding: 3px 0; }
+.payslipLineBold   { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--navy); padding: 8px 0; border-top: 2px solid var(--border); margin-top: 4px; }
+.payslipAmtGreen   { color: var(--green); font-weight: 600; }
+.payslipAmtRed     { color: var(--red); font-weight: 600; }
+
+/* ── Petty Cash ─────────────────────────────────────────────────── */
+.pcWrap       { max-width: 680px; }
+.pcSummary    { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.pcSumCard    { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; min-width: 160px; }
+.pcSumLbl     { font-size: 11px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.pcSumAmt     { font-size: 22px; font-weight: 700; line-height: 1; }
+.pcList       { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.pcCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pcCardLeft   { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+.pcCardRight  { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.pcIconWrap   { background: var(--blue-bg); color: var(--blue); padding: 8px; border-radius: 8px; flex-shrink: 0; display: flex; }
+.pcClaimant   { font-size: 11px; font-weight: 700; color: var(--text-sec); margin-bottom: 2px; }
+.pcDesc       { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.pcMeta       { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+.pcAmt        { font-size: 16px; font-weight: 700; color: var(--text); }
+
+/* ── Mobile ─────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .content         { padding: 14px; }
+  .balanceGrid     { grid-template-columns: 1fr 1fr; }
+  .formRowGroup    { grid-template-columns: 1fr; }
+  .settingsTable th, .settingsTable td { padding: 8px 10px; }
+  .queueCardMain   { flex-direction: column; gap: 10px; }
+  .queueRight      { flex-direction: row; align-items: center; }
+  .salaryConfigWrap { grid-template-columns: 1fr; }
+  .cfgGrid         { grid-template-columns: 1fr; }
+  .payslipTable th, .payslipTable td { padding: 8px 10px; }
+}

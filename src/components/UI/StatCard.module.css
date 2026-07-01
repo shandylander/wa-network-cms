@@ -1,0 +1,58 @@
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  transition: box-shadow 0.15s;
+}
+
+.card:hover { box-shadow: var(--shadow); }
+
+.body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.iconWrap {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon { width: 20px; height: 20px; }
+
+/* Colour variants */
+.blue   .iconWrap { background: var(--blue-bg);   color: var(--blue);   }
+.green  .iconWrap { background: var(--green-bg);  color: var(--green);  }
+.amber  .iconWrap { background: var(--amber-bg);  color: var(--amber);  }
+.red    .iconWrap { background: var(--red-light);  color: var(--red);    }
+.purple .iconWrap { background: var(--purple-bg); color: var(--purple); }

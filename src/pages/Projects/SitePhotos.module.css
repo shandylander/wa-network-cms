@@ -1,0 +1,55 @@
+.wrap    { padding: 16px; }
+.loading { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px; color: var(--text-sec); }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty   { color: var(--text-sec); padding: 40px 0; text-align: center; font-size: 14px; }
+
+.toolbar    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.filterRow  { display: flex; gap: 6px; flex-wrap: wrap; }
+.filterBtn  { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
+.filterBtnActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+.addBtn     { background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+.grid       { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.photoCard  { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.photoImg   { width: 100%; aspect-ratio: 4/3; object-fit: cover; cursor: zoom-in; display: block; }
+.photoMeta  { padding: 10px 12px; }
+.photoMetaTop { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.blockTag   { background: var(--navy); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.stageTag   { background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+.statusDot  { width: 8px; height: 8px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+.dotGreen   { background: var(--green); }
+.dotRed     { background: var(--red); }
+.dotAmber   { background: var(--amber); }
+.caption    { font-size: 12px; color: var(--text); margin-bottom: 4px; }
+.photoBy    { font-size: 11px; color: var(--text-sec); }
+.reviewBtns { display: flex; gap: 6px; margin-top: 8px; }
+.approveBtn { background: var(--green); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+.rejectBtn  { background: none; border: 1px solid var(--red); color: var(--red); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+.reviewComment { font-size: 11px; color: var(--text-sec); margin-top: 4px; font-style: italic; }
+
+/* Modal */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.modalHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modalTitle   { font-size: 15px; font-weight: 700; color: var(--text); }
+.modalClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+.formRow      { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.formLbl      { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.opt          { font-weight: 400; color: var(--text-sec); }
+.cameraBtn    { background: var(--navy); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-top: 4px; }
+.cameraWrap   { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cameraVideo  { width: 100%; border-radius: 8px; background: #000; }
+.camBtns      { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.captureBtn   { background: var(--red); color: #fff; border: none; padding: 11px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.camCancel    { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 20px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+
+/* Lightbox */
+.lightboxOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+.lightboxInner   { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 800px; width: 100%; }
+.lightboxImg     { max-width: 100%; max-height: 70vh; border-radius: 8px; object-fit: contain; }
+.lightboxCaption { color: rgba(255,255,255,.8); font-size: 13px; text-align: center; }
+.lightboxClose   { background: rgba(255,255,255,.15); color: #fff; border: none; padding: 8px 24px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+
+@media (max-width: 600px) { .grid { grid-template-columns: repeat(2, 1fr); } }

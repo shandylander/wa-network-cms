@@ -1,0 +1,173 @@
+/* ── Page shell ─────────────────────────────────────────────────── */
+.page    { display: flex; flex-direction: column; gap: 0; height: 100%; }
+.content { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* ── Tab bar ────────────────────────────────────────────────────── */
+.tabBar {
+  display: flex; gap: 4px; padding: 12px 20px 0;
+  border-bottom: 1px solid var(--border); background: var(--card);
+}
+.tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 500; border: none;
+  background: none; color: var(--text-sec); cursor: pointer; border-radius: 6px 6px 0 0;
+  border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
+}
+.tab:hover    { color: var(--text); }
+.tabActive    { color: var(--red); border-bottom-color: var(--red); background: var(--red-light); }
+
+/* ── Spinner / loading ──────────────────────────────────────────── */
+.spinner {
+  width: 28px; height: 28px; border: 3px solid var(--border);
+  border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.panelLoading { display: flex; justify-content: center; align-items: center; padding: 60px; }
+
+/* ── Clock panel ────────────────────────────────────────────────── */
+.clockPanel   { max-width: 480px; margin: 0 auto; }
+.dateStrip    { font-size: 13px; color: var(--text-sec); margin-bottom: 16px; }
+.statusBox    { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.statusDot    { width: 14px; height: 14px; border-radius: 50%; }
+.dotGrey      { background: var(--border); }
+.dotGreen     { background: var(--green); box-shadow: 0 0 0 4px var(--green-bg); }
+.dotBlue      { background: var(--blue);  box-shadow: 0 0 0 4px var(--blue-bg); }
+.statusLabel  { font-size: 15px; color: var(--text); text-align: center; }
+.locLink      { font-size: 11px; color: var(--blue); display: flex; align-items: center; gap: 3px; text-decoration: none; }
+.thumbImg     { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+.clockInBtn   { background: var(--green); color: #fff; border: none; padding: 10px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.clockOutBtn  { background: var(--navy); color: #fff; border: none; padding: 10px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.clockInBtn:hover  { background: var(--green); filter: brightness(1.1); }
+.clockOutBtn:hover { background: var(--navy-mid); }
+.summaryRow   { display: flex; gap: 24px; }
+.summaryItem  { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.summaryLbl   { font-size: 10px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: .06em; }
+.summaryVal   { font-size: 16px; font-weight: 700; color: var(--text); }
+.photoRow     { display: flex; gap: 12px; }
+
+/* ── Camera view ────────────────────────────────────────────────── */
+.cameraWrap    { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cameraTitle   { font-size: 14px; font-weight: 600; color: var(--text); }
+.cameraVideo   { width: 100%; max-width: 420px; border-radius: 10px; background: #000; }
+.cameraActions { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.captureBtn    { background: var(--red); color: #fff; border: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; min-width: 180px; justify-content: center; }
+.captureBtn:disabled { opacity: .6; cursor: default; }
+.cancelCamBtn  { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 24px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.locInfo       { font-size: 11px; color: var(--text-sec); display: flex; align-items: center; gap: 3px; }
+.locWarn       { font-size: 11px; color: var(--amber); display: flex; align-items: center; gap: 3px; }
+.uploadingMsg  { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px; color: var(--text-sec); }
+
+/* ── Filter bar ─────────────────────────────────────────────────── */
+.filterBar     { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.filterLbl     { font-size: 12px; color: var(--text-sec); font-weight: 500; }
+.filterInput   { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--text); background: var(--card); }
+.filterBtn     { background: var(--navy); color: #fff; border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* ── Team view table ────────────────────────────────────────────── */
+.teamWrap      { }
+.tableWrap     { overflow-x: auto; }
+.attTable      { width: 100%; border-collapse: collapse; font-size: 13px; }
+.attTable th   { background: var(--surface); color: var(--text-sec); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.attTable td   { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.attTable tr:hover td { background: var(--surface); }
+.flaggedRow td { background: #fff8f0 !important; }
+.editedBadge   { margin-left: 6px; font-size: 9px; font-weight: 600; background: var(--amber-bg); color: var(--amber); padding: 2px 5px; border-radius: 4px; text-transform: uppercase; }
+.mapPin        { color: var(--blue); margin-left: 4px; vertical-align: middle; }
+.statusPill    { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.pillGreen     { background: var(--green-bg); color: var(--green); }
+.pillAmber     { background: var(--amber-bg); color: var(--amber); }
+.actionsCell   { display: flex; gap: 4px; align-items: center; }
+.iconBtn       { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 4px 7px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; }
+.iconBtn:hover { border-color: var(--navy); color: var(--navy); }
+.flagActive    { color: var(--red) !important; border-color: var(--red) !important; }
+.empty         { color: var(--text-sec); padding: 40px 0; text-align: center; font-size: 14px; }
+
+/* ── Edit modal ─────────────────────────────────────────────────── */
+.modalOverlay  { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.editModal     { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 420px; box-shadow: var(--shadow); }
+.modalTitle    { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.editRow       { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.editLbl       { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.editInput     { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.editTextarea  { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); resize: vertical; font-family: inherit; }
+.editActions   { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cancelBtn     { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.saveBtn       { background: var(--navy); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.saveBtn:disabled { opacity: .6; cursor: default; }
+
+/* ── Photo review ───────────────────────────────────────────────── */
+.photoReviewWrap { }
+.reviewInfo      { font-size: 13px; color: var(--text-sec); margin-bottom: 14px; }
+
+/* Staff selector */
+.staffSelector       { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+.staffSelectorHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.selectorActions     { display: flex; align-items: center; gap: 4px; }
+.selectorLink        { background: none; border: none; color: var(--blue); font-size: 12px; cursor: pointer; padding: 0; }
+.selectorDivider     { color: var(--border); font-size: 12px; }
+.staffChips          { display: flex; flex-wrap: wrap; gap: 6px; }
+.staffChip           { border: 1px solid var(--border); background: var(--card); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; cursor: pointer; transition: all .15s; }
+.staffChip:hover     { border-color: var(--navy); color: var(--navy); }
+.staffChipActive     { background: var(--navy); border-color: var(--navy); color: #fff; }
+.promptBox           { background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center; color: var(--text-sec); font-size: 13px; }
+.photoGrid       { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 16px; }
+.photoCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.photoCardFlagged { border-color: var(--red); background: var(--red-light); }
+.photoCardHeader  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.photoWorker     { font-size: 14px; font-weight: 700; color: var(--text); }
+.photoDate       { font-size: 12px; color: var(--text-sec); }
+.flagBtn         { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: none; color: var(--text-sec); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+.flagBtnActive   { color: var(--red); border-color: var(--red); background: var(--red-light); }
+.photoCompare    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.photoSlot       { display: flex; flex-direction: column; gap: 6px; }
+.photoSlotLabel  { font-size: 11px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: .05em; }
+.selfieImg       { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: zoom-in; }
+.noPhoto         { width: 100%; aspect-ratio: 4/3; background: var(--surface); border-radius: 8px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-sec); }
+.photoLocLink    { font-size: 11px; color: var(--blue); display: flex; align-items: center; gap: 3px; text-decoration: none; }
+.editedNote      { margin-top: 8px; font-size: 11px; color: var(--amber); }
+
+/* ── Lightbox ───────────────────────────────────────────────────── */
+.lightboxOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.lightboxInner   { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 640px; width: 100%; }
+.lightboxImg     { width: 100%; border-radius: 10px; }
+.lightboxLabel   { color: rgba(255,255,255,.7); font-size: 13px; }
+.lightboxClose   { background: rgba(255,255,255,.15); color: #fff; border: none; padding: 8px 24px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+
+/* ── Subcon audit ───────────────────────────────────────────────── */
+.auditListWrap   { }
+.auditListHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; }
+.newAuditBtn     { background: var(--navy); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.auditCards      { display: flex; flex-direction: column; gap: 12px; }
+.auditCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.auditCardWarn   { border-left: 3px solid var(--amber); }
+.auditCardTop    { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 12px; }
+.auditCardDate   { font-size: 14px; font-weight: 700; color: var(--text); }
+.auditCardMeta   { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+.unregBadge      { display: flex; align-items: center; gap: 4px; background: var(--amber-bg); color: var(--amber); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+.auditWorkerList { display: flex; flex-wrap: wrap; gap: 6px; }
+.workerChip      { display: flex; align-items: center; gap: 4px; font-size: 12px; background: var(--green-bg); color: var(--green); padding: 3px 8px; border-radius: 20px; }
+.workerChipWarn  { background: var(--amber-bg); color: var(--amber); }
+.auditNotes      { font-size: 12px; color: var(--text-sec); margin-top: 8px; }
+
+/* New audit form */
+.auditFormWrap    { max-width: 560px; }
+.auditFormHeader  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.auditFormTitle   { font-size: 16px; font-weight: 700; color: var(--text); }
+.auditMeta        { background: var(--surface); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+.auditWorkerLabel { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.auditEntries     { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.auditEntry       { display: flex; align-items: center; gap: 8px; }
+.regOk            { color: var(--green); flex-shrink: 0; }
+.regWarn          { color: var(--amber); flex-shrink: 0; }
+.removeEntryBtn   { background: none; border: none; color: var(--text-sec); cursor: pointer; padding: 4px; display: flex; align-items: center; }
+.addEntryBtn      { background: none; border: 1px dashed var(--border); color: var(--blue); padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; margin-top: 4px; width: fit-content; }
+.auditLegend      { display: flex; gap: 16px; font-size: 12px; color: var(--text-sec); margin-top: 8px; }
+.auditLegend span { display: flex; align-items: center; gap: 4px; }
+
+/* ── Mobile ─────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .content         { padding: 14px; }
+  .photoGrid       { grid-template-columns: 1fr; }
+  .attTable th, .attTable td { padding: 8px 8px; font-size: 12px; }
+  .summaryRow      { gap: 16px; }
+  .cameraVideo     { max-width: 100%; }
+}

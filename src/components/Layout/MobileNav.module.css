@@ -1,0 +1,116 @@
+.nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-nav-height);
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-muted);
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: color 0.12s;
+  min-width: 0;
+}
+
+.tab:hover { color: var(--text-sec); }
+.tab.active { color: var(--red); }
+
+.tabIcon  { width: 22px; height: 22px; flex-shrink: 0; }
+.tabLabel { font-size: 10px; font-weight: 500; white-space: nowrap; }
+
+/* ── Employees sub-menu sheet ── */
+.empSheet {
+  position: fixed;
+  bottom: var(--mobile-nav-height);
+  left: 0; right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.18s ease;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.10);
+}
+.empSheetItem {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 24px; font-size: 15px; font-weight: 500;
+  color: var(--text); text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+}
+.empSheetItem:last-child { border-bottom: none; }
+.empSheetItem:hover      { background: var(--surface); }
+.empSheetActive          { color: var(--red); }
+
+/* ── Drawer ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.drawer {
+  background: var(--card);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  width: 100%;
+  padding: 0 0 calc(var(--mobile-nav-height) + 8px);
+  animation: slideUp 0.2s ease;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.drawerTitle { font-size: 15px; font-weight: 600; color: var(--text); }
+.drawerClose { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.drawerItem:hover { background: var(--surface); }
+
+.drawerLogout { color: var(--red); }
+
+@media (max-width: 768px) {
+  .nav { display: flex; }
+}
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }

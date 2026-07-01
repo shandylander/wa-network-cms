@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Email format: WA001@wanetwork.cms → userId = "WA001"
+    function uid() {
+      return request.auth.token.email.split('@')[0];
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+
+    function signedIn()     { return request.auth != null; }
+    function isOwner()      { return signedIn() && me().role == 'owner'; }
+    function isManager()    { return signedIn() && me().role == 'manager'; }
+    function isSupervisor() { return signedIn() && me().role == 'supervisor'; }
+    function isStaff()      { return signedIn() && me().role == 'staff'; }
+    function isSubconAdmin(){ return signedIn() && me().role == 'subcon-admin'; }
+    function isSubcon()     { return signedIn() && me().role == 'subcon'; }
+    function myTeam()       { return me().team; }
+
+    function ownerOrManager() { return isOwner() || isManager(); }
+    function internal()       { return isOwner() || isManager() || isSupervisor(); }
+    function anyStaff()       { return internal() || isStaff(); }
+
+    // ── USERS ──────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        uid() == userId || ownerOrManager() || isSupervisor()
+      );
+      allow create: if ownerOrManager();
+      allow update: if isOwner()
+        || (isManager()     && resource.data.role != 'owner')
+        || (isSubconAdmin() && resource.data.team == myTeam())
+        // users may flip their own firstLogin flag during forced PIN change
+        || (uid() == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstLogin']));
+      allow delete: if isOwner();
+    }
+
+    // ── PROJECTS ───────────────────────────────────────────────────────────
+    match /projects/{projectId} {
+      allow read: if signedIn() && (
+        anyStaff() ||
+        ((isSubconAdmin() || isSubcon()) && resource.data.assignedTeams.hasAny([myTeam()]))
+      );
+      allow create: if ownerOrManager();
+      allow update: if ownerOrManager() || isSupervisor();
+      allow delete: if isOwner();
+
+      // Blocks
+      match /blocks/{blockId} {
+        allow read: if signedIn() && (
+          anyStaff() ||
+          ((isSubconAdmin() || isSubcon()) && resource.data.team == myTeam())
+        );
+        allow create: if ownerOrManager();
+        allow update: if ownerOrManager() || isSupervisor()
+          || ((isStaff() || isSubconAdmin() || isSubcon()) && resource.data.team == myTeam());
+        allow delete: if ownerOrManager();
+      }
+
+      // Documents — default no access; access granted per team flag
+      match /documents/{docId} {
+        allow read: if signedIn() && (
+          internal() ||
+          (isStaff()       && resource.data.access.get('own',    false)) ||
+          (isSubconAdmin() && resource.data.access.get(myTeam(), false)) ||
+          (isSubcon()      && resource.data.access.get(myTeam(), false))
+        );
+        allow write: if ownerOrManager();
+      }
+
+      // Claims / finance — owner + manager only
+      match /claims/{id}         { allow read, write: if ownerOrManager(); }
+      match /materialOrders/{id} { allow read, write: if ownerOrManager() || isSupervisor(); }
+      match /deliveryOrders/{id} { allow read, write: if ownerOrManager() || isSupervisor(); }
+      match /materials/{id}      { allow read, write: if ownerOrManager() || isSupervisor(); }
+
+      // HSE / site subcollections — internal + assigned subcons
+      function assignedToProject(pid) {
+        return get(/databases/$(database)/documents/projects/$(pid)).data.assignedTeams.hasAny([myTeam()]);
+      }
+      match /permits/{id} {
+        allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
+        allow write: if internal();
+      }
+      match /toolboxMeetings/{id} {
+        allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
+        allow write: if internal();
+      }
+      match /incidents/{id}  { allow read, write: if anyStaff(); }
+      match /snags/{id}      { allow read, write: if anyStaff(); }
+      match /sitePhotos/{id} {
+        allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
+        allow write: if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
+      }
+    }
+
+    // ── WORKERS ────────────────────────────────────────────────────────────
+    match /workers/{workerId} {
+      allow read: if signedIn() && (
+        ownerOrManager() || isSupervisor() ||
+        (isSubconAdmin() && resource.data.team == myTeam())
+      );
+      allow create: if ownerOrManager()
+        || (isSubconAdmin() && request.resource.data.team == myTeam());
+      allow update: if ownerOrManager()
+        || (isSubconAdmin() && resource.data.team == myTeam());
+      allow delete: if ownerOrManager();
+    }
+
+    // ── RA LIBRARY ─────────────────────────────────────────────────────────
+    match /raLibrary/{raId} {
+      allow read:  if signedIn();
+      allow write: if ownerOrManager();
+    }
+
+    // ── ATTENDANCE ─────────────────────────────────────────────────────────
+    match /attendance/{recordId} {
+      allow read: if signedIn() && (
+        ownerOrManager() || isSupervisor() ||
+        (isStaff()       && resource.data.userId == uid()) ||
+        (isSubconAdmin() && resource.data.team   == myTeam()) ||
+        (isSubcon()      && resource.data.userId == uid())
+      );
+      allow create: if signedIn();
+      allow update: if ownerOrManager() || isSupervisor()
+        || resource.data.userId == uid();
+      allow delete: if ownerOrManager();
+    }
+
+    // ── LEAVE ──────────────────────────────────────────────────────────────
+    match /leaveApplications/{id} {
+      allow read: if signedIn() && (
+        ownerOrManager() || isSupervisor() || resource.data.userId == uid()
+      );
+      allow create: if signedIn();
+      allow update: if ownerOrManager() || isSupervisor()
+        || (resource.data.userId == uid() && resource.data.status == 'pending');
+      allow delete: if ownerOrManager();
+    }
+    match /leaveEntitlements/{id} {
+      allow read: if signedIn() && (
+        ownerOrManager() || isSupervisor() || resource.data.userId == uid()
+      );
+      allow write: if ownerOrManager();
+    }
+
+    // ── PAYROLL ────────────────────────────────────────────────────────────
+    match /payslips/{id} {
+      allow read:  if ownerOrManager() || resource.data.userId == uid();
+      allow write: if ownerOrManager();
+    }
+    match /salaryConfig/{id} {
+      allow read, write: if ownerOrManager();
+    }
+    match /pettyCashClaims/{id} {
+      allow read: if ownerOrManager() || isSupervisor()
+        || resource.data.submittedBy == uid();
+      allow create: if signedIn();
+      allow update, delete: if ownerOrManager();
+    }
+  }
+}

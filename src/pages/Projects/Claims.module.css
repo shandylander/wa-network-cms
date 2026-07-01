@@ -1,0 +1,125 @@
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+
+.loadingWrap { display: flex; justify-content: center; padding: 60px; }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Summary stats */
+.statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.statCard  { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 3px; }
+.statVal   { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+.statLabel { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.statSub   { font-size: 11px; color: var(--amber); font-weight: 600; margin-top: 2px; }
+.statBlue  .statVal { color: var(--blue); }
+.statAmber .statVal { color: var(--amber); }
+.statGreen .statVal { color: var(--green); }
+.statRed   .statVal { color: var(--red); }
+
+/* Inner tabs */
+.innerTabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); }
+.innerTab  {
+  padding: 9px 18px; font-size: 13px; font-weight: 500;
+  color: var(--text-sec); background: none; border: none;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  cursor: pointer; font-family: inherit; transition: color 0.12s;
+}
+.innerTab:hover { color: var(--text); }
+.innerTabActive { color: var(--red); border-bottom-color: var(--red); font-weight: 700; }
+
+/* Section */
+.section { display: flex; flex-direction: column; gap: 14px; }
+.sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sectionTitle  { font-size: 15px; font-weight: 700; color: var(--text); }
+.sectionNote   { font-size: 12px; color: var(--text-muted); }
+
+/* Table */
+.tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table thead tr { background: var(--surface); border-bottom: 2px solid var(--border); }
+.table th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); white-space: nowrap; }
+.table tfoot { border-top: 2px solid var(--border); }
+.row { border-bottom: 1px solid var(--border-light); }
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--surface); }
+.table td { padding: 10px 12px; vertical-align: middle; }
+.totalRow td { padding: 10px 12px; background: var(--surface); font-size: 13px; }
+.tdNum      { text-align: center; font-weight: 600; color: var(--text); }
+.tdAmt      { text-align: right; color: var(--text-sec); white-space: nowrap; }
+.tdAmtBold  { text-align: right; font-weight: 700; color: var(--text); white-space: nowrap; }
+.tdRef      { color: var(--text-sec); font-size: 12px; }
+.advBtn {
+  font-size: 11px; font-weight: 600; padding: 4px 10px;
+  background: var(--red-light); color: var(--red);
+  border: 1px solid var(--red); border-radius: 20px;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: background 0.1s;
+}
+.advBtn:hover { background: var(--red); color: #fff; }
+.paidIcon { color: var(--green); }
+.teamChip { font-size: 12px; font-weight: 600; background: var(--blue-bg); color: var(--blue); padding: 3px 10px; border-radius: 20px; }
+
+/* New claim modal */
+.modalBody { display: flex; flex-direction: column; gap: 16px; }
+.field     { display: flex; flex-direction: column; gap: 5px; }
+.fieldFull { grid-column: 1 / -1; }
+.label     { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.opt       { font-weight: 400; color: var(--text-muted); }
+.input, .textarea {
+  height: 36px; padding: 0 10px; font-size: 13px; color: var(--text);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--card); outline: none; font-family: inherit;
+}
+.textarea  { height: auto; padding: 8px 10px; resize: vertical; }
+.input:focus, .textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.formGrid  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.stageRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.stagePill {
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text-sec); cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600; text-align: left;
+  transition: all 0.12s; flex: 1; min-width: 140px;
+}
+.stagePill:hover { border-color: var(--red); color: var(--red); }
+.stagePillActive { border-color: var(--red) !important; background: var(--red-light) !important; color: var(--red) !important; }
+.stageDesc { font-size: 11px; font-weight: 400; color: inherit; opacity: 0.75; margin-top: 2px; }
+
+.claimSummaryBox {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.claimSummaryRow { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-sec); }
+.netRow   { padding-top: 8px; border-top: 1px solid var(--border); }
+.netAmount { font-size: 16px; color: var(--green) !important; }
+.inlineInput {
+  height: 30px; padding: 0 8px; width: 140px; font-size: 13px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--text); outline: none; font-family: inherit; text-align: right;
+}
+.inlineInput:focus { border-color: var(--red); }
+
+.modalFooter { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+
+/* Sub-con rates config */
+.ratesTable { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.ratesHeader { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0; background: var(--surface); padding: 8px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.ratesRow { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0; padding: 8px 12px; border-top: 1px solid var(--border-light); align-items: center; }
+.ratesTeam { font-size: 13px; font-weight: 600; color: var(--text); }
+.rateInput { height: 32px; padding: 0 8px; width: 90px; font-size: 13px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--card); color: var(--text); outline: none; font-family: inherit; }
+.rateInput:focus { border-color: var(--red); }
+
+.ratesNote { font-size: 12px; color: var(--text-muted); }
+.linkBtn { background: none; border: none; color: var(--red); cursor: pointer; font-weight: 600; font-size: 12px; font-family: inherit; padding: 0; }
+.linkBtn:hover { text-decoration: underline; }
+
+.empty { text-align: center; padding: 60px 24px; color: var(--text-muted); }
+.empty svg { margin: 0 auto 12px; display: block; color: var(--border); }
+.empty p { font-size: 14px; margin: 4px 0; }
+
+@media (max-width: 768px) {
+  .statsGrid { grid-template-columns: repeat(2, 1fr); }
+  .formGrid  { grid-template-columns: 1fr; }
+  .stageRow  { flex-direction: column; }
+}

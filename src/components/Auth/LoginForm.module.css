@@ -1,0 +1,221 @@
+/* ── Page shell: column so banner sits at the very bottom ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── Panels row: fills all remaining height above the banner ── */
+.panels {
+  display: flex;
+  flex: 1;
+}
+
+/* ── Left brand panel ──────────────────────────────────────── */
+.brand {
+  width: 400px;
+  flex-shrink: 0;
+  background: var(--navy);
+  background-image:
+    radial-gradient(ellipse at 20% 80%, rgba(204,0,0,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(26,95,168,0.10) 0%, transparent 60%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 40px;
+  color: #fff;
+}
+
+.brandInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.logoWrap {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 32px;
+  align-self: flex-start;
+}
+
+.logoImg {
+  height: 52px;
+  width: auto;
+  display: block;
+}
+
+.brandTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+  margin-bottom: 14px;
+  line-height: 1.3;
+}
+
+.brandDesc {
+  font-size: 14px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.7;
+  max-width: 300px;
+}
+
+.brandVersion {
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+}
+
+/* ── Right form panel ──────────────────────────────────────── */
+.formPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  padding: 32px 24px;
+}
+
+.formCard {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+/* Mobile-only logo inside the card */
+.formLogo {
+  display: none;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.formLogoImg {
+  height: 44px;
+  width: auto;
+}
+
+.heading {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.subheading {
+  font-size: 14px;
+  color: var(--text-sec);
+  margin-bottom: 32px;
+}
+
+/* ── Form fields ───────────────────────────────────────────── */
+.field { margin-bottom: 20px; }
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--card);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.04em;
+  box-sizing: border-box;
+}
+
+.input:focus        { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.input:disabled     { background: var(--surface); color: var(--text-sec); }
+.input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+/* ── PIN boxes ─────────────────────────────────────────────── */
+.pinRow { display: flex; gap: 10px; }
+
+.pinBox {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pinBox:focus    { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.pinBox:disabled { background: var(--surface); }
+
+/* ── Error ─────────────────────────────────────────────────── */
+.error {
+  font-size: 13px;
+  color: var(--red-dark);
+  background: var(--red-light);
+  border: 1px solid rgba(204,0,0,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.submitBtn { margin-top: 8px; }
+
+.footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 28px;
+  line-height: 1.8;
+}
+
+.setupLink {
+  color: var(--text-muted);
+  text-decoration: underline;
+  font-size: 12px;
+}
+.setupLink:hover { color: var(--red); }
+
+/* ── Certification banner strip ────────────────────────────── */
+.bannerStrip {
+  background: #fff;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 24px;
+}
+
+.bannerImg {
+  height: 52px;
+  width: auto;
+  display: block;
+}
+
+/* ── Mobile ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .brand      { display: none; }
+  .formLogo   { display: flex; }
+  .formPanel  { background: var(--navy); padding: 24px 16px; }
+  .formCard   { box-shadow: var(--shadow-lg); }
+  .bannerStrip { display: none; }
+}

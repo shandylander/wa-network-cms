@@ -1,0 +1,63 @@
+.wrap    { padding: 16px; }
+.loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty   { color: var(--text-sec); padding: 40px 0; text-align: center; font-size: 14px; }
+
+.toolbar   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.filterRow { display: flex; gap: 6px; flex-wrap: wrap; }
+.filterBtn { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; cursor: pointer; }
+.active    { background: var(--navy); border-color: var(--navy); color: #fff; }
+.addBtn    { background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+.list { display: flex; flex-direction: column; gap: 8px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; border-left: 3px solid var(--border); }
+.sev_low      { border-left-color: var(--blue); }
+.sev_medium   { border-left-color: var(--amber); }
+.sev_high     { border-left-color: var(--red); }
+.sev_critical { border-left-color: var(--red-dark); }
+
+.head    { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; gap: 10px; }
+.head:hover { background: var(--surface); }
+.headLeft  { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.headRight { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.sevIcon   { color: var(--text-muted); flex-shrink: 0; }
+.typeBadge { background: var(--navy); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+.sevBadge  { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+.sevBadge_low      { background: var(--blue-bg);  color: var(--blue); }
+.sevBadge_medium   { background: var(--amber-bg); color: var(--amber); }
+.sevBadge_high     { background: var(--red-light); color: var(--red); }
+.sevBadge_critical { background: var(--red); color: #fff; }
+.desc { font-size: 13px; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
+.statusBadge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.status_open          { background: var(--red-light);  color: var(--red); }
+.status_investigating { background: var(--amber-bg);   color: var(--amber); }
+.status_closed        { background: var(--green-bg);   color: var(--green); }
+.chevron     { color: var(--text-sec); flex-shrink: 0; transition: transform .2s; }
+.chevronOpen { transform: rotate(180deg); }
+
+.body    { padding: 12px 14px; border-top: 1px solid var(--border); background: var(--surface); }
+.details { font-size: 12px; color: var(--text-sec); display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.details strong { color: var(--text); }
+.closedLine { display: flex; align-items: center; gap: 5px; color: var(--green); font-weight: 600; }
+.actions { display: flex; gap: 8px; }
+.investigateBtn { background: var(--amber); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.closeBtn       { background: var(--green); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+/* Modal */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.modalHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modalTitle   { font-size: 15px; font-weight: 700; color: var(--text); }
+.modalClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+.modalActions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cancelBtn    { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.submitBtn    { background: var(--navy); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.submitBtn:disabled { opacity: .6; cursor: default; }
+.formRow      { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.formRowGroup { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.formLbl      { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; width: 100%; box-sizing: border-box; }
+.formTextarea { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); resize: vertical; font-family: inherit; width: 100%; box-sizing: border-box; }
+.opt          { font-weight: 400; color: var(--text-sec); }
+.signHint     { font-size: 12px; color: var(--text-sec); }

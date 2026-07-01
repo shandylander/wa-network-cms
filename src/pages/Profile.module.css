@@ -1,0 +1,68 @@
+.page { max-width: 800px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Profile card */
+.profileBody {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: 22px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.name    { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.userId  { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.roleBadge { display: inline-flex; }
+
+.infoList { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border-light); padding-top: 16px; }
+.infoRow  { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.infoKey  { color: var(--text-sec); font-weight: 500; }
+
+/* PIN form */
+.field { margin-bottom: 18px; }
+.label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 7px; }
+
+.pinRow { display: flex; gap: 10px; }
+.pinBox {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pinBox:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+
+.error {
+  font-size: 13px; color: var(--red-dark);
+  background: var(--red-light);
+  border: 1px solid rgba(204,0,0,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+}

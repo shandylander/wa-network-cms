@@ -1,0 +1,63 @@
+.section { margin-bottom: 22px; }
+
+.sectionTitle {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); margin: 0 0 12px;
+}
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.field { display: flex; flex-direction: column; }
+.label { font-size: 12px; font-weight: 500; color: var(--text-sec); margin-bottom: 4px; }
+.input {
+  height: 38px; padding: 0 10px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text); background: var(--card);
+  outline: none; font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus  { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.input:disabled { background: var(--surface); color: var(--text-muted); }
+
+/* Certs */
+.certHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.addCertBtn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--red);
+  background: none; border: none; cursor: pointer; padding: 4px 8px;
+  border-radius: var(--radius-sm); font-family: inherit;
+}
+.addCertBtn:hover { background: var(--red-light); }
+
+.certForm { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 10px; }
+.certFormBtns { display: flex; gap: 8px; }
+
+.noCerts { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
+
+.certList { display: flex; flex-direction: column; gap: 6px; }
+.certRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface); border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+.certInfo { flex: 1; min-width: 0; }
+.certName   { font-size: 13px; font-weight: 500; color: var(--text); display: block; }
+.certExpiry { font-size: 11px; color: var(--text-muted); }
+.removeBtn {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 4px; border-radius: 4px;
+  display: flex; align-items: center;
+}
+.removeBtn:hover { color: var(--red); background: var(--red-light); }
+
+.actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+@media (max-width: 520px) {
+  .grid2 { grid-template-columns: 1fr; }
+}

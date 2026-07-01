@@ -1,0 +1,192 @@
+.page { max-width: 1200px; }
+
+.loadingWrap { display: flex; justify-content: center; padding: 80px; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sec);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+  font-family: inherit;
+}
+.back:hover { color: var(--red); }
+
+.header { margin-bottom: 24px; }
+.headerMeta { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.type { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.name { font-size: 26px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+.client { font-size: 14px; color: var(--text-sec); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+}
+.tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-sec);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+  text-transform: capitalize;
+}
+.tab:hover { color: var(--text); }
+.tabActive { color: var(--red); border-bottom-color: var(--red); }
+
+/* Overview */
+.overview { display: flex; flex-direction: column; gap: 16px; }
+.statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+.detailList { display: flex; flex-direction: column; }
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 14px;
+}
+.detailRow:last-child { border-bottom: none; }
+.detailKey { color: var(--text-sec); font-weight: 500; }
+.detailVal { color: var(--text); font-weight: 500; text-align: right; }
+
+/* View toggle (Table / Kanban) */
+.viewToggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  width: fit-content;
+}
+.viewBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px; font-size: 13px; font-weight: 500;
+  border: none; border-radius: 6px; cursor: pointer;
+  background: none; color: var(--text-sec); font-family: inherit;
+  transition: all 0.12s;
+}
+.viewBtn:hover { color: var(--text); background: var(--card); }
+.viewBtnActive { background: var(--card) !important; color: var(--red) !important; box-shadow: var(--shadow-sm); }
+
+/* Milestones */
+.milestoneList { display: flex; flex-direction: column; gap: 0; margin-bottom: 14px; }
+
+.msRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-light);
+  transition: opacity 0.15s;
+}
+.msRow:last-child { border-bottom: none; }
+.msDone { opacity: 0.55; }
+.msDone .msLabel { text-decoration: line-through; }
+
+.msCheck { width: 16px; height: 16px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+.msLabel { flex: 1; font-size: 14px; color: var(--text); }
+.msRemove {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 2px; display: flex; align-items: center;
+  border-radius: 4px; opacity: 0;
+  transition: opacity 0.1s;
+}
+.msRow:hover .msRemove { opacity: 1; }
+.msRemove:hover { color: var(--red); background: var(--red-light); }
+
+.msEmpty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
+
+.msAdd { display: flex; gap: 8px; }
+.msInput {
+  flex: 1; height: 36px; padding: 0 12px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text); background: var(--card);
+  outline: none; font-family: inherit;
+}
+.msInput:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.msAddBtn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0 14px; height: 36px;
+  background: var(--red); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.msAddBtn:hover:not(:disabled) { background: var(--red-dark); }
+.msAddBtn:disabled { opacity: 0.5; cursor: default; }
+
+/* Team start dates */
+.editDatesBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; font-size: 12px; font-weight: 600;
+  background: var(--surface); color: var(--text-sec);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  cursor: pointer; font-family: inherit;
+  transition: border-color 0.12s, color 0.12s;
+}
+.editDatesBtn:hover { border-color: var(--red); color: var(--red); }
+.dateInput {
+  height: 30px; padding: 0 8px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text); font-family: inherit;
+  background: var(--card); outline: none;
+}
+.dateInput:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.noDate { color: var(--text-muted); }
+.dateActions {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 12px 16px 4px;
+}
+.cancelDatesBtn {
+  padding: 6px 14px; font-size: 13px; font-weight: 600;
+  background: var(--surface); color: var(--text-sec);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  cursor: pointer; font-family: inherit;
+}
+.saveDatesBtn {
+  padding: 6px 16px; font-size: 13px; font-weight: 600;
+  background: var(--red); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: inherit;
+}
+.saveDatesBtn:disabled { opacity: 0.6; cursor: default; }
+
+/* Documents placeholder */
+.docPlaceholder {
+  text-align: center;
+  padding: 80px 24px;
+  color: var(--text-muted);
+}
+.docPlaceholder svg { margin: 0 auto 16px; display: block; }
+.docPlaceholder p   { font-size: 16px; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
+.docPlaceholder span { font-size: 13px; }
+
+@media (max-width: 768px) {
+  .statsGrid { grid-template-columns: repeat(2, 1fr); }
+  .name { font-size: 20px; }
+  .tab { padding: 10px 14px; font-size: 13px; }
+}
