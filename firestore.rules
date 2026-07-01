@@ -2,9 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Email format: WA001@wanetwork.cms → userId = "WA001"
+    // Email format: wa001@wanetwork.cms (Firebase lowercases emails) → "WA001"
     function uid() {
-      return request.auth.token.email.split('@')[0];
+      return request.auth.token.email.split('@')[0].upper();
     }
 
     function me() {
