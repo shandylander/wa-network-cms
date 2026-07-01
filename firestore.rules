@@ -24,6 +24,20 @@ service cloud.firestore {
     function internal()       { return isOwner() || isManager() || isSupervisor(); }
     function anyStaff()       { return internal() || isStaff(); }
 
+    // ── BOOTSTRAP ─────────────────────────────────────────────────────────
+    // Allow all reads/writes before first-time setup is complete.
+    // Once _metadata/setup is written, this rule never matches again.
+    match /{document=**} {
+      allow read, write: if !exists(/databases/$(database)/documents/_metadata/setup);
+    }
+
+    // _metadata is always publicly readable (setup page checks it on load)
+    match /_metadata/{docId} {
+      allow read:  if true;
+      allow write: if ownerOrManager()
+        || !exists(/databases/$(database)/documents/_metadata/setup);
+    }
+
     // ── USERS ──────────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if signedIn() && (
