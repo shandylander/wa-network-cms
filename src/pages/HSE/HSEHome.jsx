@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, writeBatch, query, where, limit } from 'firebase/firestore';
 import { ArrowDownTrayIcon, ShieldCheckIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -54,6 +54,29 @@ export default function HSEHome() {
     }
   };
 
+  const [grantingOwn, setGrantingOwn] = useState(false);
+  const grantOwnAccess = async () => {
+    if (!projectId || docs.length === 0) return;
+    setGrantingOwn(true);
+    try {
+      const batch = writeBatch(db);
+      docs.forEach(d => {
+        if (!d.access?.own) {
+          batch.update(doc(db, 'projects', projectId, 'documents', d.id), { 'access.own': true });
+        }
+      });
+      await batch.commit();
+      setDocs(prev => prev.map(d => ({ ...d, access: { ...d.access, own: true } })));
+      toast.success('WA! staff access enabled for all documents');
+    } catch {
+      toast.error('Failed to update access');
+    } finally {
+      setGrantingOwn(false);
+    }
+  };
+
+  const allOwnEnabled = docs.length > 0 && docs.every(d => d.access?.own);
+
   const visibleDocs = isWorker && myTeam
     ? docs.filter(d => d.access?.[myTeam])
     : docs;
@@ -67,13 +90,21 @@ export default function HSEHome() {
           <h1 className={styles.title}>HSE Documents</h1>
           <p className={styles.sub}>Safety forms and site documents for PCS Batch 3</p>
         </div>
+        {canAdmin && !allOwnEnabled && (
+          <button className={styles.grantBtn} onClick={grantOwnAccess} disabled={grantingOwn}>
+            {grantingOwn ? 'Enabling…' : 'Enable for WA! Staff'}
+          </button>
+        )}
       </div>
 
       {visibleDocs.length === 0 ? (
         <div className={styles.empty}>
           <LockClosedIcon className={styles.emptyIcon} />
           <h3>No documents available</h3>
-          <p>Documents will appear here once your team is granted access.</p>
+          <p>{canAdmin
+            ? 'Use the team toggle buttons on each document to grant access, or click "Enable for WA! Staff" above.'
+            : 'Your admin needs to enable access for your team. Contact your supervisor or manager.'
+          }</p>
         </div>
       ) : (
         <Card>

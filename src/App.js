@@ -10,6 +10,7 @@ import Home           from './pages/Home';
 import Profile        from './pages/Profile';
 import Settings       from './pages/Settings/Settings';
 import UserManagement from './pages/Settings/UserManagement';
+import Permissions    from './pages/Settings/Permissions';
 import ProjectList    from './pages/Projects/ProjectList';
 import ProjectDetail  from './pages/Projects/ProjectDetail';
 import WorkerRegistry from './pages/Workers/WorkerRegistry';
@@ -19,6 +20,7 @@ import LeaveManagement from './pages/HR/LeaveManagement';
 import SalaryCalculator from './pages/HR/SalaryCalculator';
 import PettyCash       from './pages/HR/PettyCash';
 import Finance         from './pages/Finance/Finance';
+import Announcements   from './pages/Announcements/Announcements';
 import Setup           from './pages/Setup/Setup';
 import './App.css';
 
@@ -59,9 +61,11 @@ function ProtectedRoutes() {
         <Route path="salary"            element={<SalaryCalculator />} />
         <Route path="petty-cash"        element={<PettyCash />} />
         <Route path="finance"           element={<Finance />} />
+        <Route path="announcements"     element={<Announcements />} />
         <Route path="profile"           element={<Profile />} />
         <Route path="settings"          element={<Settings />} />
-        <Route path="settings/users"    element={<UserManagement />} />
+        <Route path="settings/users"       element={<UserManagement />} />
+        <Route path="settings/permissions" element={<Permissions />} />
         <Route path="*"                 element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

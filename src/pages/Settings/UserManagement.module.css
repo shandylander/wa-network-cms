@@ -320,6 +320,28 @@
 .hintError { color: var(--red) !important; }
 .cannotDelete { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.5; }
 
+/* ── Custom Permissions ───────────────────────────────────────────── */
+.permNote {
+  font-size: 12px; color: var(--text-muted);
+  margin: 0 0 10px; line-height: 1.5;
+}
+.permChecks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px 12px;
+}
+.permCheck {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; color: var(--text);
+  cursor: pointer; padding: 4px 0;
+}
+.permCheck input {
+  cursor: pointer;
+  accent-color: var(--red);
+  width: 15px; height: 15px;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .layout { flex-direction: column; min-height: unset; }

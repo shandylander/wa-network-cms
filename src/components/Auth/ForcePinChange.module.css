@@ -17,15 +17,20 @@
   box-shadow: var(--shadow-lg);
 }
 
-.logo {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
+.logoWrap {
+  background: var(--navy);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
   margin-bottom: 28px;
 }
 
-.logoWa   { font-size: 28px; font-weight: 700; color: var(--red); }
-.logoText { font-size: 11px; font-weight: 600; color: var(--navy); letter-spacing: 0.08em; }
+.logoImg {
+  height: 30px;
+  width: auto;
+  display: block;
+}
 
 .alert {
   display: flex;

@@ -15,7 +15,6 @@ const SETTING_CARDS = [
     Icon: ShieldCheckIcon,
     title: 'Permissions',
     desc: 'View the role permission matrix.',
-    disabled: true,
   },
 ];
 

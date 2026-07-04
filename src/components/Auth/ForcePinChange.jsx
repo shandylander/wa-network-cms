@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Button from '../UI/Button';
+import logo from '../../assets/logo.png';
 import styles from './ForcePinChange.module.css';
 
 function PinInputRow({ label, value, onChange, onKeyDown, refs }) {
@@ -76,9 +77,8 @@ export default function ForcePinChange() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.logo}>
-          <span className={styles.logoWa}>WA!</span>
-          <span className={styles.logoText}>NETWORK ASIA</span>
+        <div className={styles.logoWrap}>
+          <img src={logo} alt="WA! Network Asia" className={styles.logoImg} />
         </div>
 
         <div className={styles.alert}>

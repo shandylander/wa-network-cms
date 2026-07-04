@@ -153,7 +153,7 @@ export default function PayslipGenerator() {
                     <td className={styles.netCell}>{fmtSGD(r.netPay)}</td>
                     <td>
                       <button className={styles.printIconBtn} title="Print payslip"
-                        onClick={() => printPayslip(r, r.name, month)}>
+                        onClick={() => { if (!printPayslip(r, r.name, month)) toast.error('Popup blocked — allow popups for this site to print.'); }}>
                         <PrinterIcon width={14} />
                       </button>
                     </td>
@@ -170,6 +170,7 @@ export default function PayslipGenerator() {
 }
 
 function PayslipCard({ payslip, name, month }) {
+  const { toast } = useToast();
   const monthLabel = new Intl.DateTimeFormat('en-SG', { timeZone: 'Asia/Singapore', month: 'long', year: 'numeric' })
     .format(new Date(`${month}-01T00:00:00+08:00`));
   return (
@@ -179,7 +180,7 @@ function PayslipCard({ payslip, name, month }) {
           <p className={styles.payslipCardName}>{name}</p>
           <p className={styles.payslipCardMonth}>{monthLabel}</p>
         </div>
-        <button className={styles.printBtn} onClick={() => printPayslip(payslip, name, month)}>
+        <button className={styles.printBtn} onClick={() => { if (!printPayslip(payslip, name, month)) toast.error('Popup blocked — allow popups for this site to print.'); }}>
           <PrinterIcon width={14} /> Print
         </button>
       </div>

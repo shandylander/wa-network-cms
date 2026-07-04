@@ -12,7 +12,7 @@ import { db, firebaseConfig } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { ROLES } from '../../utils/permissions';
+import { ROLES, hasPermission } from '../../utils/permissions';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
 import Modal from '../../components/UI/Modal';
@@ -47,6 +47,19 @@ const COLOR_PALETTE = [
 ];
 
 const CONFIG_DOC = doc(db, 'appConfig', 'userGroups');
+
+const ALL_CUSTOM_PERMISSIONS = [
+  { key: 'view:dashboard',      label: 'View Dashboard' },
+  { key: 'manage:blocks',       label: 'Add / Remove Blocks' },
+  { key: 'view:claims',         label: 'View Finance & Claims' },
+  { key: 'generate:reports',    label: 'Generate Reports' },
+  { key: 'manage:workers',      label: 'Manage Workers' },
+  { key: 'create:subaccounts',  label: 'Create Sub-accounts' },
+  { key: 'reset:pins',          label: 'Reset PINs' },
+  { key: 'manage:announcements',label: 'Manage Announcements' },
+  { key: 'approve:permits',     label: 'Approve Permits' },
+  { key: 'admin:settings',      label: 'System Settings' },
+];
 
 function toKey(label) {
   return label.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
@@ -227,13 +240,14 @@ function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusC
   const isOwnerOrManager = ['owner', 'manager'].includes(myRole);
 
   const [form, setForm] = useState({
-    name:     user.name     ?? '',
-    role:     user.role     ?? 'subcon',
-    team:     user.team     ?? '',
-    parentId: user.parentId ?? '',
-    company:  user.company  ?? '',
-    contact:  user.contact  ?? '',
-    email:    user.email    ?? '',
+    name:              user.name              ?? '',
+    role:              user.role              ?? 'subcon',
+    team:              user.team              ?? '',
+    parentId:          user.parentId          ?? '',
+    company:           user.company           ?? '',
+    contact:           user.contact           ?? '',
+    email:             user.email             ?? '',
+    customPermissions: user.customPermissions ?? [],
   });
   const [saving,    setSaving]    = useState(false);
   const [pinStep,   setPinStep]   = useState(false);
@@ -255,9 +269,10 @@ function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusC
         updatedAt: new Date(),
       };
       if (isOwnerOrManager) {
-        payload.role     = form.role;
-        payload.team     = form.team;
-        payload.parentId = form.parentId.trim() || null;
+        payload.role              = form.role;
+        payload.team              = form.team;
+        payload.parentId          = form.parentId.trim() || null;
+        payload.customPermissions = form.customPermissions;
       }
       await updateDoc(doc(db, 'users', user.userId), payload);
       toast.success(`${form.name} updated`);
@@ -348,6 +363,33 @@ function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusC
           </>
         )}
       </div>
+
+      {isOwnerOrManager && form.role !== 'owner' && (() => {
+        const extra = ALL_CUSTOM_PERMISSIONS.filter(p => !hasPermission(form.role, p.key));
+        return extra.length > 0 ? (
+          <div className={styles.actionSection}>
+            <div className={styles.actionLabel}>Custom Access</div>
+            <p className={styles.permNote}>Grant additional permissions beyond the <strong>{ROLES[form.role]?.label ?? form.role}</strong> role defaults.</p>
+            <div className={styles.permChecks}>
+              {extra.map(p => (
+                <label key={p.key} className={styles.permCheck}>
+                  <input
+                    type="checkbox"
+                    checked={form.customPermissions.includes(p.key)}
+                    onChange={e => setForm(f => ({
+                      ...f,
+                      customPermissions: e.target.checked
+                        ? [...f.customPermissions, p.key]
+                        : f.customPermissions.filter(x => x !== p.key),
+                    }))}
+                  />
+                  <span>{p.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       <div className={styles.modalFooter}>
         <Button variant="secondary" onClick={onClose}>Cancel</Button>

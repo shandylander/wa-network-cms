@@ -1,0 +1,107 @@
+.page { max-width: 900px; }
+
+.header { margin-bottom: 16px; }
+.title  { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.sub    { font-size: 13px; color: var(--text-sec); }
+
+/* Legend */
+.legend {
+  display: flex; gap: 20px; align-items: center;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.legendItem {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--text-sec);
+}
+
+/* Table wrapper */
+.tableWrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+/* Header */
+.featureHead {
+  background: var(--navy);
+  color: rgba(255,255,255,0.7);
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+.roleHead {
+  background: var(--navy);
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 10px 10px;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+/* Group row */
+.groupRow .groupCell {
+  background: var(--surface);
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-sec);
+  padding: 6px 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Data rows */
+.dataRow:hover { background: var(--surface); }
+.featureCell {
+  padding: 10px 14px;
+  font-size: 13px; color: var(--text);
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+/* Cells */
+.cellFull, .cellNone, .cellPartial {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-light);
+}
+.cellFull    { background: var(--green-bg); }
+.cellNone    { background: var(--surface); }
+.cellPartial { background: var(--amber-bg); }
+
+.checkIcon {
+  width: 16px; height: 16px;
+  color: var(--green);
+  display: inline-block; vertical-align: middle;
+}
+.noneIcon {
+  width: 14px; height: 14px;
+  color: var(--border);
+  display: inline-block; vertical-align: middle;
+}
+.partialLabel {
+  font-size: 10px; font-weight: 600;
+  color: var(--amber);
+  white-space: nowrap;
+  display: inline-block;
+}
+.partialDot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--amber);
+  vertical-align: middle;
+}
+
+@media (max-width: 600px) {
+  .roleHead { min-width: 70px; font-size: 10px; }
+  .featureCell { font-size: 12px; padding: 8px 10px; }
+}
