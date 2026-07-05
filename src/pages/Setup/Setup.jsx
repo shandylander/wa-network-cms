@@ -7,24 +7,27 @@ import {
 } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import {
-  writeBatch, doc, setDoc, getDoc, collection,
+  writeBatch, doc, setDoc, getDoc, getDocs, collection,
 } from 'firebase/firestore';
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   ArrowPathIcon,
+  MinusCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from '@heroicons/react/24/solid';
 import { db, firebaseConfig, pinToPassword } from '../../firebase';
-import { USERS_SEED, PROJECT_SEED, PCS_BATCH3_BLOCKS, HSE_DOCS_SEED } from '../../utils/blockData';
+import { PROJECT_SEED, PCS_BATCH3_BLOCKS, HSE_DOCS_SEED } from '../../utils/blockData';
 import styles from './Setup.module.css';
 
 const PROJECT_ID = 'pcs-batch-3';
 
 const STEPS = [
-  { id: 'check',   label: 'Checking existing data' },
-  { id: 'auth',    label: `Creating Firebase Auth accounts (${USERS_SEED.length} users)` },
-  { id: 'users',   label: 'Writing user profiles to Firestore' },
-  { id: 'project', label: 'Creating project: PCS Batch 3' },
+  { id: 'check',   label: 'Checking system state' },
+  { id: 'auth',    label: 'Creating admin account in Firebase Auth' },
+  { id: 'users',   label: 'Writing admin profile to Firestore' },
+  { id: 'project', label: 'Creating PCS Batch 3 project' },
   { id: 'blocks',  label: `Seeding block data (${PCS_BATCH3_BLOCKS.length} blocks)` },
   { id: 'hse',     label: `Loading HSE documents (${HSE_DOCS_SEED.length} files)` },
   { id: 'flag',    label: 'Finalising setup' },
@@ -34,13 +37,17 @@ function StepRow({ step, status, error }) {
   return (
     <div className={[styles.step, styles[status]].join(' ')}>
       <div className={styles.stepIcon}>
-        {status === 'done'    && <CheckCircleIcon  width={18} />}
+        {status === 'done'    && <CheckCircleIcon   width={18} />}
+        {status === 'skipped' && <MinusCircleIcon   width={18} />}
         {status === 'error'   && <ExclamationCircleIcon width={18} />}
         {status === 'running' && <ArrowPathIcon width={18} className={styles.spin} />}
-        {(status === 'pending') && <span className={styles.dot} />}
+        {status === 'pending' && <span className={styles.dot} />}
       </div>
       <div>
-        <p className={styles.stepLabel}>{step.label}</p>
+        <p className={styles.stepLabel}>
+          {step.label}
+          {status === 'skipped' && <span className={styles.skipNote}> — already done, skipped</span>}
+        </p>
         {error && <p className={styles.stepError}>{error}</p>}
       </div>
     </div>
@@ -55,20 +62,36 @@ function getSecondaryAuth() {
 
 export default function Setup() {
   const navigate = useNavigate();
-  const [phase,    setPhase]    = useState('idle'); // idle | running | done | error
+
+  const [phase,    setPhase]    = useState('idle');
   const [statuses, setStatuses] = useState(() =>
     Object.fromEntries(STEPS.map(s => [s.id, 'pending']))
   );
-  const [errors,   setErrors]   = useState({});
-  const [alreadySeeded, setAlreadySeeded] = useState(false);
+  const [errors,  setErrors]   = useState({});
   const [checking, setChecking] = useState(true);
+  const [alreadyDone, setAlreadyDone] = useState(false);
+  const [createdId, setCreatedId] = useState('');
+
+  // Form state
+  const [adminId,   setAdminId]   = useState('');
+  const [adminName, setAdminName] = useState('');
+  const [adminPin,  setAdminPin]  = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
+  const [showPin,    setShowPin]    = useState(false);
+
+  // Form validation
+  const idTrimmed  = adminId.trim().toUpperCase();
+  const nameTrimmed = adminName.trim();
+  const pinOk      = /^\d{4}$/.test(adminPin);
+  const pinMatch   = adminPin === pinConfirm;
+  const formValid  = idTrimmed && nameTrimmed && pinOk && pinMatch;
 
   // Check if already seeded
   useEffect(() => {
     const check = async () => {
       try {
         const snap = await getDoc(doc(db, '_metadata', 'setup'));
-        if (snap.exists()) setAlreadySeeded(true);
+        if (snap.exists()) setAlreadyDone(true);
       } catch (_) {}
       setChecking(false);
     };
@@ -81,93 +104,112 @@ export default function Setup() {
   };
 
   const runSeed = async () => {
+    if (!formValid) return;
     setPhase('running');
 
     try {
-      // ── Step 1: Check ─────────────────────────────────────────────────
+      // ── Step 1: Check existing data ─────────────────────────────────
       setStep('check', 'running');
-      await getDoc(doc(db, 'projects', PROJECT_ID));
+      const [projectSnap, blocksSnap, hseSnap] = await Promise.all([
+        getDoc(doc(db, 'projects', PROJECT_ID)),
+        getDocs(collection(db, 'projects', PROJECT_ID, 'blocks')),
+        getDocs(collection(db, 'projects', PROJECT_ID, 'documents')),
+      ]);
+      const projectExists = projectSnap.exists();
+      const blocksExist   = blocksSnap.size > 0;
+      const hseExist      = hseSnap.size > 0;
       setStep('check', 'done');
 
-      // ── Step 2: Firebase Auth users ───────────────────────────────────
+      // ── Step 2: Create admin Firebase Auth account ───────────────────
       setStep('auth', 'running');
       const secAuth = getSecondaryAuth();
-      for (const user of USERS_SEED) {
-        const email = `${user.userId}@wanetwork.cms`;
-        try {
-          await createUserWithEmailAndPassword(secAuth, email, pinToPassword(user.pin));
-          await fbSignOut(secAuth);
-        } catch (err) {
-          if (err.code === 'auth/email-already-in-use') {
-            // Already exists — skip silently
-            try { await fbSignOut(secAuth); } catch (_) {}
-          } else {
-            throw new Error(`Auth failed for ${user.userId}: ${err.message}`);
-          }
+      const email   = `${idTrimmed.toLowerCase()}@wanetwork.cms`;
+      try {
+        await createUserWithEmailAndPassword(secAuth, email, pinToPassword(adminPin));
+        await fbSignOut(secAuth);
+      } catch (err) {
+        if (err.code === 'auth/email-already-in-use') {
+          // Account exists — acceptable if re-running
+          try { await fbSignOut(secAuth); } catch (_) {}
+        } else {
+          throw new Error(`Auth creation failed: ${err.message}`);
         }
       }
       setStep('auth', 'done');
 
-      // ── Step 3: User profiles ─────────────────────────────────────────
+      // ── Step 3: Write admin Firestore profile ────────────────────────
       setStep('users', 'running');
-      const userBatch = writeBatch(db);
-      USERS_SEED.forEach(u => {
-        const { pin, ...profile } = u; // never store the PIN
-        userBatch.set(doc(db, 'users', u.userId), {
-          ...profile,
-          createdAt: new Date(),
-        });
+      await setDoc(doc(db, 'users', idTrimmed), {
+        userId:     idTrimmed,
+        name:       nameTrimmed,
+        role:       'owner',
+        team:       'none',
+        parentId:   null,
+        firstLogin: true,
+        status:     'active',
+        createdAt:  new Date(),
       });
-      await userBatch.commit();
+      setCreatedId(idTrimmed);
       setStep('users', 'done');
 
-      // ── Step 4: Project ───────────────────────────────────────────────
-      setStep('project', 'running');
-      await setDoc(doc(db, 'projects', PROJECT_ID), {
-        ...PROJECT_SEED,
-        createdAt: new Date(),
-      });
-      setStep('project', 'done');
-
-      // ── Step 5: Blocks (175 — batched in groups of 200) ──────────────
-      setStep('blocks', 'running');
-      const BATCH_SIZE = 200;
-      for (let i = 0; i < PCS_BATCH3_BLOCKS.length; i += BATCH_SIZE) {
-        const chunk = PCS_BATCH3_BLOCKS.slice(i, i + BATCH_SIZE);
-        const blockBatch = writeBatch(db);
-        chunk.forEach(block => {
-          const ref = doc(collection(db, 'projects', PROJECT_ID, 'blocks'));
-          blockBatch.set(ref, { ...block, createdAt: new Date() });
+      // ── Step 4: Project ──────────────────────────────────────────────
+      if (projectExists) {
+        setStep('project', 'skipped');
+      } else {
+        setStep('project', 'running');
+        await setDoc(doc(db, 'projects', PROJECT_ID), {
+          ...PROJECT_SEED,
+          createdAt: new Date(),
         });
-        await blockBatch.commit();
+        setStep('project', 'done');
       }
-      setStep('blocks', 'done');
 
-      // ── Step 6: HSE documents ─────────────────────────────────────────
-      setStep('hse', 'running');
-      const hseBatch = writeBatch(db);
-      HSE_DOCS_SEED.forEach(doc_ => {
-        const ref = doc(db, 'projects', PROJECT_ID, 'documents', doc_.id);
-        hseBatch.set(ref, { ...doc_, uploadedAt: new Date(), uploadedBy: 'WA001' });
-      });
-      await hseBatch.commit();
-      setStep('hse', 'done');
+      // ── Step 5: Blocks (skip if already seeded to avoid duplicates) ──
+      if (blocksExist) {
+        setStep('blocks', 'skipped');
+      } else {
+        setStep('blocks', 'running');
+        const BATCH_SIZE = 200;
+        for (let i = 0; i < PCS_BATCH3_BLOCKS.length; i += BATCH_SIZE) {
+          const chunk = PCS_BATCH3_BLOCKS.slice(i, i + BATCH_SIZE);
+          const blockBatch = writeBatch(db);
+          chunk.forEach(block => {
+            const ref = doc(collection(db, 'projects', PROJECT_ID, 'blocks'));
+            blockBatch.set(ref, { ...block, createdAt: new Date() });
+          });
+          await blockBatch.commit();
+        }
+        setStep('blocks', 'done');
+      }
 
-      // ── Step 7: Flag setup as complete ────────────────────────────────
+      // ── Step 6: HSE documents ────────────────────────────────────────
+      if (hseExist) {
+        setStep('hse', 'skipped');
+      } else {
+        setStep('hse', 'running');
+        const hseBatch = writeBatch(db);
+        HSE_DOCS_SEED.forEach(docData => {
+          const ref = doc(db, 'projects', PROJECT_ID, 'documents', docData.id);
+          hseBatch.set(ref, { ...docData, uploadedAt: new Date(), uploadedBy: idTrimmed });
+        });
+        await hseBatch.commit();
+        setStep('hse', 'done');
+      }
+
+      // ── Step 7: Flag setup complete ──────────────────────────────────
       setStep('flag', 'running');
       await setDoc(doc(db, '_metadata', 'setup'), {
-        seededAt:    new Date(),
-        projectId:   PROJECT_ID,
-        blockCount:  PCS_BATCH3_BLOCKS.length,
-        userCount:   USERS_SEED.length,
-        version:     '1.0',
+        seededAt:   new Date(),
+        projectId:  PROJECT_ID,
+        blockCount: PCS_BATCH3_BLOCKS.length,
+        adminId:    idTrimmed,
+        version:    '2.0',
       });
       setStep('flag', 'done');
 
       setPhase('done');
     } catch (err) {
       console.error('Seed error:', err);
-      // Mark the currently running step as error
       setStatuses(p => {
         const updated = { ...p };
         const runningKey = Object.keys(updated).find(k => updated[k] === 'running');
@@ -179,29 +221,36 @@ export default function Setup() {
     }
   };
 
-  const doneCount  = Object.values(statuses).filter(s => s === 'done').length;
-  const progress   = Math.round((doneCount / STEPS.length) * 100);
+  const doneCount = Object.values(statuses).filter(s => s === 'done' || s === 'skipped').length;
+  const progress  = Math.round((doneCount / STEPS.length) * 100);
+
+  const Logo = () => (
+    <div className={styles.logo}>
+      <span className={styles.wa}>WA!</span>
+      <span className={styles.net}>NETWORK ASIA</span>
+    </div>
+  );
 
   if (checking) {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.logo}><span className={styles.wa}>WA!</span><span className={styles.net}>NETWORK ASIA</span></div>
+          <Logo />
           <p className={styles.checking}>Checking system state…</p>
         </div>
       </div>
     );
   }
 
-  if (alreadySeeded) {
+  if (alreadyDone) {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.logo}><span className={styles.wa}>WA!</span><span className={styles.net}>NETWORK ASIA</span></div>
+          <Logo />
           <div className={styles.alreadyDone}>
             <CheckCircleIcon width={40} className={styles.bigCheck} />
             <h2>System already initialised</h2>
-            <p>The database has been seeded. You can sign in now.</p>
+            <p>The database has been seeded. Sign in to continue.</p>
             <button className={styles.loginBtn} onClick={() => navigate('/login')}>
               Go to Sign In →
             </button>
@@ -214,25 +263,72 @@ export default function Setup() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        {/* Logo */}
-        <div className={styles.logo}>
-          <span className={styles.wa}>WA!</span>
-          <span className={styles.net}>NETWORK ASIA</span>
-        </div>
-
-        <h1 className={styles.heading}>First-time Setup</h1>
+        <Logo />
+        <h1 className={styles.heading}>System Setup</h1>
         <p className={styles.sub}>
-          This will create all user accounts and seed the PCS Batch 3 project data into Firebase.
-          Run this once only.
+          Create your admin account and seed the PCS Batch 3 project data.
+          After setup, add other users via <strong>Settings → Users</strong>.
         </p>
 
-        {/* Info box */}
-        <div className={styles.infoBox}>
-          <div className={styles.infoRow}><span>Users to create</span><strong>{USERS_SEED.length}</strong></div>
-          <div className={styles.infoRow}><span>Blocks to seed</span><strong>{PCS_BATCH3_BLOCKS.length}</strong></div>
-          <div className={styles.infoRow}><span>HSE documents</span><strong>{HSE_DOCS_SEED.length}</strong></div>
-          <div className={styles.infoRow}><span>Project</span><strong>PCS Batch 3</strong></div>
-        </div>
+        {/* Admin account form */}
+        {phase === 'idle' && (
+          <div className={styles.adminForm}>
+            <div className={styles.formSection}>Admin Account</div>
+            <div className={styles.field}>
+              <label className={styles.fieldLbl}>User ID</label>
+              <input
+                className={styles.fieldInput}
+                value={adminId}
+                onChange={e => setAdminId(e.target.value.toUpperCase())}
+                placeholder="e.g. ADMIN or WA001"
+                maxLength={20}
+                autoFocus
+              />
+              <span className={styles.fieldHint}>This is the ID you will use to log in. Cannot be changed later.</span>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.fieldLbl}>Full Name</label>
+              <input
+                className={styles.fieldInput}
+                value={adminName}
+                onChange={e => setAdminName(e.target.value)}
+                placeholder="e.g. Andy Ng"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.fieldLbl}>Initial PIN (4 digits)</label>
+              <div className={styles.pinWrap}>
+                <input
+                  className={styles.fieldInput}
+                  type={showPin ? 'text' : 'password'}
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={adminPin}
+                  onChange={e => setAdminPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="••••"
+                />
+                <button type="button" className={styles.pinToggle} onClick={() => setShowPin(v => !v)}>
+                  {showPin ? <EyeSlashIcon width={16} /> : <EyeIcon width={16} />}
+                </button>
+              </div>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.fieldLbl}>Confirm PIN</label>
+              <input
+                className={[styles.fieldInput, pinConfirm && !pinMatch ? styles.fieldError : ''].join(' ')}
+                type={showPin ? 'text' : 'password'}
+                inputMode="numeric"
+                maxLength={4}
+                value={pinConfirm}
+                onChange={e => setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="••••"
+              />
+              {pinConfirm && !pinMatch && (
+                <span className={styles.fieldErrMsg}>PINs do not match</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         {phase !== 'idle' && (
@@ -256,7 +352,6 @@ export default function Setup() {
           </div>
         )}
 
-        {/* Error message */}
         {errors._global && (
           <p className={styles.globalError}>⚠ {errors._global}</p>
         )}
@@ -264,8 +359,8 @@ export default function Setup() {
         {/* Actions */}
         <div className={styles.actions}>
           {phase === 'idle' && (
-            <button className={styles.startBtn} onClick={runSeed}>
-              Initialise System
+            <button className={styles.startBtn} onClick={runSeed} disabled={!formValid}>
+              Initialize System
             </button>
           )}
           {phase === 'running' && (
@@ -285,9 +380,9 @@ export default function Setup() {
           )}
         </div>
 
-        {phase === 'idle' && (
+        {phase === 'done' && createdId && (
           <p className={styles.hint}>
-            After setup, sign in as <strong>WA001</strong> with PIN <strong>1234</strong>.
+            Sign in as <strong>{createdId}</strong> with the PIN you just set.
           </p>
         )}
       </div>

@@ -1,0 +1,120 @@
+.page    { padding: 20px 16px; max-width: 820px; margin: 0 auto; }
+.loading { display: flex; justify-content: center; padding: 60px; }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Header */
+.header   { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 12px; }
+.title    { font-size: 20px; font-weight: 700; color: var(--text); margin: 0 0 3px; }
+.subtitle { font-size: 13px; color: var(--text-sec); margin: 0; }
+.newBtn   { display: flex; align-items: center; gap: 6px; background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.newBtn:hover { background: var(--red-dark); }
+
+/* Toolbar */
+.toolbar    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.filterRow  { display: flex; gap: 6px; }
+.filterBtn  { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
+.filterBtn:hover { border-color: var(--navy); color: var(--navy); }
+.filterActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+.countLabel { font-size: 12px; color: var(--text-muted); }
+
+/* Empty */
+.empty   { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text-muted); padding: 60px 20px; text-align: center; }
+.empty p { font-size: 14px; margin: 0; }
+
+/* List */
+.list { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 16px; border: none; background: none;
+  cursor: pointer; border-bottom: 1px solid var(--border-light);
+  text-align: left; font-family: inherit; width: 100%; transition: background .1s;
+}
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--surface); }
+.rowRead { opacity: .6; }
+
+.rowLeft  { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+.rowBody  { flex: 1; min-width: 0; }
+.rowMsg   { font-size: 13.5px; color: var(--text); line-height: 1.4; margin: 0 0 5px; word-break: break-word; }
+.rowMeta  { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.dot      { color: var(--border); font-size: 11px; }
+.metaText { font-size: 11px; color: var(--text-sec); }
+.rowRight { flex-shrink: 0; }
+
+/* Severity dot (colored circle) */
+.sevDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.sevCritical.sevDot { background: var(--red); }
+.sevWarning.sevDot  { background: var(--amber); }
+.sevInfo.sevDot     { background: var(--blue); }
+
+/* Severity badge */
+.sevBadge     { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.sevCritical.sevBadge { background: var(--red-light); color: var(--red); }
+.sevWarning.sevBadge  { background: var(--amber-bg); color: var(--amber); }
+.sevInfo.sevBadge     { background: var(--blue-bg); color: var(--blue); }
+
+/* Modal severity badge (standalone, no .sevDot/.sevBadge combinator needed) */
+.sevCritical { background: var(--red-light); color: var(--red); }
+.sevWarning  { background: var(--amber-bg);  color: var(--amber); }
+.sevInfo     { background: var(--blue-bg);   color: var(--blue); }
+
+.audBadge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--surface); color: var(--text-sec); border: 1px solid var(--border); }
+
+/* Ack pill in row */
+.ackPill     { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--amber); background: var(--amber-bg); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.ackPillDone { color: var(--green); background: var(--green-bg); }
+.readIcon    { color: var(--green); }
+.unreadDot   { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+
+/* Composer card */
+.composerCard    { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.composerHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.composerTitle   { font-size: 14px; font-weight: 600; color: var(--text); }
+.composerClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+.composerInput   { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; color: var(--text); background: #fff; box-sizing: border-box; margin-bottom: 8px; }
+.composerRow     { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.composerSelect  { flex: 1; min-width: 120px; border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px; font-size: 12px; color: var(--text); background: #fff; }
+.composerActions { display: flex; justify-content: flex-end; gap: 8px; }
+.cancelBtn { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 7px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.sendBtn   { background: var(--red); color: #fff; border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.sendBtn:disabled { opacity: .6; cursor: default; }
+
+/* Modal overlay */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal   { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 540px; max-height: 88vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+
+.modalHead  { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border-light); }
+.modalTitle { font-size: 14px; font-weight: 700; color: var(--text); }
+.modalClose { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
+
+.modalBody { padding: 16px 18px; border-bottom: 1px solid var(--border-light); }
+.modalMsg  { font-size: 14px; color: var(--text); line-height: 1.55; margin: 8px 0 6px; }
+.modalMeta { font-size: 11px; color: var(--text-sec); }
+
+.modalFooter { padding: 14px 18px; }
+.ackBtn { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; background: var(--green); color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.readConfirm { display: flex; align-items: center; gap: 6px; justify-content: center; font-size: 13px; font-weight: 600; color: var(--green); }
+
+/* Ack tracking columns */
+.ackCols { display: grid; grid-template-columns: 1fr 1fr; }
+.ackCol  { padding: 14px 18px; min-height: 80px; }
+.ackCol:first-child { border-right: 1px solid var(--border-light); }
+
+.ackColHead  { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+.headAcked   { color: var(--green); }
+.headPending { color: var(--amber); }
+
+.ackEmpty { font-size: 12px; color: var(--text-muted); text-align: center; padding: 10px 0; margin: 0; }
+
+.ackUser { padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+.ackUser:last-child { border-bottom: none; }
+.ackName { display: block; font-size: 12.5px; color: var(--text); font-weight: 500; }
+.ackId   { display: block; font-size: 11px; color: var(--text-sec); }
+
+@media (max-width: 480px) {
+  .ackCols { grid-template-columns: 1fr; }
+  .ackCol:first-child { border-right: none; border-bottom: 1px solid var(--border-light); }
+  .rowMsg { font-size: 13px; }
+}

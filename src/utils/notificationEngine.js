@@ -37,6 +37,8 @@ function certAlerts(workers) {
   return alerts;
 }
 
+const MGMT_ROLES = ['owner', 'manager', 'supervisor'];
+
 async function announcementAlerts(userProfile) {
   const alerts = [];
   try {
@@ -44,7 +46,11 @@ async function announcementAlerts(userProfile) {
     snap.docs.forEach(d => {
       const a = d.data();
       const audience = a.audience ?? 'all';
-      const targeted = audience === 'all' || audience === userProfile.team || audience === userProfile.role;
+      const targeted =
+        audience === 'all' ||
+        audience === userProfile.team ||
+        audience === userProfile.role ||
+        (audience === 'management' && MGMT_ROLES.includes(userProfile.role));
       const read = (a.readBy ?? []).includes(userProfile.userId);
       if (targeted && !read) {
         alerts.push({

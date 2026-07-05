@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, addDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -33,11 +33,41 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
     contact:     worker?.contact     ?? '',
     team:        worker?.team        ?? (isAdmin ? '' : userTeam ?? ''),
     status:      worker?.status      ?? 'active',
+    linkedUserId: worker?.linkedUserId ?? '',
   });
   const [certs,    setCerts]    = useState(worker?.certs ?? []);
   const [newCert,  setNewCert]  = useState(EMPTY_CERT);
   const [showAdd,  setShowAdd]  = useState(false);
   const [saving,   setSaving]   = useState(false);
+
+  // Users available for import (add mode only)
+  const [userList, setUserList] = useState([]);
+  useEffect(() => {
+    if (mode !== 'add') return;
+    getDocs(collection(db, 'users')).then(snap => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(u => u.status === 'active')
+        .sort((a, b) => a.name?.localeCompare(b.name));
+      setUserList(list);
+    }).catch(() => {});
+  }, [mode]);
+
+  const handleImportUser = (userId) => {
+    if (!userId) {
+      setForm(f => ({ ...f, linkedUserId: '' }));
+      return;
+    }
+    const u = userList.find(u => u.userId === userId);
+    if (!u) return;
+    setForm(f => ({
+      ...f,
+      linkedUserId: u.userId,
+      name:    u.name    || f.name,
+      team:    u.team    || f.team,
+      contact: u.contact || f.contact,
+    }));
+  };
 
   const setF = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -77,6 +107,29 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
 
   return (
     <Modal isOpen onClose={onClose} title={mode === 'add' ? 'Add Worker' : 'Edit Worker'} size="md">
+
+      {/* Import from existing user account */}
+      {mode === 'add' && userList.length > 0 && (
+        <div className={styles.importBar}>
+          <label className={styles.importLabel}>Import from user account</label>
+          <select
+            className={styles.importSelect}
+            value={form.linkedUserId}
+            onChange={e => handleImportUser(e.target.value)}
+          >
+            <option value="">— Enter manually —</option>
+            {userList.map(u => (
+              <option key={u.userId} value={u.userId}>
+                {u.name} ({u.userId}) · {TEAMS[u.team] ?? u.team ?? '—'}
+              </option>
+            ))}
+          </select>
+          {form.linkedUserId && (
+            <p className={styles.importHint}>Name, team and contact pre-filled. Add NRIC, designation and certs below.</p>
+          )}
+        </div>
+      )}
+
       <div className={styles.section}>
         <h4 className={styles.sectionTitle}>Basic Info</h4>
         <div className={styles.grid2}>

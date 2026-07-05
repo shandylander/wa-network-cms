@@ -118,6 +118,22 @@ export default function MyLeave() {
       };
       const ref = await addDoc(collection(db, 'leaveApplications'), payload);
       setApps(a => [{ id: ref.id, ...payload }, ...a]);
+
+      // Notify management of the leave request (non-fatal)
+      const typeLbl = LEAVE_TYPES.find(t => t.value === form.type)?.label ?? form.type;
+      const dateRange = form.halfDay
+        ? `${fmtDate(form.dateFrom)} (${form.halfDayPeriod} half)`
+        : form.dateTo && form.dateTo !== form.dateFrom
+          ? `${fmtDate(form.dateFrom)} – ${fmtDate(form.dateTo)}`
+          : fmtDate(form.dateFrom);
+      addDoc(collection(db, 'announcements'), {
+        message: `Leave request: ${userProfile.name} — ${typeLbl}, ${dateRange} (${days} day${days !== 1 ? 's' : ''})`,
+        severity: 'info', audience: 'management',
+        createdBy: userProfile.userId, createdByName: userProfile.name,
+        createdAt: Timestamp.now(), readBy: [],
+        isSystemNotification: true, leaveId: ref.id,
+      }).catch(() => {});
+
       toast.success('Leave application submitted');
       setShowModal(false);
       setForm({ type: 'AL', dateFrom: '', dateTo: '', halfDay: false, halfDayPeriod: 'AM', reason: '', mcUrl: '' });

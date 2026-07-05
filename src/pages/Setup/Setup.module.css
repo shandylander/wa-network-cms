@@ -203,3 +203,23 @@
 .loginBtn:hover { background: var(--navy-mid); }
 
 .actions { margin-top: 4px; }
+
+/* Admin form */
+.adminForm    { margin-bottom: 24px; }
+.formSection  { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.field        { margin-bottom: 14px; }
+.fieldLbl     { display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; }
+.fieldInput   { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; font-size: 14px; color: var(--text); background: #fff; box-sizing: border-box; font-family: inherit; }
+.fieldInput:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 2px rgba(26,26,46,.08); }
+.fieldError   { border-color: var(--red); }
+.fieldHint    { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.fieldErrMsg  { display: block; font-size: 11px; color: var(--red); margin-top: 4px; }
+.pinWrap      { position: relative; }
+.pinWrap .fieldInput { padding-right: 40px; }
+.pinToggle    { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; }
+.pinToggle:hover { color: var(--text); }
+
+/* Skipped step style */
+.skipped .stepIcon  { color: var(--text-muted); }
+.skipped .stepLabel { color: var(--text-muted); }
+.skipNote           { font-size: 11px; font-weight: 400; color: var(--text-muted); }

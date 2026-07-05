@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, arrayUnion, Timestamp, onSnapshot } from 'firebase/firestore';
 import {
   BellIcon, XMarkIcon, MegaphoneIcon, ExclamationTriangleIcon,
   IdentificationIcon, ShieldExclamationIcon, BanknotesIcon, PlusIcon,
@@ -110,7 +110,15 @@ export default function NotificationBell() {
     }
   }, [userProfile]);
 
+  // Initial load
   useEffect(() => { load(); }, [load]);
+
+  // Re-run whenever the announcements collection changes (real-time badge updates)
+  useEffect(() => {
+    if (!userProfile) return;
+    const unsub = onSnapshot(collection(db, 'announcements'), () => load(), () => {});
+    return unsub;
+  }, [userProfile, load]);
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setComposing(false); } };
@@ -173,6 +181,9 @@ export default function NotificationBell() {
               })
             )}
           </div>
+          <button className={styles.viewAll} onClick={() => { setOpen(false); navigate('/announcements'); }}>
+            View all announcements →
+          </button>
         </div>
       )}
     </div>
