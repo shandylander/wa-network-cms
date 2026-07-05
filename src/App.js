@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ToastContainer from './components/UI/Toast';
 import LoginForm      from './components/Auth/LoginForm';
 import ForcePinChange from './components/Auth/ForcePinChange';
@@ -20,6 +21,7 @@ import LeaveManagement from './pages/HR/LeaveManagement';
 import SalaryCalculator from './pages/HR/SalaryCalculator';
 import PettyCash       from './pages/HR/PettyCash';
 import Finance         from './pages/Finance/Finance';
+import UploadsAudit    from './pages/Admin/UploadsAudit';
 import Announcements   from './pages/Announcements/Announcements';
 import Setup           from './pages/Setup/Setup';
 import './App.css';
@@ -61,6 +63,7 @@ function ProtectedRoutes() {
         <Route path="salary"            element={<SalaryCalculator />} />
         <Route path="petty-cash"        element={<PettyCash />} />
         <Route path="finance"           element={<Finance />} />
+        <Route path="audit"             element={<UploadsAudit />} />
         <Route path="announcements"     element={<Announcements />} />
         <Route path="profile"           element={<Profile />} />
         <Route path="settings"          element={<Settings />} />
@@ -76,6 +79,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <LanguageProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/setup" element={<Setup />} />
@@ -84,6 +88,7 @@ export default function App() {
           </Routes>
           <ToastContainer />
         </BrowserRouter>
+        </LanguageProvider>
       </ToastProvider>
     </AuthProvider>
   );

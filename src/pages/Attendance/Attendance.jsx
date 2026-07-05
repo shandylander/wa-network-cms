@@ -4,6 +4,7 @@ import ClockPanel   from './ClockPanel';
 import TeamView     from './TeamView';
 import PhotoReview  from './PhotoReview';
 import SubconAudit  from './SubconAudit';
+import WorkerClock  from '../Worker/WorkerClock';
 import styles from './Attendance.module.css';
 
 const TABS = {
@@ -28,6 +29,11 @@ export default function Attendance() {
   const tabs = TABS[role] ?? ['clock'];
 
   const [active, setActive] = useState(tabs[0] ?? 'clock');
+
+  // Field workers get the simplified big-button experience
+  if (role === 'staff' || role === 'subcon') {
+    return <WorkerClock />;
+  }
 
   if (tabs.length === 0) {
     return <p style={{ padding: 32, color: 'var(--text-sec)' }}>Attendance is not available for your role.</p>;

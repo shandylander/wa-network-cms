@@ -12,6 +12,7 @@ import {
   BanknotesIcon,
   ReceiptPercentIcon,
   CurrencyDollarIcon,
+  DocumentMagnifyingGlassIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   UserCircleIcon,
@@ -133,6 +134,15 @@ export default function Sidebar() {
             </NavLink>
           );
         })}
+
+        {/* Uploads audit — management only */}
+        {['owner', 'manager'].includes(role) && (
+          <NavLink to="/audit"
+            className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
+            <DocumentMagnifyingGlassIcon className={styles.navIcon} />
+            <span>Uploads Audit</span>
+          </NavLink>
+        )}
 
         <p className={styles.navLabel} style={{ marginTop: 8 }}>Account</p>
         {ACCOUNT.map(({ to, label, Icon, perm }) => {

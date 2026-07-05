@@ -4,6 +4,7 @@ import { PlusIcon, XMarkIcon, CheckIcon, ReceiptPercentIcon } from '@heroicons/r
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import WorkerClaims from '../Worker/WorkerClaims';
 import styles from './HR.module.css';
 
 const CATEGORIES = [
@@ -25,6 +26,7 @@ export default function PettyCash() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const isAdmin = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const isWorker = userProfile?.role === 'staff';
 
   const [claims,    setClaims]    = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -55,7 +57,12 @@ export default function PettyCash() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadClaims(); }, [tab]); // eslint-disable-line
+  useEffect(() => { if (!isWorker) loadClaims(); }, [tab]); // eslint-disable-line
+
+  // Field workers get the simplified photo-first experience
+  if (isWorker) {
+    return <WorkerClaims />;
+  }
 
   const submit = async (e) => {
     e.preventDefault();

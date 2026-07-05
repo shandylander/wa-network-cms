@@ -124,6 +124,22 @@ service cloud.firestore {
       allow delete: if ownerOrManager();
     }
 
+    // ── ANNOUNCEMENTS ──────────────────────────────────────────────────────
+    match /announcements/{annId} {
+      allow read: if signedIn();
+      // Owner/manager can post anything; signed-in users can post system
+      // notifications (leave requests etc.) targeted to management only
+      allow create: if ownerOrManager()
+        || (signedIn()
+            && request.resource.data.isSystemNotification == true
+            && request.resource.data.audience == 'management');
+      allow update: if ownerOrManager()
+        // Any signed-in user may add their own userId to readBy (acknowledge)
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
+      allow delete: if ownerOrManager();
+    }
+
     // ── RA LIBRARY ─────────────────────────────────────────────────────────
     match /raLibrary/{raId} {
       allow read:  if signedIn();
@@ -171,7 +187,7 @@ service cloud.firestore {
     }
     match /pettyCashClaims/{id} {
       allow read: if ownerOrManager() || isSupervisor()
-        || resource.data.submittedBy == uid();
+        || resource.data.userId == uid();
       allow create: if signedIn();
       allow update, delete: if ownerOrManager();
     }

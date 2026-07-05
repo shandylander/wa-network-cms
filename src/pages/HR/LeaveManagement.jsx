@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import MyLeave       from './MyLeave';
 import ApprovalQueue from './ApprovalQueue';
 import LeaveSettings from './LeaveSettings';
+import WorkerLeave   from '../Worker/WorkerLeave';
 import styles from './HR.module.css';
 
 const TABS = {
@@ -24,6 +25,11 @@ export default function LeaveManagement() {
   const tabs = TABS[role] ?? ['my'];
 
   const [active, setActive] = useState(tabs[0] ?? 'my');
+
+  // Field workers get the simplified wizard experience
+  if (role === 'staff') {
+    return <WorkerLeave />;
+  }
 
   if (tabs.length === 0) {
     return <p style={{ padding: 32, color: 'var(--text-sec)' }}>Leave management is not available for your role.</p>;

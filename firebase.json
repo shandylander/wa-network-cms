@@ -8,6 +8,10 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": {
+    "source": "functions",
+    "codebase": "default"
+  },
   "hosting": {
     "public": "build",
     "ignore": [
