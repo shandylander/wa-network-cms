@@ -17,10 +17,16 @@ export default function PhotoReview() {
   const [dateTo,    setDateTo]   = useState(todaySG());
   const [lightbox,  setLightbox] = useState(null);
 
-  // Load own-team staff list for the selector
+  // Load everyone who clocks attendance — own employees regardless of the
+  // team value stored on their user record (some staff have team 'none').
   useEffect(() => {
-    getDocs(query(collection(db, 'users'), where('team', '==', 'own'), where('status', '==', 'active')))
-      .then(snap => setStaff(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    getDocs(query(collection(db, 'users'), where('status', '==', 'active')))
+      .then(snap => setStaff(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(u => ['staff', 'supervisor', 'manager'].includes(u.role))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      ))
       .catch(() => {});
   }, []);
 
@@ -43,7 +49,10 @@ export default function PhotoReview() {
         where('date', '<=', dateTo),
         orderBy('date', 'desc')
       ));
-      setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      // Newest day first; within a day, group alphabetically so each
+      // person's in/out pair sits together for buddy-clocking checks
+      setRecords(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name)));
     } catch {
       toast.error('Failed to load records');
     } finally {
@@ -84,7 +93,7 @@ export default function PhotoReview() {
               {s.name}
             </button>
           ))}
-          {staff.length === 0 && <span className={styles.filterLbl}>No own-team staff found</span>}
+          {staff.length === 0 && <span className={styles.filterLbl}>No active staff found</span>}
         </div>
       </div>
 
