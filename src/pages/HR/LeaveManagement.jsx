@@ -6,8 +6,9 @@ import LeaveSettings from './LeaveSettings';
 import WorkerLeave   from '../Worker/WorkerLeave';
 import styles from './HR.module.css';
 
+// Owner approves leave but does not apply for it — no 'my' tab.
 const TABS = {
-  owner:      ['my', 'queue', 'settings'],
+  owner:      ['queue', 'settings'],
   manager:    ['my', 'queue', 'settings'],
   supervisor: ['my', 'queue'],
   staff:      ['my'],
