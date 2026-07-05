@@ -29,13 +29,14 @@ This is a production React + Firebase web application for **WA! Network Asia**, 
 ## FIREBASE CONFIG
 
 ```javascript
+// Values stored in .env.local — see REACT_APP_FIREBASE_* variables
 const firebaseConfig = {
-  apiKey: "AIzaSyBuQvrSt2yt1fktAKAaPpQwdrihLib78Jo",
-  authDomain: "wa-network-cms.firebaseapp.com",
-  projectId: "wa-network-cms",
-  storageBucket: "wa-network-cms.firebasestorage.app",
-  messagingSenderId: "787547203117",
-  appId: "1:787547203117:web:3a6545f7be055244f03aa4"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
 ```
 
