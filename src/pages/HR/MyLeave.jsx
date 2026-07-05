@@ -6,6 +6,7 @@ import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
 import styles from './HR.module.css';
 
 const LEAVE_TYPES = [
@@ -41,7 +42,7 @@ export default function MyLeave() {
   const userId  = userProfile?.userId;
   const year    = new Date().getFullYear();
 
-  const [entitlement, setEntitlement] = useState({ al: 0, mc: 0 });
+  const [entitlement, setEntitlement] = useState({ al: DEFAULT_AL, mc: DEFAULT_MC });
   const [apps,        setApps]        = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [showModal,   setShowModal]   = useState(false);
@@ -58,7 +59,10 @@ export default function MyLeave() {
         getDocs(query(collection(db, 'leaveEntitlements'), where('userId', '==', userId))),
         getDocs(query(collection(db, 'leaveApplications'), where('userId', '==', userId), where('year', '==', year))),
       ]);
-      if (!entSnap.empty) setEntitlement(entSnap.docs[0].data());
+      if (!entSnap.empty) {
+        const ent = entSnap.docs[0].data();
+        setEntitlement({ al: ent.al ?? DEFAULT_AL, mc: ent.mc ?? DEFAULT_MC });
+      }
       const sorted = appSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));

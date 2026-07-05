@@ -4,6 +4,7 @@ import { CheckIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
 import styles from './HR.module.css';
 
 export default function LeaveSettings() {
@@ -34,10 +35,11 @@ export default function LeaveSettings() {
             name:   u.name,
             role:   u.role,
             team:   u.team,
-            al:     entMap[u.userId]?.al ?? 7,   // sensible default
-            mc:     entMap[u.userId]?.mc ?? 14,
+            al:     entMap[u.userId]?.al ?? DEFAULT_AL,
+            mc:     entMap[u.userId]?.mc ?? DEFAULT_MC,
             entId:  entMap[u.userId]?.id ?? null,
-            dirty:  false,
+            // No saved document yet — mark dirty so admin sees Save is needed
+            dirty:  !entMap[u.userId],
           }))
           .sort((a, b) => a.name.localeCompare(b.name));
 

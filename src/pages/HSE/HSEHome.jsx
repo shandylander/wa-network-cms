@@ -22,15 +22,29 @@ export default function HSEHome() {
   const myTeam  = userProfile?.team;
   const canAdmin = hasPermission(role, 'manage:blocks'); // owner + manager
   const isWorker = ['staff', 'subcon-admin', 'subcon'].includes(role);
+  const isSubconRole = ['subcon-admin', 'subcon'].includes(role);
+  // Staff are WA employees — their document access flag is 'own' regardless
+  // of the team value stored on the user record.
+  const accessTeam = role === 'staff' ? 'own' : myTeam;
 
   useEffect(() => {
     const load = async () => {
       try {
-        const pSnap = await getDocs(query(collection(db, 'projects'), where('status', '==', 'active'), limit(1)));
+        // Security rules only let subcon roles read projects assigned to their
+        // team, and only let worker roles read documents their team can access.
+        // Rules are not filters — the queries must match them exactly.
+        const pSnap = await getDocs(isSubconRole
+          ? query(collection(db, 'projects'),
+              where('status', '==', 'active'),
+              where('assignedTeams', 'array-contains', myTeam),
+              limit(1))
+          : query(collection(db, 'projects'), where('status', '==', 'active'), limit(1)));
         if (pSnap.empty) { setLoading(false); return; }
         const pid = pSnap.docs[0].id;
         setProjectId(pid);
-        const dSnap = await getDocs(collection(db, 'projects', pid, 'documents'));
+        const dSnap = await getDocs(isWorker
+          ? query(collection(db, 'projects', pid, 'documents'), where(`access.${accessTeam}`, '==', true))
+          : collection(db, 'projects', pid, 'documents'));
         setDocs(dSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch {
         toast.error('Failed to load HSE documents');
@@ -39,7 +53,7 @@ export default function HSEHome() {
       }
     };
     load();
-  }, []);
+  }, [isWorker, isSubconRole, accessTeam, myTeam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleAccess = async (docId, team, current) => {
     if (!projectId) return;
@@ -77,9 +91,8 @@ export default function HSEHome() {
 
   const allOwnEnabled = docs.length > 0 && docs.every(d => d.access?.own);
 
-  const visibleDocs = isWorker && myTeam
-    ? docs.filter(d => d.access?.[myTeam])
-    : docs;
+  // Worker queries are already access-filtered server-side
+  const visibleDocs = docs;
 
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
 

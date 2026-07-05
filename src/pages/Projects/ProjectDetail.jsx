@@ -139,7 +139,14 @@ function TeamStartDatesSection({ project, setProject, blocks, userProfile }) {
   const [dates,   setDates]   = useState({});
   const [saving,  setSaving]  = useState(false);
 
-  const activeTeams = [...new Set(blocks.map(b => b.team).filter(Boolean))].sort();
+  // Management sees every team's start date; field roles see only their own
+  // team's date (staff belong to WA's 'own' team).
+  const role       = userProfile?.role;
+  const isInternal = ['owner', 'manager', 'supervisor'].includes(role);
+  const ownTeam    = role === 'staff' ? 'own' : userProfile?.team;
+
+  const allTeams    = [...new Set(blocks.map(b => b.team).filter(Boolean))].sort();
+  const activeTeams = isInternal ? allTeams : allTeams.filter(t => t === ownTeam);
   const stored      = project.teamStartDates ?? {};
 
   const startEdit = () => {
@@ -240,7 +247,10 @@ export default function ProjectDetail() {
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
   if (!project) return null;
 
-  const TABS    = getTabsForType(project.projectType ?? 'pcs');
+  // Money data (claim rates, payments) is restricted to owner/manager
+  const canViewMoney = hasPermission(userProfile?.role, 'view:claims');
+  const TABS    = getTabsForType(project.projectType ?? 'pcs')
+    .filter(t => t !== 'claims' || canViewMoney);
   const isCctv  = ['pcs', 'cctv'].includes(project.projectType ?? 'pcs');
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;
@@ -298,7 +308,7 @@ export default function ProjectDetail() {
                   <span className={styles.detailVal}>{v}</span>
                 </div>
               ))}
-              {project.rates?.s1 > 0 && <>
+              {canViewMoney && project.rates?.s1 > 0 && <>
                 <div className={styles.detailRow}><span className={styles.detailKey}>Stage 1 Rate</span><span className={styles.detailVal}>${project.rates.s1?.toLocaleString()}/block</span></div>
                 <div className={styles.detailRow}><span className={styles.detailKey}>Stage 2 Rate</span><span className={styles.detailVal}>${project.rates.s2?.toLocaleString()}/block</span></div>
                 <div className={styles.detailRow}><span className={styles.detailKey}>Stage 3 Rate</span><span className={styles.detailVal}>${project.rates.s3?.toLocaleString()}/block</span></div>
@@ -348,7 +358,7 @@ export default function ProjectDetail() {
         />
       )}
 
-      {tab === 'claims' && (
+      {tab === 'claims' && canViewMoney && (
         <Claims project={project} setProject={setProject} blocks={blocks} userRole={userProfile?.role} />
       )}
 
