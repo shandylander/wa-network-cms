@@ -1,0 +1,53 @@
+# Auto-deploys the app to Firebase Hosting on every push to master.
+#
+# Requires two repository secrets (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT_WA_NETWORK_CMS — created automatically by
+#     running `firebase init hosting:github` once on your machine
+#   DOTENV — the full contents of your local .env.local file
+#
+# Security rules, indexes and Cloud Functions still deploy manually
+# (they change rarely and need stronger credentials):
+#   firebase deploy --only firestore:rules,firestore:indexes,storage,functions
+
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Restore environment config
+        run: |
+          printf '%s' "$DOTENV" > .env
+          if [ ! -s .env ]; then
+            echo "::error::DOTENV repository secret is missing or empty — add it in Settings → Secrets → Actions"
+            exit 1
+          fi
+        env:
+          DOTENV: ${{ secrets.DOTENV }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          CI: false # CRA fails on lint warnings when CI=true
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WA_NETWORK_CMS }}
+          channelId: live
+          projectId: wa-network-cms
