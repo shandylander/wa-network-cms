@@ -23,7 +23,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Match the Node/npm version the package-lock.json was generated with
+          node-version: 24
           cache: npm
 
       - name: Restore environment config
