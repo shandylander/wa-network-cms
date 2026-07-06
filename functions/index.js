@@ -6,6 +6,10 @@ initializeApp();
 
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
+const DROPBOX_APP_KEY       = defineSecret('DROPBOX_APP_KEY');
+const DROPBOX_APP_SECRET    = defineSecret('DROPBOX_APP_SECRET');
+const DROPBOX_REFRESH_TOKEN = defineSecret('DROPBOX_REFRESH_TOKEN');
+
 const GEMINI_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
@@ -134,6 +138,139 @@ exports.extractDocument = onCall(
     } catch {
       console.error('Gemini non-JSON response:', raw.slice(0, 500));
       throw new HttpsError('internal', 'OCR returned an unreadable result.');
+    }
+  }
+);
+
+// ── Dropbox document upload ─────────────────────────────────────────────
+// Moves Dropbox credentials server-side — the old client code shipped the
+// app key/secret/refresh token in the CRA bundle (public to anyone).
+
+const DROPBOX_TOKEN_URL      = 'https://api.dropbox.com/oauth2/token';
+const DROPBOX_UPLOAD_URL     = 'https://content.dropboxapi.com/2/files/upload';
+const DROPBOX_SHARE_URL      = 'https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings';
+const DROPBOX_SHARE_LIST_URL = 'https://api.dropboxapi.com/2/sharing/list_shared_links';
+
+const getDropboxAccessToken = async () => {
+  const res = await fetch(DROPBOX_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'refresh_token',
+      refresh_token: DROPBOX_REFRESH_TOKEN.value(),
+      client_id:     DROPBOX_APP_KEY.value(),
+      client_secret: DROPBOX_APP_SECRET.value(),
+    }),
+  });
+  if (!res.ok) {
+    console.error('[Dropbox] Token refresh failed:', res.status);
+    throw new HttpsError('internal', 'Dropbox authentication failed.');
+  }
+  const data = await res.json();
+  return data.access_token;
+};
+
+const toDirectLink = (url) =>
+  url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
+
+const getDropboxShareLink = async (token, path) => {
+  const res = await fetch(DROPBOX_SHARE_URL, {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ path, settings: { requested_visibility: 'public' } }),
+  });
+  if (res.ok) {
+    const data = await res.json();
+    return toDirectLink(data.url);
+  }
+  const err = await res.json().catch(() => null);
+  if (err?.error?.['.tag'] === 'shared_link_already_exists') {
+    const listRes = await fetch(DROPBOX_SHARE_LIST_URL, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ path, direct_only: true }),
+    });
+    if (!listRes.ok) {
+      console.error('[Dropbox] Share link list failed:', listRes.status);
+      throw new HttpsError('internal', 'Dropbox share link lookup failed.');
+    }
+    const list = await listRes.json();
+    return toDirectLink(list.links[0].url);
+  }
+  console.error('[Dropbox] Share link failed:', res.status);
+  throw new HttpsError('internal', 'Dropbox share link creation failed.');
+};
+
+exports.uploadProjectDocument = onCall(
+  {
+    region: 'asia-southeast1',
+    secrets: [DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN],
+    memory: '512MiB',
+    timeoutSeconds: 120,
+    maxInstances: 5,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    const { data, fileName, mimeType, folder } = request.data ?? {};
+    if (!data || typeof data !== 'string') {
+      throw new HttpsError('invalid-argument', 'Missing file data.');
+    }
+    if (data.length > MAX_BASE64_CHARS) {
+      throw new HttpsError('invalid-argument', 'File too large (max 10 MB).');
+    }
+    if (!fileName || typeof fileName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Missing file name.');
+    }
+    if (!folder || typeof folder !== 'string') {
+      throw new HttpsError('invalid-argument', 'Missing destination folder.');
+    }
+
+    const safeName = fileName.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_');
+    const destPath = `${folder}/${safeName}`;
+
+    let token;
+    try {
+      token = await getDropboxAccessToken();
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error('[Dropbox] Token error:', err);
+      throw new HttpsError('unavailable', 'Dropbox service unreachable.');
+    }
+
+    let uploadRes;
+    try {
+      uploadRes = await fetch(DROPBOX_UPLOAD_URL, {
+        method:  'POST',
+        headers: {
+          Authorization:    `Bearer ${token}`,
+          'Content-Type':   'application/octet-stream',
+          'Dropbox-API-Arg': JSON.stringify({ path: destPath, mode: 'add', autorename: true }),
+        },
+        body: Buffer.from(data, 'base64'),
+      });
+    } catch (err) {
+      console.error('[Dropbox] Upload request failed:', err);
+      throw new HttpsError('unavailable', 'Dropbox service unreachable.');
+    }
+
+    if (!uploadRes.ok) {
+      const body = await uploadRes.text().catch(() => '');
+      console.error('[Dropbox] Upload failed:', uploadRes.status, body.slice(0, 500));
+      throw new HttpsError('internal', 'Dropbox upload failed.');
+    }
+
+    const result = await uploadRes.json();
+
+    try {
+      const url = await getDropboxShareLink(token, result.path_display);
+      return { url };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error('[Dropbox] Share link error:', err);
+      throw new HttpsError('internal', 'Dropbox share link creation failed.');
     }
   }
 );
