@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, query, where } from 'firebase/firestore';
 import { PlusIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -26,7 +26,9 @@ const TEAMS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur
 export default function SnagList({ project }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const isAdmin = ['owner','manager','supervisor'].includes(userProfile?.role);
+  const isAdmin      = ['owner','manager','supervisor'].includes(userProfile?.role);
+  const isSubconRole = ['subcon-admin','subcon'].includes(userProfile?.role);
+  const myTeam       = userProfile?.team;
 
   const [snags,     setSnags]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -43,11 +45,19 @@ export default function SnagList({ project }) {
   });
 
   useEffect(() => {
-    getDocs(query(collection(db, 'projects', project.id, 'snags'), orderBy('reportedAt', 'desc')))
-      .then(snap => setSnags(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    // Sub-cons may only read snags assigned to their team (see firestore.rules),
+    // so the query must match the rule. Sort client-side to avoid needing a
+    // composite (assignedTeam + reportedAt) index.
+    const snagsRef = collection(db, 'projects', project.id, 'snags');
+    getDocs(isSubconRole ? query(snagsRef, where('assignedTeam', '==', myTeam)) : snagsRef)
+      .then(snap => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => (b.reportedAt?.toMillis?.() ?? 0) - (a.reportedAt?.toMillis?.() ?? 0));
+        setSnags(list);
+      })
       .catch(() => toast.error('Failed to load snags'))
       .finally(() => setLoading(false));
-  }, [project.id, toast]);
+  }, [project.id, isSubconRole, myTeam, toast]);
 
   const submitSnag = async (e) => {
     e.preventDefault();
@@ -188,7 +198,7 @@ export default function SnagList({ project }) {
                     {SEVERITIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select></div>
                 <div className={styles.formRow}><label className={styles.formLbl}>Assign to</label>
-                  <select className={styles.formInput} value={form.assignedTeam} onChange={e => setForm(f => ({ ...f, assignedTeam: e.target.value }))}>
+                  <select className={styles.formInput} value={form.assignedTeam} disabled={isSubconRole} onChange={e => setForm(f => ({ ...f, assignedTeam: e.target.value }))}>
                     {Object.entries(TEAMS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                   </select></div>
               </div>

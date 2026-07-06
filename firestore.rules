@@ -104,7 +104,17 @@ service cloud.firestore {
         allow write: if internal();
       }
       match /incidents/{id}  { allow read, write: if anyStaff(); }
-      match /snags/{id}      { allow read, write: if anyStaff(); }
+      // Snags are directed to the sub-con team handling the block, so an
+      // assigned sub-con may read/log/update snags for their own team only.
+      match /snags/{id} {
+        allow read:   if anyStaff()
+          || ((isSubconAdmin() || isSubcon()) && resource.data.assignedTeam == myTeam());
+        allow create: if anyStaff()
+          || ((isSubconAdmin() || isSubcon()) && request.resource.data.assignedTeam == myTeam());
+        allow update: if anyStaff()
+          || ((isSubconAdmin() || isSubcon()) && resource.data.assignedTeam == myTeam());
+        allow delete: if ownerOrManager();
+      }
       match /sitePhotos/{id} {
         allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
         allow write: if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
