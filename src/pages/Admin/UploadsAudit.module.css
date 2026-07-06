@@ -158,9 +158,10 @@
   padding: 3px 8px;
 }
 
-.badgeBlue  { color: var(--blue);  background: var(--blue-bg);  }
-.badgeGreen { color: var(--green); background: var(--green-bg); }
-.badgeAmber { color: var(--amber); background: var(--amber-bg); }
+.badgeBlue   { color: var(--blue);   background: var(--blue-bg);   }
+.badgeGreen  { color: var(--green);  background: var(--green-bg);  }
+.badgeAmber  { color: var(--amber);  background: var(--amber-bg);  }
+.badgePurple { color: var(--purple); background: var(--purple-bg); }
 
 .status {
   font-size: 11px;

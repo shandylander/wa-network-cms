@@ -59,6 +59,19 @@
 .certForm { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface); border-radius: var(--radius-sm); margin-bottom: 10px; }
 .certFormBtns { display: flex; gap: 8px; }
 
+.certFileBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 12px;
+  border: 1.5px dashed var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-sec); background: var(--card);
+  cursor: pointer; font-family: inherit;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.certFileBtn:hover { border-color: var(--navy); color: var(--navy); }
+.certFileBtn:disabled { opacity: 0.6; }
+
+.certFileLink { color: var(--blue); text-decoration: none; font-weight: 600; }
+
 .noCerts { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
 
 .certList { display: flex; flex-direction: column; gap: 6px; }

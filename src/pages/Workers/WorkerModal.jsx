@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, PaperClipIcon, DocumentIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { TEAMS } from '../../utils/permissions';
+import { useTeams, useCertTypes } from '../../hooks/useAppConfig';
+import { compressImage, uploadWorkerDoc } from '../../utils/workerDocs';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import styles from './WorkerModal.module.css';
 
-const TEAM_OPTIONS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
-const EMPTY_CERT = { name: '', expiry: '' };
+const EMPTY_CERT = { type: '', name: '', expiry: '', url: '', fileName: '' };
 
 function certBadge(expiry) {
   if (!expiry) return { label: 'No expiry', color: 'default' };
@@ -24,7 +24,10 @@ function certBadge(expiry) {
 export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, userTeam }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { teams: TEAMS, teamOptions } = useTeams();
+  const { certTypes }   = useCertTypes();
   const isAdmin = ['owner', 'manager', 'supervisor'].includes(userRole);
+  const certFileRef = useRef(null);
 
   const [form, setForm] = useState({
     name:        worker?.name        ?? '',
@@ -35,10 +38,11 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
     status:      worker?.status      ?? 'active',
     linkedUserId: worker?.linkedUserId ?? '',
   });
-  const [certs,    setCerts]    = useState(worker?.certs ?? []);
-  const [newCert,  setNewCert]  = useState(EMPTY_CERT);
-  const [showAdd,  setShowAdd]  = useState(false);
-  const [saving,   setSaving]   = useState(false);
+  const [certs,     setCerts]     = useState(worker?.certs ?? []);
+  const [newCert,   setNewCert]   = useState(EMPTY_CERT);
+  const [showAdd,   setShowAdd]   = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Users available for import (add mode only)
   const [userList, setUserList] = useState([]);
@@ -71,9 +75,36 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
 
   const setF = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
+  const handleCertFile = async (e) => {
+    const raw = e.target.files?.[0];
+    e.target.value = '';
+    if (!raw) return;
+    if (raw.size > 10 * 1024 * 1024) { toast.error('File too large (max 10 MB)'); return; }
+    setUploading(true);
+    try {
+      const file = await compressImage(raw);
+      const url  = await uploadWorkerDoc(file, 'certs', userProfile.userId);
+      setNewCert(c => ({ ...c, url, fileName: raw.name }));
+    } catch {
+      toast.error('Upload failed. Try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const addCert = () => {
-    if (!newCert.name.trim()) return;
-    setCerts(c => [...c, { ...newCert }]);
+    const typeInfo = certTypes.find(t => t.key === newCert.type);
+    const name = newCert.type === 'other' ? newCert.name.trim() : (typeInfo?.label ?? '');
+    if (!name) return;
+    setCerts(c => [...c, {
+      type: newCert.type === 'other' ? '' : newCert.type,
+      name,
+      expiry: newCert.expiry,
+      url: newCert.url,
+      fileName: newCert.fileName,
+      uploadedAt: newCert.url ? new Date().toISOString() : null,
+      uploadedBy: newCert.url ? userProfile.userId : null,
+    }]);
     setNewCert(EMPTY_CERT);
     setShowAdd(false);
   };
@@ -153,7 +184,7 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
             <label className={styles.label}>Team</label>
             <select className={styles.input} value={form.team} onChange={setF('team')} disabled={!isAdmin}>
               <option value="">— Select team —</option>
-              {TEAM_OPTIONS.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
+              {teamOptions.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
             </select>
           </div>
           <div className={styles.field}>
@@ -178,20 +209,47 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
 
         {showAdd && (
           <div className={styles.certForm}>
-            <input
+            <select
               className={styles.input}
-              placeholder="Certificate name"
-              value={newCert.name}
-              onChange={e => setNewCert(c => ({ ...c, name: e.target.value }))}
-            />
+              value={newCert.type}
+              onChange={e => setNewCert(c => ({ ...c, type: e.target.value }))}
+            >
+              <option value="">— Certificate type —</option>
+              {certTypes.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+              <option value="other">Others…</option>
+            </select>
+            {newCert.type === 'other' && (
+              <input
+                className={styles.input}
+                placeholder="Certificate name"
+                value={newCert.name}
+                onChange={e => setNewCert(c => ({ ...c, name: e.target.value }))}
+              />
+            )}
             <input
               type="date"
               className={styles.input}
               value={newCert.expiry}
               onChange={e => setNewCert(c => ({ ...c, expiry: e.target.value }))}
             />
+            <button
+              type="button"
+              className={styles.certFileBtn}
+              onClick={() => certFileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading
+                ? 'Uploading…'
+                : newCert.fileName
+                  ? <><DocumentIcon width={14} /> {newCert.fileName}</>
+                  : <><PaperClipIcon width={14} /> Attach photo / PDF</>}
+            </button>
+            <input
+              ref={certFileRef} type="file" accept="image/*,application/pdf"
+              style={{ display: 'none' }} onChange={handleCertFile}
+            />
             <div className={styles.certFormBtns}>
-              <Button size="sm" onClick={addCert}>Add</Button>
+              <Button size="sm" onClick={addCert} disabled={uploading || !newCert.type || (newCert.type === 'other' && !newCert.name.trim())}>Add</Button>
               <Button size="sm" variant="ghost" onClick={() => { setShowAdd(false); setNewCert(EMPTY_CERT); }}>Cancel</Button>
             </div>
           </div>
@@ -207,7 +265,10 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
                 <div key={i} className={styles.certRow}>
                   <div className={styles.certInfo}>
                     <span className={styles.certName}>{c.name}</span>
-                    <span className={styles.certExpiry}>{c.expiry ? `Exp: ${c.expiry}` : 'No expiry'}</span>
+                    <span className={styles.certExpiry}>
+                      {c.expiry ? `Exp: ${c.expiry}` : 'No expiry'}
+                      {c.url && <a href={c.url} target="_blank" rel="noreferrer" className={styles.certFileLink}> · View file</a>}
+                    </span>
                   </div>
                   <Badge color={b.color}>{b.label}</Badge>
                   <button className={styles.removeBtn} onClick={() => removeCert(i)} title="Remove">

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import {
   MagnifyingGlassIcon, DocumentIcon, CameraIcon, HeartIcon, ReceiptPercentIcon,
-  ArrowTopRightOnSquareIcon, XMarkIcon,
+  AcademicCapIcon, ArrowTopRightOnSquareIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
@@ -14,12 +14,14 @@ const TYPE_TABS = [
   { value: 'selfie',  label: 'Selfies'    },
   { value: 'mc',      label: 'MCs'        },
   { value: 'receipt', label: 'Receipts'   },
+  { value: 'cert',    label: 'Certs'      },
 ];
 
 const TYPE_META = {
-  selfie:  { label: 'Selfie',  Icon: CameraIcon,         cls: 'badgeBlue'  },
-  mc:      { label: 'MC',      Icon: HeartIcon,          cls: 'badgeGreen' },
-  receipt: { label: 'Receipt', Icon: ReceiptPercentIcon, cls: 'badgeAmber' },
+  selfie:  { label: 'Selfie',  Icon: CameraIcon,         cls: 'badgeBlue'   },
+  mc:      { label: 'MC',      Icon: HeartIcon,          cls: 'badgeGreen'  },
+  receipt: { label: 'Receipt', Icon: ReceiptPercentIcon, cls: 'badgeAmber'  },
+  cert:    { label: 'Cert',    Icon: AcademicCapIcon,    cls: 'badgePurple' },
 };
 
 const fmtDate = (iso) => { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
@@ -42,13 +44,14 @@ export default function UploadsAudit() {
     setLoading(true);
     setSearched(true);
     try {
-      const [attSnap, leaveSnap, pcSnap] = await Promise.all([
+      const [attSnap, leaveSnap, pcSnap, workerSnap] = await Promise.all([
         getDocs(query(collection(db, 'attendance'),
           where('date', '>=', dateFrom), where('date', '<=', dateTo))),
         getDocs(query(collection(db, 'leaveApplications'),
           where('dateFrom', '>=', dateFrom), where('dateFrom', '<=', dateTo))),
         getDocs(query(collection(db, 'pettyCashClaims'),
           where('date', '>=', dateFrom), where('date', '<=', dateTo))),
+        getDocs(collection(db, 'workers')),
       ]);
 
       const rows = [];
@@ -86,6 +89,23 @@ export default function UploadsAudit() {
           name: r.name, team: r.team, date: r.date,
           detail: `$${Number(r.amount ?? 0).toFixed(2)} · ${r.description ?? ''}`,
           status: r.status,
+        });
+      });
+
+      // Worker certificates: filter by upload date when known; certificates
+      // added before upload tracking existed are always shown.
+      workerSnap.docs.forEach(d => {
+        const w = d.data();
+        (w.certs ?? []).forEach((c, i) => {
+          if (!c.url) return;
+          const upDate = c.uploadedAt ? c.uploadedAt.slice(0, 10) : '';
+          if (upDate && (upDate < dateFrom || upDate > dateTo)) return;
+          rows.push({
+            id: `${d.id}-cert-${i}`, type: 'cert', url: c.url,
+            name: w.name, team: w.team, date: upDate,
+            detail: `${c.name ?? 'Certificate'}${c.expiry ? ` · exp ${c.expiry}` : ''}`,
+            status: null,
+          });
         });
       });
 

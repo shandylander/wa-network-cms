@@ -22,6 +22,15 @@ service firebase.storage {
                        || request.resource.contentType == 'application/pdf');
     }
 
+    // Worker certificates — photo or PDF, keyed by uploader.
+    match /certs/{userId}/{fileName} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*')
+                       || request.resource.contentType == 'application/pdf');
+    }
+
     // Petty cash receipts — photo or PDF.
     match /receipts/{userId}/{fileName} {
       allow read:  if request.auth != null;

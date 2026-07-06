@@ -146,6 +146,12 @@ service cloud.firestore {
       allow write: if ownerOrManager();
     }
 
+    // ── APP CONFIG (team groups, certificate types) ────────────────────────
+    match /appConfig/{docId} {
+      allow read:  if signedIn();
+      allow write: if ownerOrManager();
+    }
+
     // ── ATTENDANCE ─────────────────────────────────────────────────────────
     match /attendance/{recordId} {
       allow read: if signedIn() && (
