@@ -40,10 +40,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set build metadata
+        run: echo "BUILD_DATE=$(date -u +%y%m%d)" >> "$GITHUB_ENV"
+
       - name: Build
         run: npm run build
         env:
           CI: false # CRA fails on lint warnings when CI=true
+          REACT_APP_BUILD_NUMBER: ${{ github.run_number }}
+          REACT_APP_BUILD_DATE: ${{ env.BUILD_DATE }}
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
