@@ -38,6 +38,17 @@ Extract these fields. Use null when a value is not present or unreadable.
 - amount: final total paid in SGD as a number (after GST; look for TOTAL, NETT or amount tendered)
 - category: best guess, exactly one of: transport, meals, materials, tools, comms, other
 - description: one short line describing what was bought`,
+  do: `You are reading a delivery order (DO) photo/PDF for a construction materials supplier in Singapore.
+Extract these fields. Use null when a value is not present or unreadable.
+- doNo: the delivery order / DO number printed on the document
+- supplier: the supplier/company name that issued the DO
+- date: delivery/document date in YYYY-MM-DD (Singapore documents usually print DD/MM/YYYY)
+- items: array of line items actually delivered, each with:
+  - description: item name/description as printed
+  - qty: quantity delivered as a number
+  - unit: unit of measure if printed (e.g. pcs, m, roll, box, set, lot), else null
+  - unitPrice: unit price in SGD if printed, else null
+Only include rows that are actual delivered items, not headers or totals.`,
 };
 
 const SCHEMAS = {
@@ -60,6 +71,26 @@ const SCHEMAS = {
       amount:      { type: 'NUMBER', nullable: true },
       category:    { type: 'STRING', nullable: true },
       description: { type: 'STRING', nullable: true },
+    },
+  },
+  do: {
+    type: 'OBJECT',
+    properties: {
+      doNo:     { type: 'STRING', nullable: true },
+      supplier: { type: 'STRING', nullable: true },
+      date:     { type: 'STRING', nullable: true },
+      items: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            description: { type: 'STRING', nullable: true },
+            qty:         { type: 'NUMBER', nullable: true },
+            unit:        { type: 'STRING', nullable: true },
+            unitPrice:   { type: 'NUMBER', nullable: true },
+          },
+        },
+      },
     },
   },
 };
@@ -88,7 +119,7 @@ exports.extractDocument = onCall(
       throw new HttpsError('invalid-argument', `Unsupported file type: ${mimeType}`);
     }
     if (!PROMPTS[docType]) {
-      throw new HttpsError('invalid-argument', 'docType must be "mc" or "receipt".');
+      throw new HttpsError('invalid-argument', 'docType must be "mc", "receipt" or "do".');
     }
 
     const body = {

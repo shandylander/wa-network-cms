@@ -46,7 +46,7 @@ const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? '') && !Number.isNaN(Date.p
 
 const EMPTY_FORM = {
   type: null, dateFrom: '', dateTo: '', dayMode: 'full', reason: '',
-  mcUrl: '', mcFileName: '', mcClinic: '',
+  mcUrl: '', mcFileName: '', mcPreview: null, mcClinic: '',
 };
 
 export default function WorkerLeave() {
@@ -87,6 +87,7 @@ export default function WorkerLeave() {
   }, [userId, year, toast, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => () => { if (form.mcPreview) URL.revokeObjectURL(form.mcPreview); }, [form.mcPreview]);
 
   const used = (type, statuses = ['approved']) =>
     apps.filter(a => a.type === type && statuses.includes(a.status))
@@ -112,10 +113,12 @@ export default function WorkerLeave() {
         uploadWorkerDoc(file, 'mc', userId),
         extractDocument(file, 'mc').catch(() => null),
       ]);
+      const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
       setForm(f => ({
         ...f,
         mcUrl: url,
         mcFileName: raw.name,
+        mcPreview: preview,
         mcClinic: ocr?.clinic ?? '',
         dateFrom: isISO(ocr?.dateFrom) ? ocr.dateFrom : f.dateFrom,
         dateTo:   isISO(ocr?.dateTo)   ? ocr.dateTo
@@ -266,11 +269,15 @@ export default function WorkerLeave() {
 
                   {(mcState === 'done' || mcState === 'failed') && (
                     <>
-                      <div className={styles.pdfBadge}>
-                        <DocumentIcon width={26} style={{ flexShrink: 0 }} />
-                        {form.mcFileName}
-                        <CheckCircleIcon width={24} style={{ color: 'var(--green)', flexShrink: 0, marginLeft: 'auto' }} />
-                      </div>
+                      {form.mcPreview
+                        ? <img src={form.mcPreview} alt="" className={styles.filePreview} />
+                        : (
+                          <div className={styles.pdfBadge}>
+                            <DocumentIcon width={26} style={{ flexShrink: 0 }} />
+                            {form.mcFileName}
+                            <CheckCircleIcon width={24} style={{ color: 'var(--green)', flexShrink: 0, marginLeft: 'auto' }} />
+                          </div>
+                        )}
                       <button type="button" className={styles.cancelBtn} onClick={() => fileInputRef.current?.click()}>
                         {t('retake')}
                       </button>
