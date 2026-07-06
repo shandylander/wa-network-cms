@@ -28,15 +28,17 @@ export default function ToolboxMeeting({ project }) {
   });
 
   useEffect(() => {
-    Promise.all([
-      getDocs(query(collection(db, 'projects', project.id, 'toolboxMeetings'), orderBy('date', 'desc'))),
-      getDocs(collection(db, 'workers')),
-    ]).then(([mSnap, wSnap]) => {
+    // The workers collection is readable only by internal roles, and only
+    // they can log a meeting (see firestore.rules), so field/subcon roles —
+    // who just view meetings — skip it to avoid a permission-denied error.
+    const meetingsQ = getDocs(query(collection(db, 'projects', project.id, 'toolboxMeetings'), orderBy('date', 'desc')));
+    const workersQ  = isAdmin ? getDocs(collection(db, 'workers')) : Promise.resolve(null);
+    Promise.all([meetingsQ, workersQ]).then(([mSnap, wSnap]) => {
       setMeetings(mSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setWorkers(wSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(w => w.status === 'active'));
+      if (wSnap) setWorkers(wSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(w => w.status === 'active'));
     }).catch(() => toast.error('Failed to load toolbox meetings'))
       .finally(() => setLoading(false));
-  }, [project.id, toast]);
+  }, [project.id, isAdmin, toast]);
 
   const teamWorkers = workers.filter(w => w.team === form.team);
 
@@ -72,7 +74,7 @@ export default function ToolboxMeeting({ project }) {
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
         <p className={styles.toolbarHint}>Daily toolbox talks — topic, hazards covered, and who attended.</p>
-        <button className={styles.addBtn} onClick={() => setShowForm(true)}><PlusIcon width={14} /> Log Meeting</button>
+        {isAdmin && <button className={styles.addBtn} onClick={() => setShowForm(true)}><PlusIcon width={14} /> Log Meeting</button>}
       </div>
 
       {visibleMeetings.length === 0 ? (

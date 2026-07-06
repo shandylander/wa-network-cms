@@ -249,8 +249,11 @@ export default function ProjectDetail() {
 
   // Money data (claim rates, payments) is restricted to owner/manager
   const canViewMoney = hasPermission(userProfile?.role, 'view:claims');
+  // Materials/DO data is readable only by internal roles (see firestore.rules);
+  // hide the tab from field/subcon roles so they don't hit a load error.
+  const isInternal   = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
   const TABS    = getTabsForType(project.projectType ?? 'pcs')
-    .filter(t => t !== 'claims' || canViewMoney);
+    .filter(t => (t !== 'claims' || canViewMoney) && (t !== 'materials' || isInternal));
   const isCctv  = ['pcs', 'cctv'].includes(project.projectType ?? 'pcs');
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;
