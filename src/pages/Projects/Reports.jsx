@@ -9,6 +9,7 @@ import { db } from '../../firebase';
 import { TEAMS } from '../../utils/permissions';
 import { getOverallProgress, todayInputSG, toDateInputSG } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
+import ImportReport from './ImportReport';
 import styles from './Reports.module.css';
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
@@ -336,6 +337,11 @@ export default function Reports({ blocks, setBlocks, project, setProject, userRo
           {baseBlocks.length === 0 ? 'No blocks match the current filters.' : report}
         </pre>
       </div>
+
+      {/* ── Import incoming reports (management only) ── */}
+      {canAdmin && (
+        <ImportReport projectId={project?.id} blocks={blocks} setBlocks={setBlocks} />
+      )}
 
     </div>
   );
