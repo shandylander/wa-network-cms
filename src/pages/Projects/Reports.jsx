@@ -51,7 +51,7 @@ export const buildReport = (blocks, opts = {}) => {
 
   const groups = {};
   sortBlocks(blocks).forEach(b => {
-    const key = b.street ?? 'Other';
+    const key = b.cluster || b.street || 'Other';
     if (!groups[key]) groups[key] = [];
     groups[key].push(b);
   });
@@ -109,6 +109,7 @@ export default function Reports({ blocks, setBlocks, project, setProject, userRo
 
   const [reportDate,   setReportDate]   = useState(todayISO());
   const [progressOnly, setProgressOnly] = useState(true);
+  const [hideClosedClusters, setHideClosedClusters] = useState(true);
   const [copied,       setCopied]       = useState(false);
   const [clearing,     setClearing]     = useState(false);
 
@@ -137,8 +138,9 @@ export default function Reports({ blocks, setBlocks, project, setProject, userRo
       : blocks;
     if (selectedTeam) b = b.filter(x => x.team === selectedTeam);
     if (progressOnly) b = b.filter(x => getOverallProgress(x) > 0);
+    if (hideClosedClusters) b = b.filter(x => !x.clusterClosedAt);
     return sortBlocks(b);
-  }, [blocks, isWorker, userTeam, selectedTeam, progressOnly]);
+  }, [blocks, isWorker, userTeam, selectedTeam, progressOnly, hideClosedClusters]);
 
   const report = useMemo(() =>
     buildReport(baseBlocks, { reportDate, clusterStartDate: getTeamStartDate(selectedTeam), activeIds }),
@@ -242,6 +244,12 @@ export default function Reports({ blocks, setBlocks, project, setProject, userRo
           <label className={styles.checkLabel}>
             <input type="checkbox" checked={progressOnly} onChange={e => setProgressOnly(e.target.checked)} className={styles.checkbox} />
             With progress only
+          </label>
+        </div>
+        <div className={styles.controlGroup}>
+          <label className={styles.checkLabel}>
+            <input type="checkbox" checked={hideClosedClusters} onChange={e => setHideClosedClusters(e.target.checked)} className={styles.checkbox} />
+            Hide closed clusters
           </label>
         </div>
         <div className={styles.blockCount}>

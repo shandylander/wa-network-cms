@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { PlusIcon, TrashIcon, CheckIcon, PrinterIcon, EyeIcon } from '@heroicons/react/24/outline';
+import {
+  PlusIcon, TrashIcon, CheckIcon, PrinterIcon, EyeIcon,
+  CameraIcon, DocumentIcon, ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -10,7 +13,11 @@ import Badge from '../../components/UI/Badge';
 import MaterialOrderForm from './MaterialOrderForm';
 import { ITE_FORMS, ALL_SUPPLIERS, fmtSGD } from '../../utils/materialData';
 import { printITEOrderForm } from '../../utils/printITEForm';
+import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/workerDocs';
 import styles from './Materials.module.css';
+
+const isISODate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? '') && !Number.isNaN(Date.parse(s));
+const UNITS = ['pcs', 'm', 'roll', 'box', 'set', 'lot', 'length'];
 
 const fmt = fmtSGD;
 const fmtDate = (iso) => { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
@@ -38,6 +45,56 @@ function DOModal({ projectId, onClose, onSaved }) {
   const [notes,    setNotes]    = useState('');
   const [items,    setItems]    = useState([{ ...EMPTY_ITEM }]);
   const [saving,   setSaving]   = useState(false);
+
+  const [scanState, setScanState] = useState('none'); // none|working|done|failed
+  const [scanPreview, setScanPreview] = useState(null);
+  const [scanFileName, setScanFileName] = useState('');
+  const scanInputRef = useRef(null);
+
+  useEffect(() => () => { if (scanPreview) URL.revokeObjectURL(scanPreview); }, [scanPreview]);
+
+  const handleScanFile = async (e) => {
+    const raw = e.target.files?.[0];
+    e.target.value = '';
+    if (!raw) return;
+    if (raw.size > 10 * 1024 * 1024) { toast.error('File too large (max 10 MB).'); return; }
+    setScanState('working');
+    try {
+      const file = await compressImage(raw);
+      const [url, ocr] = await Promise.all([
+        uploadWorkerDoc(file, 'deliveryOrders', userProfile.userId),
+        extractDocument(file, 'do').catch(() => null),
+      ]);
+      setDropbox(url);
+      setScanFileName(raw.name);
+      setScanPreview(file.type.startsWith('image/') ? URL.createObjectURL(file) : null);
+      if (ocr) {
+        if (ocr.doNo) setDoNo(ocr.doNo);
+        if (isISODate(ocr.date)) setDate(ocr.date);
+        const matched = SUPPLIER_OPTIONS.find(s =>
+          ocr.supplier && s.label.toLowerCase().includes(String(ocr.supplier).toLowerCase()));
+        if (matched) setSupplier(matched.value);
+        if (Array.isArray(ocr.items) && ocr.items.length) {
+          setItems(ocr.items.map(it => {
+            const qty = Number(it.qty) || '';
+            const unitPrice = Number(it.unitPrice) || '';
+            return {
+              description: it.description ?? '',
+              qty: qty || '',
+              unit: UNITS.includes(it.unit) ? it.unit : 'pcs',
+              unitPrice: unitPrice || '',
+              amount: (qty && unitPrice) ? (qty * unitPrice).toFixed(2) : '',
+            };
+          }));
+        }
+      }
+      setScanState(ocr ? 'done' : 'failed');
+      if (!ocr) toast.error("Couldn't auto-read the DO — please fill in the details manually.");
+    } catch {
+      setScanState('none');
+      toast.error('Upload failed — check your connection and try again.');
+    }
+  };
 
   const setItem = (i, key, val) => setItems(prev => {
     const next = [...prev];
@@ -94,9 +151,44 @@ function DOModal({ projectId, onClose, onSaved }) {
             <label className={styles.label}>Received Date</label>
             <input type="date" className={styles.input} value={date} onChange={e => setDate(e.target.value)} />
           </div>
-          <div className={styles.field}>
-            <label className={styles.label}>Dropbox Scan Link <span className={styles.opt}>(photo of DO)</span></label>
-            <input className={styles.input} value={dropbox} onChange={e => setDropbox(e.target.value)} placeholder="https://dropbox.com/…" />
+          <div className={[styles.field, styles.fieldFull].join(' ')}>
+            <label className={styles.label}>DO Scan <span className={styles.opt}>(photo or PDF — auto-fills the details on this form)</span></label>
+
+            {scanState === 'none' && (
+              <button type="button" className={styles.scanUploadBtn} onClick={() => scanInputRef.current?.click()}>
+                <CameraIcon width={16} /> Scan / Upload DO
+              </button>
+            )}
+
+            {scanState === 'working' && (
+              <div className={styles.scanWorking}><div className={styles.spinner} /> Reading DO…</div>
+            )}
+
+            {(scanState === 'done' || scanState === 'failed') && (
+              <div className={styles.scanResult}>
+                {scanPreview
+                  ? <img src={scanPreview} alt="DO scan" className={styles.scanPreviewImg} />
+                  : (
+                    <div className={styles.scanPdfBadge}>
+                      <DocumentIcon width={20} style={{ flexShrink: 0 }} />
+                      {scanFileName}
+                    </div>
+                  )}
+                <div className={styles.scanResultMeta}>
+                  <button type="button" className={styles.scanRetakeBtn} onClick={() => scanInputRef.current?.click()}>
+                    Retake
+                  </button>
+                  {scanState === 'done' ? (
+                    <span className={styles.scanNoteOk}><CheckIcon width={13} /> Auto-filled — please verify the details below.</span>
+                  ) : (
+                    <span className={styles.scanNoteWarn}><ExclamationTriangleIcon width={13} /> Couldn't auto-read — please fill in manually.</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <input ref={scanInputRef} type="file" accept="image/*,application/pdf"
+              style={{ display: 'none' }} onChange={handleScanFile} />
           </div>
         </div>
         <div>
@@ -113,7 +205,7 @@ function DOModal({ projectId, onClose, onSaved }) {
                 <input className={styles.input} value={it.description} onChange={e => setItem(i, 'description', e.target.value)} placeholder="Item description" />
                 <input className={styles.input} type="number" value={it.qty} onChange={e => setItem(i, 'qty', e.target.value)} placeholder="0" min="0" />
                 <select className={styles.input} value={it.unit} onChange={e => setItem(i, 'unit', e.target.value)}>
-                  {['pcs', 'm', 'roll', 'box', 'set', 'lot', 'length'].map(u => <option key={u} value={u}>{u}</option>)}
+                  {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
                 <input className={styles.input} type="number" value={it.unitPrice} onChange={e => setItem(i, 'unitPrice', e.target.value)} placeholder="0.00" min="0" step="0.01" />
                 <input className={[styles.input, styles.inputReadonly].join(' ')} value={it.amount ? `$${Number(it.amount).toFixed(2)}` : ''} readOnly placeholder="—" />

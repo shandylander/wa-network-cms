@@ -22,21 +22,12 @@ export default function Settings() {
   return (
     <div className={styles.page}>
       <div className={styles.grid}>
-        {SETTING_CARDS.map(({ to, Icon, title, desc, disabled }) => (
-          disabled ? (
-            <div key={to} className={[styles.card, styles.disabled].join(' ')}>
-              <Icon className={styles.cardIcon} />
-              <h3 className={styles.cardTitle}>{title}</h3>
-              <p className={styles.cardDesc}>{desc}</p>
-              <span className={styles.soon}>Coming soon</span>
-            </div>
-          ) : (
-            <Link key={to} to={to} className={styles.card}>
-              <Icon className={styles.cardIcon} />
-              <h3 className={styles.cardTitle}>{title}</h3>
-              <p className={styles.cardDesc}>{desc}</p>
-            </Link>
-          )
+        {SETTING_CARDS.map(({ to, Icon, title, desc }) => (
+          <Link key={to} to={to} className={styles.card}>
+            <Icon className={styles.cardIcon} />
+            <h3 className={styles.cardTitle}>{title}</h3>
+            <p className={styles.cardDesc}>{desc}</p>
+          </Link>
         ))}
       </div>
     </div>

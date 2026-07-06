@@ -145,7 +145,7 @@ O = outdoor rack, I = indoor rack
 --shadow: 0 2px 8px rgba(0,0,0,0.08)
 ```
 
-**Logo:** Text-based — `WA!` in red (#CC0000) bold + `NETWORK ASIA` in navy, no image file needed.
+**Logo:** Image-based — `src/assets/logo.png` (a red/black "wa" crest above the "WA! NETWORK ASIA" wordmark), rendered via `<img>` in `Sidebar.jsx`, `LoginForm.jsx`, and `ForcePinChange.jsx`. The plain text `WA!` in red bold is only used standalone on `App.js`'s transient auth-loading screen. PWA icons (`public/favicon.ico`, `logo192.png`, `logo512.png`) are generated from the crest portion of this same logo.
 
 **Layout:**
 - Desktop: sidebar navigation (220px) + main content area

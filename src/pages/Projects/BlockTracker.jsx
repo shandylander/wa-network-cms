@@ -1,13 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { MagnifyingGlassIcon, StarIcon as StarOutline, PlusIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { doc, updateDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import {
+  MagnifyingGlassIcon, StarIcon as StarOutline, PlusIcon, DocumentTextIcon,
+  ArrowTopRightOnSquareIcon, LockClosedIcon,
+} from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { db } from '../../firebase';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { hasPermission, TEAMS } from '../../utils/permissions';
-import { getStageStatus } from '../../utils/helpers';
+import { getStageStatus, formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import BlockModal from './BlockModal';
 import styles from './BlockTracker.module.css';
+
+const TEAM_OPTIONS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
 
 const STAGE_META = {
   'stage2-complete': { label: 'Stage 2',     color: 'green'   },
@@ -148,9 +155,13 @@ function DocViewerModal({ block, onClose }) {
 }
 
 export default function BlockTracker({ projectId, blocks, setBlocks, userRole, userTeam }) {
+  const { userProfile } = useAuth();
+  const { toast }       = useToast();
+
   const [search,      setSearch]      = useState('');
   const [teamFilter,  setTeamFilter]  = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [clusterFilter, setClusterFilter] = useState('');
   const [sortKey,     setSortKey]     = useState('no');
   const [sortDir,     setSortDir]     = useState('asc');
   const [editBlock,    setEditBlock]    = useState(null);
@@ -159,7 +170,15 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
   const isWorker  = ['staff', 'subcon-admin', 'subcon'].includes(userRole);
   const canEdit   = hasPermission(userRole, 'update:blocks');
   const canManage = ['owner', 'manager'].includes(userRole);
+  const canBulk   = ['owner', 'manager', 'supervisor'].includes(userRole);
   const [addMode, setAddMode] = useState(false);
+
+  const [selectedIds,  setSelectedIds]  = useState(() => new Set());
+  const [bulkTeam,      setBulkTeam]      = useState('');
+  const [bulkCluster,   setBulkCluster]   = useState('');
+  const [assigning,     setAssigning]     = useState(false);
+  const [closeConfirm,  setCloseConfirm]  = useState(false);
+  const [closing,       setClosing]       = useState(false);
 
   const handleSort = (col) => {
     if (sortKey === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -177,6 +196,57 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
     }
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const handleBulkAssignTeam = async () => {
+    if (!projectId || selectedIds.size === 0 || !bulkTeam) return;
+    setAssigning(true);
+    try {
+      const ids = [...selectedIds];
+      const batch = writeBatch(db);
+      const patch = {
+        team: bulkTeam === '__unassigned__' ? '' : bulkTeam,
+        updatedAt: new Date(),
+        updatedBy: userProfile.userId,
+        ...(bulkCluster.trim() ? { cluster: bulkCluster.trim() } : {}),
+      };
+      ids.forEach(id => batch.update(doc(db, 'projects', projectId, 'blocks', id), patch));
+      await batch.commit();
+      setBlocks(prev => prev.map(b => ids.includes(b.id) ? { ...b, ...patch } : b));
+      toast.success(`${ids.length} block(s) reassigned`);
+      setSelectedIds(new Set());
+      setBulkTeam(''); setBulkCluster('');
+    } catch {
+      toast.error('Failed to reassign blocks');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleBulkCloseCluster = async () => {
+    if (!projectId || selectedIds.size === 0) return;
+    setClosing(true);
+    try {
+      const ids = [...selectedIds];
+      const batch = writeBatch(db);
+      const patch = { clusterClosedAt: Timestamp.now(), clusterClosedBy: userProfile.userId };
+      ids.forEach(id => batch.update(doc(db, 'projects', projectId, 'blocks', id), patch));
+      await batch.commit();
+      setBlocks(prev => prev.map(b => ids.includes(b.id) ? { ...b, ...patch } : b));
+      toast.success(`${ids.length} block(s) — cluster closed`);
+      setSelectedIds(new Set());
+      setCloseConfirm(false);
+    } catch {
+      toast.error('Failed to close cluster');
+    } finally {
+      setClosing(false);
+    }
+  };
+
   const baseBlocks = useMemo(() => {
     if (isWorker && userTeam && userTeam !== 'none') return blocks.filter(b => b.team === userTeam);
     return blocks;
@@ -185,10 +255,11 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
   const filtered = useMemo(() => baseBlocks.filter(b => {
     const q = search.toLowerCase();
     if (q && !b.no.toLowerCase().includes(q) && !b.street.toLowerCase().includes(q)) return false;
-    if (teamFilter  && b.team !== teamFilter)              return false;
-    if (stageFilter && getStageStatus(b) !== stageFilter)  return false;
+    if (teamFilter    && b.team !== teamFilter)                        return false;
+    if (stageFilter   && getStageStatus(b) !== stageFilter)            return false;
+    if (clusterFilter && (b.cluster || b.street) !== clusterFilter)    return false;
     return true;
-  }), [baseBlocks, search, teamFilter, stageFilter]);
+  }), [baseBlocks, search, teamFilter, stageFilter, clusterFilter]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     let cmp = 0;
@@ -209,7 +280,8 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
 
   const teams         = [...new Set(blocks.map(b => b.team).filter(Boolean))];
   const activeCount   = baseBlocks.filter(b => b.isActive).length;
-  const existingStreets = [...new Set(blocks.map(b => b.street).filter(Boolean))].sort();
+  const existingStreets  = [...new Set(blocks.map(b => b.street).filter(Boolean))].sort();
+  const existingClusters = [...new Set(blocks.map(b => b.cluster || b.street).filter(Boolean))].sort();
 
   const handleSaved = (updated) => {
     setBlocks(prev => {
@@ -254,6 +326,10 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
           <option value="in-progress">In Progress</option>
           <option value="not-started">Not Started</option>
         </select>
+        <select className={styles.select} value={clusterFilter} onChange={e => setClusterFilter(e.target.value)}>
+          <option value="">All Clusters</option>
+          {existingClusters.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
         <span className={styles.count}>{filtered.length} / {baseBlocks.length} blocks</span>
         {activeCount > 0 && (
           <span className={styles.activePill}>★ {activeCount} active</span>
@@ -265,10 +341,58 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
         )}
       </div>
 
+      {canBulk && selectedIds.size > 0 && (
+        <div className={styles.bulkBar}>
+          <span className={styles.bulkCount}>{selectedIds.size} selected</span>
+          <button className={styles.bulkClearBtn} onClick={() => setSelectedIds(new Set())}>Clear</button>
+
+          <select className={styles.select} value={bulkTeam} onChange={e => setBulkTeam(e.target.value)}>
+            <option value="">Team…</option>
+            <option value="__unassigned__">Unassigned</option>
+            {TEAM_OPTIONS.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
+          </select>
+          <input
+            className={styles.search}
+            style={{ width: 180 }}
+            placeholder="Cluster label (optional)"
+            value={bulkCluster}
+            onChange={e => setBulkCluster(e.target.value)}
+            list="bulk-cluster-list"
+          />
+          <datalist id="bulk-cluster-list">
+            {existingClusters.map(c => <option key={c} value={c} />)}
+          </datalist>
+          <button className={styles.addBtn} disabled={assigning || !bulkTeam} onClick={handleBulkAssignTeam}>
+            {assigning ? 'Assigning…' : 'Assign Team'}
+          </button>
+
+          {!closeConfirm ? (
+            <button className={styles.bulkCloseBtn} onClick={() => setCloseConfirm(true)}>Close Cluster</button>
+          ) : (
+            <span className={styles.bulkCloseConfirm}>
+              Close cluster for {selectedIds.size} block(s)?
+              <button className={styles.cancelDelBtn} onClick={() => setCloseConfirm(false)}>Cancel</button>
+              <button className={styles.confirmDelBtn} disabled={closing} onClick={handleBulkCloseCluster}>
+                {closing ? 'Closing…' : 'Confirm'}
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
+              {canBulk && (
+                <th className={styles.thCheck}>
+                  <input
+                    type="checkbox"
+                    checked={sorted.length > 0 && sorted.every(b => selectedIds.has(b.id))}
+                    onChange={e => setSelectedIds(e.target.checked ? new Set(sorted.map(b => b.id)) : new Set())}
+                  />
+                </th>
+              )}
               <th className={styles.thStar} title="Mark as currently working on">★</th>
               <th className={styles.thDoc} title="Documents">📄</th>
               <SortTh col="no"     label="Block"  {...thProps} />
@@ -276,6 +400,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
               <th className={styles.hideS}>Type</th>
               <SortTh col="team"   label="Team"   {...thProps} />
               <SortTh col="survey" label="Survey" {...thProps} className={styles.hideS} />
+              <th>Cluster</th>
               <SortTh col="fix1"   label="Fix 1"  {...thProps} />
               <SortTh col="fix2"   label="Fix 2"  {...thProps} />
               <SortTh col="fix3"   label="Fix 3"  {...thProps} />
@@ -295,6 +420,15 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
                   className={[styles.row, editable ? styles.rowEditable : '', block.isActive ? styles.rowActive : ''].join(' ')}
                   onClick={() => editable && setEditBlock(block)}
                 >
+                  {canBulk && (
+                    <td className={styles.tdCheck} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(block.id)}
+                        onChange={() => toggleSelect(block.id)}
+                      />
+                    </td>
+                  )}
                   <td className={styles.tdStar}>
                     {editable && (
                       <button
@@ -332,6 +466,17 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
                       : <span className={styles.unassigned}>—</span>}
                   </td>
                   <td className={styles.hideS}><Badge color={sv.color}>{sv.label}</Badge></td>
+                  <td className={styles.tdCluster}>
+                    {block.cluster || block.street}
+                    {block.clusterClosedAt && (
+                      <span
+                        className={styles.clusterClosedBadge}
+                        title={`Closed ${formatDate(block.clusterClosedAt)}${block.clusterClosedBy ? ' by ' + block.clusterClosedBy : ''}`}
+                      >
+                        <LockClosedIcon width={11} />
+                      </span>
+                    )}
+                  </td>
                   <td className={styles.fixCell}><MiniBar value={block.fix1} /><span className={styles.fixPct}>{block.fix1 ?? 0}%</span></td>
                   <td className={styles.fixCell}><MiniBar value={block.fix2} /><span className={styles.fixPct}>{block.fix2 ?? 0}%</span></td>
                   <td className={styles.fixCell}><MiniBar value={block.fix3} /><span className={styles.fixPct}>{block.fix3 ?? 0}%</span></td>
@@ -359,6 +504,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
           onSaved={handleSaved}
           userRole={userRole}
           existingStreets={existingStreets}
+          existingClusters={existingClusters}
         />
       )}
 
@@ -371,6 +517,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
           onDeleted={handleDeleted}
           userRole={userRole}
           userTeam={userTeam}
+          existingClusters={existingClusters}
           existingStreets={existingStreets}
         />
       )}

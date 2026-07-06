@@ -33,6 +33,7 @@
 
 .field { display: flex; flex-direction: column; }
 .label { font-size: 12px; font-weight: 500; color: var(--text-sec); margin-bottom: 5px; }
+.opt   { font-weight: 400; color: var(--text-muted); }
 
 .select, .input {
   height: 38px;
@@ -112,6 +113,24 @@
   border-color: var(--red);
   color: #fff;
 }
+
+/* Closed cluster banner */
+.closedBanner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  font-size: 13px; color: var(--text-sec);
+}
+.closedIcon { color: var(--text-muted); flex-shrink: 0; }
+.reopenBtn {
+  margin-left: auto;
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer; font-family: inherit;
+  color: var(--text-sec);
+}
+.reopenBtn:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+.reopenBtn:disabled { opacity: 0.5; cursor: default; }
 
 /* Delete zone */
 .deleteZone {

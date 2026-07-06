@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.png';
+import { VERSION_LABEL } from '../../utils/version';
 import {
   HomeIcon,
   FolderIcon,
@@ -77,6 +78,7 @@ export default function Sidebar() {
         </div>
         <span className={styles.logoCms}>PORTAL</span>
       </div>
+      <span className={styles.versionTag}>{VERSION_LABEL}</span>
 
       {/* Main nav */}
       <nav className={styles.nav}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import {
   PlusIcon, XMarkIcon, ArrowDownTrayIcon, TrashIcon,
   DocumentTextIcon, ExclamationTriangleIcon, CloudArrowUpIcon,
@@ -31,6 +31,9 @@ export default function ProjectDocuments({ project }) {
   const canAdmin = can('manage:blocks');
   const isWorker = ['staff', 'subcon-admin', 'subcon'].includes(userProfile?.role);
   const myTeam   = userProfile?.team;
+  // Staff are WA employees — their document access flag is 'own' regardless
+  // of the team value stored on the user record.
+  const accessTeam = userProfile?.role === 'staff' ? 'own' : myTeam;
 
   const [docsList,  setDocsList]  = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -45,7 +48,13 @@ export default function ProjectDocuments({ project }) {
   const [form, setForm] = useState({ name: '', category: 'general', file: null, access: emptyAccess() });
 
   useEffect(() => {
-    getDocs(collection(db, 'projects', project.id, 'documents'))
+    const documentsRef = collection(db, 'projects', project.id, 'documents');
+    // Security rules only let worker roles read documents their team can
+    // access. Rules are not filters — the query must match them exactly,
+    // or Firestore rejects the whole request with permission-denied.
+    getDocs(isWorker
+      ? query(documentsRef, where(`access.${accessTeam}`, '==', true))
+      : documentsRef)
       .then(snap => {
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         list.sort((a, b) => (b.uploadedAt?.toMillis?.() ?? 0) - (a.uploadedAt?.toMillis?.() ?? 0));
@@ -53,7 +62,7 @@ export default function ProjectDocuments({ project }) {
       })
       .catch(() => toast.error('Failed to load documents'))
       .finally(() => setLoading(false));
-  }, [project.id, toast]);
+  }, [project.id, isWorker, accessTeam, toast]);
 
   const toggleAccess = async (docId, team, current) => {
     try {
@@ -122,9 +131,9 @@ export default function ProjectDocuments({ project }) {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const visibleDocs = isWorker && myTeam ? docsList.filter(d => d.access?.[myTeam]) : docsList;
-  const filtered    = filter === 'all' ? visibleDocs : visibleDocs.filter(d => d.category === filter);
-  const counts      = Object.fromEntries(CATEGORIES.map(c => [c.value, visibleDocs.filter(d => d.category === c.value).length]));
+  // Worker queries are already access-filtered server-side (see fetch effect above).
+  const filtered = filter === 'all' ? docsList : docsList.filter(d => d.category === filter);
+  const counts    = Object.fromEntries(CATEGORIES.map(c => [c.value, docsList.filter(d => d.category === c.value).length]));
 
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
 
@@ -132,7 +141,7 @@ export default function ProjectDocuments({ project }) {
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
         <div className={styles.filterRow}>
-          <button className={[styles.filterBtn, filter === 'all' ? styles.active : ''].join(' ')} onClick={() => setFilter('all')}>All ({visibleDocs.length})</button>
+          <button className={[styles.filterBtn, filter === 'all' ? styles.active : ''].join(' ')} onClick={() => setFilter('all')}>All ({docsList.length})</button>
           {CATEGORIES.map(c => (
             <button key={c.value} className={[styles.filterBtn, filter === c.value ? styles.active : ''].join(' ')} onClick={() => setFilter(c.value)}>
               {c.label}{counts[c.value] ? ` (${counts[c.value]})` : ''}

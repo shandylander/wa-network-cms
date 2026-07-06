@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
 import {
   ArrowLeftIcon, CubeIcon, CheckCircleIcon,
   BuildingOfficeIcon, TableCellsIcon, ViewColumnsIcon,
@@ -225,12 +225,19 @@ export default function ProjectDetail() {
   const [tab,       setTab]      = useState('overview');
   const [blockView, setBlockView] = useState('table'); // 'table' | 'kanban'
 
+  const isSubconRole = ['subcon-admin', 'subcon'].includes(userProfile?.role);
+  const myTeam       = userProfile?.team;
+
   useEffect(() => {
     const load = async () => {
       try {
+        // Sub-cons may only read blocks assigned to their team (see
+        // firestore.rules), so the blocks query must match the rule or the
+        // whole load fails and the project page renders blank.
+        const blocksRef = collection(db, 'projects', id, 'blocks');
         const [pSnap, bSnap] = await Promise.all([
           getDoc(doc(db, 'projects', id)),
-          getDocs(collection(db, 'projects', id, 'blocks')),
+          getDocs(isSubconRole ? query(blocksRef, where('team', '==', myTeam)) : blocksRef),
         ]);
         if (!pSnap.exists()) { navigate('/projects'); return; }
         setProject({ id: pSnap.id, ...pSnap.data() });
@@ -242,15 +249,22 @@ export default function ProjectDetail() {
       }
     };
     load();
-  }, [id, navigate]);
+  }, [id, navigate, isSubconRole, myTeam]);
 
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
   if (!project) return null;
 
   // Money data (claim rates, payments) is restricted to owner/manager
   const canViewMoney = hasPermission(userProfile?.role, 'view:claims');
+  // Materials/DO data is readable only by internal roles (see firestore.rules);
+  // hide the tab from field/subcon roles so they don't hit a load error.
+  const isInternal   = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  // Incidents are internal/staff-only (see firestore.rules); hide the tab
+  // from sub-con roles so they don't hit a load error.
   const TABS    = getTabsForType(project.projectType ?? 'pcs')
-    .filter(t => t !== 'claims' || canViewMoney);
+    .filter(t => (t !== 'claims' || canViewMoney)
+      && (t !== 'materials' || isInternal)
+      && (t !== 'incidents' || !isSubconRole));
   const isCctv  = ['pcs', 'cctv'].includes(project.projectType ?? 'pcs');
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;

@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { doc, addDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { TEAMS } from '../../utils/permissions';
+import { formatDate } from '../../utils/helpers';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import styles from './BlockModal.module.css';
 
 const TEAM_OPTIONS   = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
 const QUICK          = [0, 25, 50, 75, 100];
-const EMPTY_BLOCK    = { no: '', type: 'RESIDENTIAL', street: '', survey: 'ip', team: '', cam: 0, rack: '', fix1: 0, fix2: 0, fix3: 0, fix4: 0, surveyUrl: '', floorplanUrl: '' };
+const EMPTY_BLOCK    = { no: '', type: 'RESIDENTIAL', street: '', survey: 'ip', team: '', cam: 0, rack: '', fix1: 0, fix2: 0, fix3: 0, fix4: 0, surveyUrl: '', floorplanUrl: '', cluster: '' };
 
 function ProgressField({ label, value, onChange }) {
   return (
@@ -49,6 +50,7 @@ export default function BlockModal({
   onDeleted,      // (blockId) => void — optional
   userRole,
   existingStreets = [],   // for datalist autocomplete
+  existingClusters = [],  // for datalist autocomplete
   mode = 'edit',
 }) {
   const { userProfile } = useAuth();
@@ -75,11 +77,13 @@ export default function BlockModal({
           street:      block.street      ?? '',
           surveyUrl:   block.surveyUrl   ?? '',
           floorplanUrl: block.floorplanUrl ?? '',
+          cluster:     block.cluster     ?? '',
         }
   );
   const [saving,    setSaving]    = useState(false);
   const [delStep,   setDelStep]   = useState(false); // two-step delete
   const [deleting,  setDeleting]  = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const set    = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
   const setE   = (key) => (e)   => setForm(f => ({ ...f, [key]: e.target.value }));
@@ -93,6 +97,7 @@ export default function BlockModal({
         ...form,
         no:  form.no.trim().toUpperCase(),
         cam: Number(form.cam),
+        cluster: form.cluster.trim() || null,
         updatedAt: new Date(),
         updatedBy: userProfile.userId,
       };
@@ -110,6 +115,21 @@ export default function BlockModal({
       toast.error(mode === 'add' ? 'Failed to add block' : 'Failed to save changes');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    setReopening(true);
+    try {
+      const patch = { clusterClosedAt: null, clusterClosedBy: null };
+      await updateDoc(doc(db, 'projects', projectId, 'blocks', block.id), patch);
+      toast.success('Cluster reopened');
+      onSaved({ ...block, ...patch });
+      onClose();
+    } catch {
+      toast.error('Failed to reopen cluster');
+    } finally {
+      setReopening(false);
     }
   };
 
@@ -197,6 +217,36 @@ export default function BlockModal({
                 <option value="bto">BTO</option>
               </select>
             </div>
+          </div>
+          <div className={styles.field} style={{ marginTop: 12 }}>
+            <label className={styles.label}>Cluster <span className={styles.opt}>(optional — defaults to street)</span></label>
+            <input
+              className={styles.input}
+              value={form.cluster}
+              onChange={setE('cluster')}
+              placeholder={form.street || block?.street || ''}
+              list="cluster-list"
+            />
+            <datalist id="cluster-list">
+              {existingClusters.map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+        </div>
+      )}
+
+      {!isAdd && block.clusterClosedAt && (
+        <div className={styles.section}>
+          <div className={styles.closedBanner}>
+            <LockClosedIcon width={14} className={styles.closedIcon} />
+            <span>
+              Cluster closed {formatDate(block.clusterClosedAt)}
+              {block.clusterClosedBy ? ` by ${block.clusterClosedBy}` : ''}
+            </span>
+            {canManage && (
+              <button className={styles.reopenBtn} onClick={handleReopen} disabled={reopening}>
+                {reopening ? 'Reopening…' : 'Reopen'}
+              </button>
+            )}
           </div>
         </div>
       )}
