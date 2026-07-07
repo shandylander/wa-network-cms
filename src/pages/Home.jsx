@@ -136,6 +136,12 @@ export default function Home() {
   const [claimsOutstanding, setClaimsOutstanding] = useState(0);
   const [loading,         setLoading]         = useState(true);
   const [showCompleted,   setShowCompleted]   = useState(false);
+  const [now,             setNow]             = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -216,7 +222,11 @@ export default function Home() {
           <h2 className={styles.greetText}>{greet()}, {userProfile?.name?.split(' ')[0]}</h2>
           <p className={styles.greetSub}>Here's your company overview</p>
         </div>
-        <span className={styles.greetDate}>{new Intl.DateTimeFormat('en-SG', { dateStyle: 'long', timeZone: 'Asia/Singapore' }).format(new Date())}</span>
+        <span className={styles.greetDate}>
+          {new Intl.DateTimeFormat('en-SG', { dateStyle: 'long', timeZone: 'Asia/Singapore' }).format(now)}
+          {' · '}
+          {new Intl.DateTimeFormat('en-SG', { timeStyle: 'medium', timeZone: 'Asia/Singapore' }).format(now)}
+        </span>
       </div>
 
       {/* Stats */}
