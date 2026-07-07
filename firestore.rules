@@ -182,8 +182,13 @@ service cloud.firestore {
         ownerOrManager() || isSupervisor() || resource.data.userId == uid()
       );
       allow create: if signedIn() && (request.resource.data.userId == uid() || ownerOrManager());
+      // Applicants may edit or cancel their own application while pending,
+      // but cannot change its owner or self-approve it.
       allow update: if ownerOrManager() || isSupervisor()
-        || (resource.data.userId == uid() && resource.data.status == 'pending');
+        || (resource.data.userId == uid()
+            && resource.data.status == 'pending'
+            && request.resource.data.status in ['pending', 'cancelled']
+            && request.resource.data.userId == resource.data.userId);
       allow delete: if ownerOrManager();
     }
     match /leaveEntitlements/{id} {
@@ -205,7 +210,14 @@ service cloud.firestore {
       allow read: if ownerOrManager() || isSupervisor()
         || resource.data.userId == uid();
       allow create: if signedIn() && (request.resource.data.userId == uid() || ownerOrManager());
-      allow update, delete: if ownerOrManager();
+      // Submitters may correct their own claim while it is still pending,
+      // but cannot change its owner or self-approve it.
+      allow update: if ownerOrManager()
+        || (resource.data.userId == uid()
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.userId == resource.data.userId);
+      allow delete: if ownerOrManager();
     }
   }
 }

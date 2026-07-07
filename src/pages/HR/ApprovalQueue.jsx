@@ -4,6 +4,7 @@ import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
 
 const fmtDate = (iso) => {
@@ -17,6 +18,7 @@ const TYPE_COLOR = { AL: 'blue', MC: 'green', NPL: 'amber', OIL: 'purple' };
 export default function ApprovalQueue() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const [lightbox, setLightbox] = useState(null);
   const year = new Date().getFullYear();
 
   const [apps,       setApps]      = useState([]);
@@ -131,7 +133,13 @@ export default function ApprovalQueue() {
                       <p className={styles.queueReject}>Reason: {app.rejectionReason}</p>
                     )}
                     {app.mcUrl && (
-                      <a href={app.mcUrl} target="_blank" rel="noreferrer" className={styles.mcLink}>View MC cert →</a>
+                      <a href={app.mcUrl} target="_blank" rel="noreferrer" className={styles.mcLink}
+                        onClick={e => { if (isImageUrl(app.mcUrl)) { e.preventDefault(); setLightbox(app.mcUrl); } }}>
+                        View MC cert →
+                      </a>
+                    )}
+                    {lightbox === app.mcUrl && (
+                      <FileLightbox url={lightbox} caption={`${app.name} — MC`} onClose={() => setLightbox(null)} />
                     )}
                   </div>
                 </div>

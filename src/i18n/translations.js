@@ -6,7 +6,7 @@ const en = {
   // Common
   back: 'Back', next: 'Next', cancel: 'Cancel', confirm: 'Confirm',
   submit: 'Send', done: 'Done', close: 'Close', retake: 'Retake',
-  tryAgain: 'Try again', view: 'View', loading: 'Loading…', optional: '(optional)',
+  tryAgain: 'Try again', view: 'View', edit: 'Edit', loading: 'Loading…', optional: '(optional)',
   statusPending: 'Waiting', statusApproved: 'Approved', statusRejected: 'Rejected', statusCancelled: 'Cancelled',
   day: 'day', days: 'days', hours: 'hours',
   fileTooBig: 'File is too big (max 10 MB)', uploadFailed: 'Upload failed. Try again.',
@@ -69,7 +69,7 @@ const en = {
 const bn = {
   back: 'ফিরে যান', next: 'পরবর্তী', cancel: 'বাতিল', confirm: 'নিশ্চিত করুন',
   submit: 'পাঠান', done: 'সম্পন্ন', close: 'বন্ধ', retake: 'আবার তুলুন',
-  tryAgain: 'আবার চেষ্টা করুন', view: 'দেখুন', loading: 'লোড হচ্ছে…', optional: '(ঐচ্ছিক)',
+  tryAgain: 'আবার চেষ্টা করুন', view: 'দেখুন', edit: 'ঠিক করুন', loading: 'লোড হচ্ছে…', optional: '(ঐচ্ছিক)',
   statusPending: 'অপেক্ষায়', statusApproved: 'অনুমোদিত', statusRejected: 'প্রত্যাখ্যাত', statusCancelled: 'বাতিল',
   day: 'দিন', days: 'দিন', hours: 'ঘণ্টা',
   fileTooBig: 'ফাইল খুব বড় (সর্বোচ্চ ১০ MB)', uploadFailed: 'আপলোড ব্যর্থ। আবার চেষ্টা করুন।',
@@ -129,7 +129,7 @@ const bn = {
 const ta = {
   back: 'பின்செல்', next: 'அடுத்து', cancel: 'ரத்து', confirm: 'உறுதி',
   submit: 'அனுப்பு', done: 'முடிந்தது', close: 'மூடு', retake: 'மீண்டும் எடு',
-  tryAgain: 'மீண்டும் முயற்சி', view: 'பார்', loading: 'ஏற்றுகிறது…', optional: '(விருப்பம்)',
+  tryAgain: 'மீண்டும் முயற்சி', view: 'பார்', edit: 'திருத்து', loading: 'ஏற்றுகிறது…', optional: '(விருப்பம்)',
   statusPending: 'காத்திருக்கிறது', statusApproved: 'ஒப்புதல்', statusRejected: 'நிராகரிப்பு', statusCancelled: 'ரத்து',
   day: 'நாள்', days: 'நாட்கள்', hours: 'மணி',
   fileTooBig: 'கோப்பு மிகப் பெரியது (அதிகபட்சம் 10 MB)', uploadFailed: 'பதிவேற்றம் தோல்வி. மீண்டும் முயற்சிக்கவும்.',

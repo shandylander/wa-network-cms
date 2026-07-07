@@ -5,6 +5,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import WorkerClaims from '../Worker/WorkerClaims';
+import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
 
 const CATEGORIES = [
@@ -35,6 +36,7 @@ export default function PettyCash() {
   const [rejectId,  setRejectId]  = useState(null);
   const [rejectNote, setRejectNote] = useState('');
   const [saving,    setSaving]    = useState(false);
+  const [lightbox,  setLightbox]  = useState(null);
 
   const [form, setForm] = useState({
     date: todaySG(), category: 'transport', description: '', amount: '', receiptUrl: '',
@@ -161,7 +163,12 @@ export default function PettyCash() {
                     {tab === 'queue' && <p className={styles.pcClaimant}>{c.name}</p>}
                     <p className={styles.pcDesc}>{c.description}</p>
                     <p className={styles.pcMeta}>{fmtDate(c.date)} · {catLabel}</p>
-                    {c.receiptUrl && <a href={c.receiptUrl} target="_blank" rel="noreferrer" className={styles.mcLink}>View receipt →</a>}
+                    {c.receiptUrl && (
+                      <a href={c.receiptUrl} target="_blank" rel="noreferrer" className={styles.mcLink}
+                        onClick={e => { if (isImageUrl(c.receiptUrl)) { e.preventDefault(); setLightbox(c.receiptUrl); } }}>
+                        View receipt →
+                      </a>
+                    )}
                     {c.rejectionReason && <p className={styles.appReject}>Rejected: {c.rejectionReason}</p>}
                   </div>
                 </div>
@@ -228,6 +235,8 @@ export default function PettyCash() {
           </div>
         </div>
       )}
+
+      {lightbox && <FileLightbox url={lightbox} onClose={() => setLightbox(null)} />}
 
       {/* Reject modal */}
       {rejectId && (

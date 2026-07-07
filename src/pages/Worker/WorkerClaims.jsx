@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  collection, query, where, getDocs, addDoc, Timestamp,
+  collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp,
 } from 'firebase/firestore';
 import {
   ArrowLeftIcon, CameraIcon, CheckCircleIcon, ClockIcon, XCircleIcon,
@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useLang, LangSwitch } from '../../context/LanguageContext';
 import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/workerDocs';
+import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './Worker.module.css';
 
 const CATEGORIES = [
@@ -52,6 +53,8 @@ export default function WorkerClaims() {
   const [ocrState,   setOcrState]   = useState('none');  // none|working|done|failed
   const [form,       setForm]       = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [editingId,  setEditingId]  = useState(null);    // pending claim being edited
+  const [lightbox,   setLightbox]   = useState(null);    // url being enlarged
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -101,7 +104,24 @@ export default function WorkerClaims() {
     }
   };
 
-  const openWizard  = () => { setForm({ ...EMPTY_FORM, date: todaySG() }); setOcrState('none'); setStep(1); setWizard(true); };
+  const openWizard  = () => { setEditingId(null); setForm({ ...EMPTY_FORM, date: todaySG() }); setOcrState('none'); setStep(1); setWizard(true); };
+
+  /* Reopen a still-pending claim for correction */
+  const openEdit = (claim) => {
+    setEditingId(claim.id);
+    setForm({
+      date: claim.date ?? todaySG(),
+      category: claim.category ?? 'other',
+      description: claim.description ?? '',
+      amount: String(claim.amount ?? ''),
+      receiptUrl: claim.receiptUrl ?? '',
+      receiptFileName: 'Receipt',
+      receiptPreview: claim.receiptUrl && isImageUrl(claim.receiptUrl) ? claim.receiptUrl : null,
+    });
+    setOcrState('done');
+    setStep(2);
+    setWizard(true);
+  };
 
   const canSubmit = form.receiptUrl && form.amount && parseFloat(form.amount) > 0 && form.date;
 
@@ -109,21 +129,32 @@ export default function WorkerClaims() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      const payload = {
-        userId, name: userProfile.name, team: userProfile.team ?? '',
+      const fields = {
         date: form.date,
         category: form.category,
         description: form.description.trim() || CATEGORIES.find(c => c.value === form.category)?.value || 'claim',
         amount: parseFloat(form.amount),
         receiptUrl: form.receiptUrl,
-        status: 'pending',
-        reviewedBy: null, reviewedAt: null, rejectionReason: null,
-        createdAt: Timestamp.now(),
       };
-      const ref = await addDoc(collection(db, 'pettyCashClaims'), payload);
-      setClaims(c => [{ id: ref.id, ...payload }, ...c]);
+
+      if (editingId) {
+        const patch = { ...fields, status: 'pending', updatedAt: Timestamp.now() };
+        await updateDoc(doc(db, 'pettyCashClaims', editingId), patch);
+        setClaims(c => c.map(x => x.id === editingId ? { ...x, ...patch } : x));
+      } else {
+        const payload = {
+          userId, name: userProfile.name, team: userProfile.team ?? '',
+          ...fields,
+          status: 'pending',
+          reviewedBy: null, reviewedAt: null, rejectionReason: null,
+          createdAt: Timestamp.now(),
+        };
+        const ref = await addDoc(collection(db, 'pettyCashClaims'), payload);
+        setClaims(c => [{ id: ref.id, ...payload }, ...c]);
+      }
       toast.success(t('claimSent'));
       setWizard(false);
+      setEditingId(null);
     } catch { toast.error(t('uploadFailed')); }
     finally { setSubmitting(false); }
   };
@@ -183,7 +214,9 @@ export default function WorkerClaims() {
           {step === 2 && (
             <>
               {form.receiptPreview
-                ? <img src={form.receiptPreview} alt="" className={styles.filePreview} />
+                ? <img src={form.receiptPreview} alt="" className={styles.filePreview}
+                    style={{ cursor: 'zoom-in' }}
+                    onClick={() => setLightbox(form.receiptUrl || form.receiptPreview)} />
                 : (
                   <div className={styles.pdfBadge}>
                     <DocumentIcon width={26} style={{ flexShrink: 0 }} />
@@ -240,6 +273,7 @@ export default function WorkerClaims() {
             </>
           )}
         </div>
+        {lightbox && <FileLightbox url={lightbox} onClose={() => setLightbox(null)} />}
       </div>
     );
   }
@@ -287,11 +321,26 @@ export default function WorkerClaims() {
                 <span className={[styles.statusChip, styles[chip.cls]].join(' ')}>
                   <chip.Icon className={styles.statusChipIcon} /> {t(chip.tKey)}
                 </span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {c.receiptUrl && (
+                    <button className={styles.cancelAppBtn} style={{ color: 'var(--blue)' }}
+                      onClick={() => setLightbox(c.receiptUrl)}>
+                      {t('receipt')}
+                    </button>
+                  )}
+                  {c.status === 'pending' && (
+                    <button className={styles.cancelAppBtn} style={{ color: 'var(--navy)' }}
+                      onClick={() => openEdit(c)}>
+                      {t('edit')}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
         })
       )}
+      {lightbox && <FileLightbox url={lightbox} onClose={() => setLightbox(null)} />}
     </div>
   );
 }

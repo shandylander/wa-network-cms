@@ -13,6 +13,7 @@ import { useToast } from '../../context/ToastContext';
 import { useLang, LangSwitch } from '../../context/LanguageContext';
 import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/workerDocs';
 import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
+import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './Worker.module.css';
 
 const TYPES = [
@@ -66,6 +67,8 @@ export default function WorkerLeave() {
   const [form,       setForm]       = useState(EMPTY_FORM);
   const [mcState,    setMcState]    = useState('none');      // none|working|done|failed
   const [submitting, setSubmitting] = useState(false);
+  const [editing,    setEditing]    = useState(null);        // pending app being edited
+  const [lightbox,   setLightbox]   = useState(null);        // url being enlarged
 
   const loadData = useCallback(async () => {
     if (!userId) return;
@@ -133,8 +136,27 @@ export default function WorkerLeave() {
   };
 
   /* ── Navigation ── */
-  const openWizard  = () => { setForm(EMPTY_FORM); setMcState('none'); setStep(1); setWizard(true); };
-  const closeWizard = () => setWizard(false);
+  const openWizard  = () => { setEditing(null); setForm(EMPTY_FORM); setMcState('none'); setStep(1); setWizard(true); };
+  const closeWizard = () => { setWizard(false); setEditing(null); };
+
+  /* Reopen a still-pending application for correction */
+  const openEdit = (app) => {
+    setEditing(app);
+    setForm({
+      type: app.type,
+      dateFrom: app.dateFrom,
+      dateTo: app.halfDay ? '' : (app.dateTo ?? ''),
+      dayMode: app.halfDay ? (app.halfDayPeriod ?? 'AM') : 'full',
+      reason: app.reason ?? '',
+      mcUrl: app.mcUrl ?? '',
+      mcFileName: app.mcUrl ? 'MC' : '',
+      mcPreview: app.mcUrl && isImageUrl(app.mcUrl) ? app.mcUrl : null,
+      mcClinic: app.mcClinic ?? '',
+    });
+    setMcState(app.mcUrl ? 'done' : app.type === 'MC' ? 'failed' : 'none');
+    setStep(2);
+    setWizard(true);
+  };
   const pickType    = (value) => { setForm(f => ({ ...f, type: value })); setStep(2); };
 
   const canGoConfirm =
@@ -143,8 +165,11 @@ export default function WorkerLeave() {
 
   /* ── Submit ── */
   const submit = async () => {
-    if (form.type === 'AL' && days > alLeft) { toast.error(t('notEnoughBalance')); return; }
-    if (form.type === 'MC' && days > mcLeft) { toast.error(t('notEnoughBalance')); return; }
+    // When editing, the app's own pending days are already counted as used —
+    // credit them back so re-saving the same dates passes the balance check.
+    const credit = (type) => (editing && editing.type === type ? (editing.days ?? 0) : 0);
+    if (form.type === 'AL' && days > alLeft + credit('AL')) { toast.error(t('notEnoughBalance')); return; }
+    if (form.type === 'MC' && days > mcLeft + credit('MC')) { toast.error(t('notEnoughBalance')); return; }
 
     setSubmitting(true);
     try {
@@ -153,8 +178,7 @@ export default function WorkerLeave() {
         || (form.type === 'MC'
               ? `Medical leave${form.mcClinic ? ` — ${form.mcClinic}` : ''} (MC attached)`
               : typeLabel);
-      const payload = {
-        userId, name: userProfile.name, team: userProfile.team ?? '',
+      const fields = {
         type: form.type,
         dateFrom: form.dateFrom,
         dateTo: halfDay ? form.dateFrom : form.dateTo,
@@ -164,6 +188,21 @@ export default function WorkerLeave() {
         reason,
         mcUrl: form.type === 'MC' ? form.mcUrl : null,
         mcClinic: form.type === 'MC' ? (form.mcClinic || null) : null,
+      };
+
+      if (editing) {
+        const patch = { ...fields, status: 'pending', updatedAt: Timestamp.now() };
+        await updateDoc(doc(db, 'leaveApplications', editing.id), patch);
+        setApps(a => a.map(x => x.id === editing.id ? { ...x, ...patch } : x));
+        toast.success(t('submitted'));
+        setWizard(false);
+        setEditing(null);
+        return;
+      }
+
+      const payload = {
+        userId, name: userProfile.name, team: userProfile.team ?? '',
+        ...fields,
         status: 'pending',
         reviewedBy: null, reviewedAt: null, rejectionReason: null,
         year,
@@ -270,9 +309,13 @@ export default function WorkerLeave() {
                   {(mcState === 'done' || mcState === 'failed') && (
                     <>
                       {form.mcPreview
-                        ? <img src={form.mcPreview} alt="" className={styles.filePreview} />
+                        ? <img src={form.mcPreview} alt="" className={styles.filePreview}
+                            style={{ cursor: 'zoom-in' }}
+                            onClick={() => setLightbox(form.mcUrl || form.mcPreview)} />
                         : (
-                          <div className={styles.pdfBadge}>
+                          <div className={styles.pdfBadge}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => form.mcUrl && window.open(form.mcUrl, '_blank', 'noopener')}>
                             <DocumentIcon width={26} style={{ flexShrink: 0 }} />
                             {form.mcFileName}
                             <CheckCircleIcon width={24} style={{ color: 'var(--green)', flexShrink: 0, marginLeft: 'auto' }} />
@@ -400,6 +443,7 @@ export default function WorkerLeave() {
             </>
           )}
         </div>
+        {lightbox && <FileLightbox url={lightbox} onClose={() => setLightbox(null)} />}
       </div>
     );
   }
@@ -449,16 +493,29 @@ export default function WorkerLeave() {
                 <span className={[styles.statusChip, styles[chip.cls]].join(' ')}>
                   <chip.Icon className={styles.statusChipIcon} /> {t(chip.tKey)}
                 </span>
-                {app.status === 'pending' && (
-                  <button className={styles.cancelAppBtn} onClick={() => cancelApp(app)}>
-                    {t('cancel')}
+                {app.mcUrl && (
+                  <button className={styles.cancelAppBtn} style={{ color: 'var(--blue)' }}
+                    onClick={() => setLightbox(app.mcUrl)}>
+                    MC
                   </button>
+                )}
+                {app.status === 'pending' && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className={styles.cancelAppBtn} style={{ color: 'var(--navy)' }}
+                      onClick={() => openEdit(app)}>
+                      {t('edit')}
+                    </button>
+                    <button className={styles.cancelAppBtn} onClick={() => cancelApp(app)}>
+                      {t('cancel')}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           );
         })
       )}
+      {lightbox && <FileLightbox url={lightbox} onClose={() => setLightbox(null)} />}
     </div>
   );
 }
