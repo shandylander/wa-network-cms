@@ -24,6 +24,15 @@ service cloud.firestore {
     function internal()       { return isOwner() || isManager() || isSupervisor(); }
     function anyStaff()       { return internal() || isStaff(); }
 
+    // Access Levels — see accessLevels/{levelId} below. Only used for
+    // conditions that are clean, standalone feature gates with a verified
+    // exact match in src/utils/permissionCatalog.js's default role-sets.
+    // Do NOT use for conditions structurally tied to Bucket-B team/self
+    // scoping, or where no catalog key reproduces today's exact role-set —
+    // those stay on the role helpers above until a follow-up pass resolves
+    // the mismatch deliberately rather than silently.
+    function hasPerm(p) { return p in me().effectivePermissions; }
+
     // ── BOOTSTRAP ─────────────────────────────────────────────────────────
     // Allow all reads/writes before first-time setup is complete.
     // Once _metadata/setup is written, this rule never matches again.
@@ -67,35 +76,54 @@ service cloud.firestore {
         anyStaff() ||
         ((isSubconAdmin() || isSubcon()) && resource.data.assignedTeams.hasAny([myTeam()]))
       );
-      allow create: if ownerOrManager();
+      // create: matches ProjectList.jsx's existing manage:blocks gate exactly
+      allow create: if hasPerm('manage:blocks');
+      // update: role-component intentionally left unconverted — the current
+      // rule (ownerOrManager()||isSupervisor()) doesn't exactly match any
+      // single catalog permission's role-set without either narrowing
+      // supervisor out (regression) or widening a narrower key (over-grant).
       allow update: if ownerOrManager() || isSupervisor();
       allow delete: if isOwner();
 
       // Blocks
       match /blocks/{blockId} {
+        // read: left unconverted — anyStaff() here is structurally paired
+        // with the subcon team-scoped branch; converting the broad side to
+        // a permission key that subcon-admin/subcon's own level also grants
+        // (per the wider app-level view:projects permission) would silently
+        // remove their team-scoping. Needs a deliberate follow-up decision,
+        // not a mechanical conversion.
         allow read: if signedIn() && (
           anyStaff() ||
           ((isSubconAdmin() || isSubcon()) && resource.data.team == myTeam())
         );
-        allow create: if ownerOrManager();
+        allow create: if hasPerm('manage:blocks');
         allow update: if ownerOrManager() || isSupervisor()
           || ((isStaff() || isSubconAdmin() || isSubcon()) && resource.data.team == myTeam());
-        allow delete: if ownerOrManager();
+        allow delete: if hasPerm('blocks:delete');
       }
 
       // Documents — default no access; access granted per team flag
       match /documents/{docId} {
+        // read: left unconverted, same reasoning as blocks read above.
         allow read: if signedIn() && (
           internal() ||
           (isStaff()       && resource.data.access.get('own',    false)) ||
           (isSubconAdmin() && resource.data.access.get(myTeam(), false)) ||
           (isSubcon()      && resource.data.access.get(myTeam(), false))
         );
-        allow write: if ownerOrManager();
+        // write: matches ProjectDocuments.jsx's existing manage:blocks gate
+        allow write: if hasPerm('manage:blocks');
       }
 
-      // Claims / finance — owner + manager only
-      match /claims/{id}         { allow read, write: if ownerOrManager(); }
+      // Claims / finance — owner + manager only, no subcon involvement
+      match /claims/{id}         { allow read, write: if hasPerm('view:claims'); }
+      // Left unconverted: this single condition covers both read AND write.
+      // materials:view (owner/manager/supervisor) would over-grant write/
+      // approve rights beyond what the label implies; materials:approve
+      // (owner/manager only) would regress supervisor's existing write
+      // access. Needs the read/write split decided deliberately, not
+      // conflated by a mechanical conversion.
       match /materialOrders/{id} { allow read, write: if ownerOrManager() || isSupervisor(); }
       match /deliveryOrders/{id} { allow read, write: if ownerOrManager() || isSupervisor(); }
       match /materials/{id}      { allow read, write: if ownerOrManager() || isSupervisor(); }
@@ -105,14 +133,18 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/projects/$(pid)).data.assignedTeams.hasAny([myTeam()]);
       }
       match /permits/{id} {
+        // read: left unconverted, same anyStaff()/subcon-scope reasoning as above
         allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
-        allow write: if internal();
+        // write has no subcon branch at all — clean match to approve:permits
+        allow write: if hasPerm('approve:permits');
       }
       match /toolboxMeetings/{id} {
         allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
-        allow write: if internal();
+        // write has no subcon branch at all — clean match to toolbox:manage
+        allow write: if hasPerm('toolbox:manage');
       }
-      match /incidents/{id}  { allow read, write: if anyStaff(); }
+      // Pure anyStaff() with no subcon branch at all — exact match to incidents:view
+      match /incidents/{id}  { allow read, write: if hasPerm('incidents:view'); }
       // Snags are directed to the sub-con team handling the block, so an
       // assigned sub-con may read/log/update snags for their own team only.
       match /snags/{id} {
@@ -148,15 +180,15 @@ service cloud.firestore {
       allow read: if signedIn();
       // Owner/manager can post anything; signed-in users can post system
       // notifications (leave requests etc.) targeted to management only
-      allow create: if ownerOrManager()
+      allow create: if hasPerm('manage:announcements')
         || (signedIn()
             && request.resource.data.isSystemNotification == true
             && request.resource.data.audience == 'management');
-      allow update: if ownerOrManager()
+      allow update: if hasPerm('manage:announcements')
         // Any signed-in user may add their own userId to readBy (acknowledge)
         || (signedIn()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
-      allow delete: if ownerOrManager();
+      allow delete: if hasPerm('manage:announcements');
     }
 
     // ── RA LIBRARY ─────────────────────────────────────────────────────────
@@ -189,21 +221,29 @@ service cloud.firestore {
         (isSubconAdmin() && resource.data.team   == myTeam()) ||
         (isSubcon()      && resource.data.userId == uid())
       );
+      // create: left unconverted — the admin-override branch here is
+      // ownerOrManager() only (no supervisor), narrower than
+      // attendance:manage; converting would over-grant create rights.
       allow create: if signedIn() && (request.resource.data.userId == uid() || ownerOrManager());
-      allow update: if ownerOrManager() || isSupervisor()
+      // update: role-component matches attendance:manage exactly
+      allow update: if hasPerm('attendance:manage')
         || resource.data.userId == uid();
       allow delete: if ownerOrManager();
     }
 
     // ── LEAVE ──────────────────────────────────────────────────────────────
     match /leaveApplications/{id} {
+      // role-component matches leave:approve exactly
       allow read: if signedIn() && (
-        ownerOrManager() || isSupervisor() || resource.data.userId == uid()
+        hasPerm('leave:approve') || resource.data.userId == uid()
       );
+      // create: left unconverted — admin-override is ownerOrManager() only
+      // (no supervisor), narrower than leave:approve.
       allow create: if signedIn() && (request.resource.data.userId == uid() || ownerOrManager());
       // Applicants may edit or cancel their own application while pending,
       // but cannot change its owner or self-approve it.
-      allow update: if ownerOrManager() || isSupervisor()
+      // role-component matches leave:approve exactly
+      allow update: if hasPerm('leave:approve')
         || (resource.data.userId == uid()
             && resource.data.status == 'pending'
             && request.resource.data.status in ['pending', 'cancelled']
@@ -211,22 +251,27 @@ service cloud.firestore {
       allow delete: if ownerOrManager();
     }
     match /leaveEntitlements/{id} {
+      // role-component matches leave:approve exactly
       allow read: if signedIn() && (
-        ownerOrManager() || isSupervisor() || resource.data.userId == uid()
+        hasPerm('leave:approve') || resource.data.userId == uid()
       );
-      allow write: if ownerOrManager();
+      // matches LeaveManagement.jsx's leave:settings-gated Entitlements tab
+      allow write: if hasPerm('leave:settings');
     }
 
     // ── PAYROLL ────────────────────────────────────────────────────────────
     match /payslips/{id} {
       allow read:  if ownerOrManager() || resource.data.userId == uid();
-      allow write: if ownerOrManager();
+      // matches PayslipGenerator.jsx's salary:manage-payslips admin branch
+      allow write: if hasPerm('salary:manage-payslips');
     }
     match /salaryConfig/{id} {
-      allow read, write: if ownerOrManager();
+      // matches SalaryCalculator.jsx's salary:config-gated Pay Config tab
+      allow read, write: if hasPerm('salary:config');
     }
     match /pettyCashClaims/{id} {
-      allow read: if ownerOrManager() || isSupervisor()
+      // role-component matches pettycash:approve exactly
+      allow read: if hasPerm('pettycash:approve')
         || resource.data.userId == uid();
       allow create: if signedIn() && (request.resource.data.userId == uid() || ownerOrManager());
       // Submitters may correct their own claim while it is still pending,
