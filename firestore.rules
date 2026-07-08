@@ -43,12 +43,21 @@ service cloud.firestore {
       allow read: if signedIn() && (
         uid() == userId || ownerOrManager() || isSupervisor()
       );
-      allow create: if ownerOrManager();
-      allow update: if isOwner()
+      // effectivePermissions is Cloud-Function-only, never client-writable —
+      // it's the denormalized result Access Levels compute server-side.
+      allow create: if ownerOrManager()
+        && !('effectivePermissions' in request.resource.data);
+      allow update: if (
+        isOwner()
         || (isManager()     && resource.data.role != 'owner')
         || (isSubconAdmin() && resource.data.team == myTeam())
         // users may flip their own firstLogin flag during forced PIN change
-        || (uid() == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstLogin']));
+        || (uid() == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstLogin']))
+      )
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['effectivePermissions'])
+        // role/accessLevels assignment is never delegable — owner/manager only,
+        // regardless of which branch above would otherwise permit the write.
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'accessLevels']) || ownerOrManager());
       allow delete: if isOwner();
     }
 
@@ -158,6 +167,16 @@ service cloud.firestore {
 
     // ── APP CONFIG (team groups, certificate types) ────────────────────────
     match /appConfig/{docId} {
+      allow read:  if signedIn();
+      allow write: if ownerOrManager();
+    }
+
+    // ── ACCESS LEVELS ──────────────────────────────────────────────────────
+    // Defining/editing levels is never delegable via the permission system
+    // itself — hard-coded owner/manager only, to prevent self-escalation
+    // (someone with a grantable "manage access levels" permission could
+    // otherwise grant themselves anything). Do not convert this to hasPerm().
+    match /accessLevels/{levelId} {
       allow read:  if signedIn();
       allow write: if ownerOrManager();
     }

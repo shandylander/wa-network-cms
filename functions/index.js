@@ -1,8 +1,13 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 initializeApp();
+
+const REGION = 'asia-southeast1';
 
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
@@ -302,6 +307,155 @@ exports.uploadProjectDocument = onCall(
       if (err instanceof HttpsError) throw err;
       console.error('[Dropbox] Share link error:', err);
       throw new HttpsError('internal', 'Dropbox share link creation failed.');
+    }
+  }
+);
+
+// ── Access Levels — effective-permission recomputation ──────────────────
+// A user's effectivePermissions is the union of every assigned access
+// level's permissions. It is denormalized onto the user doc so Firestore
+// security rules can check it in O(1) (`p in me().effectivePermissions`)
+// instead of resolving group membership inside rules, which the rules
+// language can't do efficiently. This field is Cloud-Function-only —
+// firestore.rules blocks every client write to it.
+
+function arraysEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function computeEffectivePermissions(accessLevelIds, levelsById) {
+  const set = new Set();
+  (accessLevelIds ?? []).forEach((id) => {
+    const level = levelsById[id];
+    if (!level) return; // dangling reference (deleted level) — contributes nothing
+    (level.permissions ?? []).forEach((p) => set.add(p));
+  });
+  return [...set].sort();
+}
+
+async function loadLevelsById(db, ids) {
+  const levelsById = {};
+  const uniqueIds = [...new Set(ids)].filter(Boolean);
+  await Promise.all(uniqueIds.map(async (id) => {
+    const snap = await db.collection('accessLevels').doc(id).get();
+    if (snap.exists) levelsById[id] = snap.data();
+  }));
+  return levelsById;
+}
+
+async function loadAllLevels(db) {
+  const snap = await db.collection('accessLevels').get();
+  const levelsById = {};
+  snap.docs.forEach((d) => { levelsById[d.id] = d.data(); });
+  return levelsById;
+}
+
+// Recomputes one user's effectivePermissions when their own accessLevels
+// (or role) changes. Guarded against retriggering on its own write: it
+// only ever writes effectivePermissions, which isn't a watched field, so
+// the second invocation sees no change and returns immediately.
+exports.recomputeUserPermissions = onDocumentWritten(
+  { document: 'users/{userId}', region: REGION, memory: '256MiB', timeoutSeconds: 60 },
+  async (event) => {
+    const after = event.data?.after;
+    if (!after?.exists) return; // user deleted
+
+    const beforeData = event.data?.before?.exists ? event.data.before.data() : {};
+    const afterData  = after.data();
+
+    const beforeLevels = (beforeData.accessLevels ?? []).slice().sort();
+    const afterLevels  = (afterData.accessLevels ?? []).slice().sort();
+    if (arraysEqual(beforeLevels, afterLevels)) return; // loop guard
+
+    const db = getFirestore();
+    const levelsById = await loadLevelsById(db, afterLevels);
+    const computed = computeEffectivePermissions(afterLevels, levelsById);
+    const current  = (afterData.effectivePermissions ?? []).slice().sort();
+    if (arraysEqual(computed, current)) return;
+
+    await after.ref.update({
+      effectivePermissions: computed,
+      effectivePermissionsComputedAt: FieldValue.serverTimestamp(),
+    });
+  }
+);
+
+// Fans out to every user assigned to a level when that level's permission
+// list changes (or the level is deleted), so nobody's access silently goes
+// stale. Loads the whole accessLevels collection once and reuses it across
+// every affected user rather than re-resolving per user.
+exports.recomputeLevelMemberPermissions = onDocumentWritten(
+  { document: 'accessLevels/{levelId}', region: REGION, memory: '256MiB', timeoutSeconds: 120 },
+  async (event) => {
+    const levelId = event.params.levelId;
+    const after = event.data?.after;
+    const beforeData = event.data?.before?.exists ? event.data.before.data() : {};
+    const afterData  = after?.exists ? after.data() : null;
+    const deleted = !afterData;
+
+    const beforePerms = (beforeData.permissions ?? []).slice().sort();
+    const afterPerms  = (afterData?.permissions ?? []).slice().sort();
+    if (!deleted && arraysEqual(beforePerms, afterPerms)) return; // cosmetic-only edit (label/color)
+
+    const db = getFirestore();
+    const usersSnap = await db.collection('users')
+      .where('accessLevels', 'array-contains', levelId)
+      .get();
+    if (usersSnap.empty) return;
+
+    const levelsById = await loadAllLevels(db);
+
+    const docs = usersSnap.docs;
+    for (let i = 0; i < docs.length; i += 500) {
+      const batch = db.batch();
+      docs.slice(i, i + 500).forEach((userDoc) => {
+        const userData = userDoc.data();
+        let accessLevels = userData.accessLevels ?? [];
+        if (deleted) accessLevels = accessLevels.filter((id) => id !== levelId); // strip dangling ref
+        const computed = computeEffectivePermissions(accessLevels, levelsById);
+        batch.update(userDoc.ref, {
+          ...(deleted ? { accessLevels } : {}),
+          effectivePermissions: computed,
+          effectivePermissionsComputedAt: FieldValue.serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    }
+  }
+);
+
+// Hourly safety net: unconditionally recomputes every user. Covers the
+// narrow race window between two near-simultaneous edits (e.g. a user's
+// level assignment and that level's permission list changing at the same
+// moment) and catches any invocation that silently failed above.
+exports.reconcileAllPermissions = onSchedule(
+  { schedule: 'every 60 minutes', region: REGION, memory: '256MiB', timeoutSeconds: 120 },
+  async () => {
+    const db = getFirestore();
+    const [usersSnap, levelsById] = await Promise.all([
+      db.collection('users').get(),
+      loadAllLevels(db),
+    ]);
+
+    const docs = usersSnap.docs;
+    for (let i = 0; i < docs.length; i += 500) {
+      const batch = db.batch();
+      let anyChange = false;
+      docs.slice(i, i + 500).forEach((userDoc) => {
+        const userData = userDoc.data();
+        const computed = computeEffectivePermissions(userData.accessLevels, levelsById);
+        const current  = (userData.effectivePermissions ?? []).slice().sort();
+        if (!arraysEqual(computed, current)) {
+          anyChange = true;
+          batch.update(userDoc.ref, {
+            effectivePermissions: computed,
+            effectivePermissionsComputedAt: FieldValue.serverTimestamp(),
+          });
+        }
+      });
+      if (anyChange) await batch.commit();
     }
   }
 );
