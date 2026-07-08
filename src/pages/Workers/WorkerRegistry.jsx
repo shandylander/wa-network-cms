@@ -4,7 +4,7 @@ import { PlusIcon, UserGroupIcon, MagnifyingGlassIcon, TagIcon } from '@heroicon
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { hasPermission } from '../../utils/permissions';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useTeams, useCertTypes } from '../../hooks/useAppConfig';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
@@ -16,6 +16,7 @@ import styles from './WorkerRegistry.module.css';
 export default function WorkerRegistry() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
   const { teams: TEAMS, teamOptions } = useTeams();
   const { certTypes, saveCertTypes }  = useCertTypes();
   const [workers,  setWorkers]  = useState([]);
@@ -28,8 +29,8 @@ export default function WorkerRegistry() {
 
   const role    = userProfile?.role;
   const myTeam  = userProfile?.team;
-  const canAdd  = hasPermission(role, 'manage:workers');
-  const canManageTypes = ['owner', 'manager'].includes(role);
+  const canAdd  = can('manage:workers');
+  const canManageTypes = can('workers:manage-cert-types');
   const isSubconAdmin = role === 'subcon-admin';
 
   useEffect(() => { load(); }, []);

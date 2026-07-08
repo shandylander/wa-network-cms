@@ -4,6 +4,7 @@ import { PlusIcon, XMarkIcon, CheckIcon, ReceiptPercentIcon } from '@heroicons/r
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import WorkerClaims from '../Worker/WorkerClaims';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
@@ -26,7 +27,8 @@ const todaySG = ()    => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Sing
 export default function PettyCash() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const isAdmin = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const { can }         = usePermissions();
+  const isAdmin = can('pettycash:approve');
   const isWorker = userProfile?.role === 'staff';
 
   const [claims,    setClaims]    = useState([]);

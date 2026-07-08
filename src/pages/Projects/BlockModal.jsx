@@ -4,6 +4,7 @@ import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/out
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { TEAMS } from '../../utils/permissions';
 import { formatDate } from '../../utils/helpers';
 import Modal from '../../components/UI/Modal';
@@ -55,9 +56,10 @@ export default function BlockModal({
 }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
 
-  const canAssign = ['owner', 'manager', 'supervisor'].includes(userRole);
-  const canManage = ['owner', 'manager'].includes(userRole);
+  const canAssign = can('blocks:assign-team');
+  const canManage = can('blocks:delete');
 
   const [form, setForm] = useState(
     mode === 'add'

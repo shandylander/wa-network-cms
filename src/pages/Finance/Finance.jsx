@@ -5,7 +5,7 @@ import {
   ReceiptPercentIcon, ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
-import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate as fmtDate } from '../../utils/helpers';
 import styles from './Finance.module.css';
 
@@ -25,7 +25,7 @@ function StatTile({ label, value, sub, icon: Icon, color = 'blue' }) {
 }
 
 export default function Finance() {
-  const { userProfile } = useAuth();
+  const { can } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [claims,  setClaims]  = useState({ s1: 0, s2: 0, s3: 0, blocks: 0 });
   const [payroll, setPayroll] = useState({ total: 0, month: '' });
@@ -93,7 +93,7 @@ export default function Finance() {
 
   const totalClaimable = claims.s1 + claims.s2 + claims.s3;
 
-  if (!['owner', 'manager'].includes(userProfile?.role)) {
+  if (!can('view:claims')) {
     return <div className={styles.accessDenied}><p>Finance overview is only available to Owner and Manager.</p></div>;
   }
 

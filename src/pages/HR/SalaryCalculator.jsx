@@ -1,22 +1,14 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import PayslipGenerator from './PayslipGenerator';
 import SalaryConfig     from './SalaryConfig';
 import styles from './HR.module.css';
 
-const TABS = {
-  owner:      ['payslips', 'config'],
-  manager:    ['payslips', 'config'],
-  supervisor: ['payslips'],
-  staff:      ['payslips'],
-};
-
 const TAB_LABELS = { payslips: 'Payslips', config: 'Pay Config' };
 
 export default function SalaryCalculator() {
-  const { userProfile } = useAuth();
-  const role = userProfile?.role ?? 'staff';
-  const tabs = TABS[role] ?? ['payslips'];
+  const { can } = usePermissions();
+  const tabs = ['payslips', ...(can('salary:config') ? ['config'] : [])];
   const [active, setActive] = useState(tabs[0]);
 
   return (

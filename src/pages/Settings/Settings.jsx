@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UsersIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, ShieldCheckIcon, KeyIcon } from '@heroicons/react/24/outline';
 import styles from './Settings.module.css';
 
 const SETTING_CARDS = [
@@ -11,10 +11,16 @@ const SETTING_CARDS = [
     desc: 'Create accounts, reset PINs, and manage user roles.',
   },
   {
+    to: '/settings/access-levels',
+    Icon: KeyIcon,
+    title: 'Access Levels',
+    desc: 'Create named permission bundles and assign them to users.',
+  },
+  {
     to: '/settings/permissions',
     Icon: ShieldCheckIcon,
     title: 'Permissions',
-    desc: 'View the role permission matrix.',
+    desc: 'Live matrix of what each Access Level grants.',
   },
 ];
 

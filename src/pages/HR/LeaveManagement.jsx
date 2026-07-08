@@ -1,18 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import MyLeave       from './MyLeave';
 import ApprovalQueue from './ApprovalQueue';
 import LeaveSettings from './LeaveSettings';
 import WorkerLeave   from '../Worker/WorkerLeave';
 import styles from './HR.module.css';
-
-// Owner approves leave but does not apply for it — no 'my' tab.
-const TABS = {
-  owner:      ['queue', 'settings'],
-  manager:    ['my', 'queue', 'settings'],
-  supervisor: ['my', 'queue'],
-  staff:      ['my'],
-};
 
 const TAB_LABELS = {
   my:       'My Leave',
@@ -22,8 +15,15 @@ const TAB_LABELS = {
 
 export default function LeaveManagement() {
   const { userProfile } = useAuth();
+  const { can }         = usePermissions();
   const role = userProfile?.role ?? 'staff';
-  const tabs = TABS[role] ?? ['my'];
+
+  // Owner approves leave but does not apply for it — no 'my' tab.
+  const tabs = [
+    ...(role !== 'owner' ? ['my'] : []),
+    ...(can('leave:approve')  ? ['queue']    : []),
+    ...(can('leave:settings') ? ['settings'] : []),
+  ];
 
   const [active, setActive] = useState(tabs[0] ?? 'my');
 

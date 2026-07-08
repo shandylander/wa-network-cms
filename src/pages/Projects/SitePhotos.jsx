@@ -5,6 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import styles from './SitePhotos.module.css';
 
 const STAGES = ['fix1','fix2','fix3','fix4','general'];
@@ -32,7 +33,8 @@ function useCamera() {
 export default function SitePhotos({ project }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const isAdmin = ['owner','manager','supervisor'].includes(userProfile?.role);
+  const { can }         = usePermissions();
+  const isAdmin = can('sitephotos:approve');
 
   const [photos,   setPhotos]   = useState([]);
   const [loading,  setLoading]  = useState(true);

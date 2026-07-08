@@ -7,6 +7,7 @@ import {
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
@@ -462,8 +463,9 @@ const SUB_TABS = [
 ];
 
 export default function Materials({ project, userRole }) {
-  const canAdmin      = ['owner', 'manager'].includes(userRole);
-  const canViewCosts  = ['owner', 'manager'].includes(userRole);
+  const { can }        = usePermissions();
+  const canAdmin      = can('materials:approve');
+  const canViewCosts  = can('materials:view-costs');
   const [subTab, setSubTab] = useState('orders');
 
   return (

@@ -12,7 +12,9 @@ import { db, firebaseConfig } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { ROLES, hasPermission } from '../../utils/permissions';
+import { useAccessLevels } from '../../hooks/useAccessLevels';
+import { ROLES } from '../../utils/permissions';
+import { ROLE_LEVEL_SEED } from '../../utils/permissionCatalog';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
 import Modal from '../../components/UI/Modal';
@@ -47,19 +49,6 @@ const COLOR_PALETTE = [
 ];
 
 const CONFIG_DOC = doc(db, 'appConfig', 'userGroups');
-
-const ALL_CUSTOM_PERMISSIONS = [
-  { key: 'view:dashboard',      label: 'View Dashboard' },
-  { key: 'manage:blocks',       label: 'Add / Remove Blocks' },
-  { key: 'view:claims',         label: 'View Finance & Claims' },
-  { key: 'generate:reports',    label: 'Generate Reports' },
-  { key: 'manage:workers',      label: 'Manage Workers' },
-  { key: 'create:subaccounts',  label: 'Create Sub-accounts' },
-  { key: 'reset:pins',          label: 'Reset PINs' },
-  { key: 'manage:announcements',label: 'Manage Announcements' },
-  { key: 'approve:permits',     label: 'Approve Permits' },
-  { key: 'admin:settings',      label: 'System Settings' },
-];
 
 function toKey(label) {
   return label.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
@@ -237,17 +226,18 @@ function GroupModal({ existing, usedKeys, onClose, onSaved, onDeleted, userCount
 /* ── Edit User modal ──────────────────────────────────────────────── */
 function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusChange, can, myRole }) {
   const { toast }        = useToast();
+  const { levels: accessLevels } = useAccessLevels();
   const isOwnerOrManager = ['owner', 'manager'].includes(myRole);
 
   const [form, setForm] = useState({
-    name:              user.name              ?? '',
-    role:              user.role              ?? 'subcon',
-    team:              user.team              ?? '',
-    parentId:          user.parentId          ?? '',
-    company:           user.company           ?? '',
-    contact:           user.contact           ?? '',
-    email:             user.email             ?? '',
-    customPermissions: user.customPermissions ?? [],
+    name:         user.name         ?? '',
+    role:         user.role         ?? 'subcon',
+    team:         user.team         ?? '',
+    parentId:     user.parentId     ?? '',
+    company:      user.company      ?? '',
+    contact:      user.contact      ?? '',
+    email:        user.email        ?? '',
+    accessLevels: user.accessLevels ?? [],
   });
   const [saving,    setSaving]    = useState(false);
   const [pinStep,   setPinStep]   = useState(false);
@@ -269,10 +259,10 @@ function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusC
         updatedAt: new Date(),
       };
       if (isOwnerOrManager) {
-        payload.role              = form.role;
-        payload.team              = form.team;
-        payload.parentId          = form.parentId.trim() || null;
-        payload.customPermissions = form.customPermissions;
+        payload.role         = form.role;
+        payload.team         = form.team;
+        payload.parentId     = form.parentId.trim() || null;
+        payload.accessLevels = form.accessLevels;
       }
       await updateDoc(doc(db, 'users', user.userId), payload);
       toast.success(`${form.name} updated`);
@@ -364,32 +354,49 @@ function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusC
         )}
       </div>
 
-      {isOwnerOrManager && form.role !== 'owner' && (() => {
-        const extra = ALL_CUSTOM_PERMISSIONS.filter(p => !hasPermission(form.role, p.key));
-        return extra.length > 0 ? (
-          <div className={styles.actionSection}>
-            <div className={styles.actionLabel}>Custom Access</div>
-            <p className={styles.permNote}>Grant additional permissions beyond the <strong>{ROLES[form.role]?.label ?? form.role}</strong> role defaults.</p>
+      {isOwnerOrManager && (
+        <div className={styles.actionSection}>
+          <div className={styles.actionLabel}>Access Levels</div>
+          <p className={styles.permNote}>
+            This user's access is the union of every level checked below — assign as many as apply.
+            Manage what each level grants in Settings → Access Levels.
+          </p>
+          {accessLevels.length === 0 ? (
+            <p className={styles.permNote}>No access levels created yet.</p>
+          ) : (
             <div className={styles.permChecks}>
-              {extra.map(p => (
-                <label key={p.key} className={styles.permCheck}>
+              {accessLevels.map(l => (
+                <label key={l.id} className={styles.permCheck}>
                   <input
                     type="checkbox"
-                    checked={form.customPermissions.includes(p.key)}
+                    checked={form.accessLevels.includes(l.id)}
                     onChange={e => setForm(f => ({
                       ...f,
-                      customPermissions: e.target.checked
-                        ? [...f.customPermissions, p.key]
-                        : f.customPermissions.filter(x => x !== p.key),
+                      accessLevels: e.target.checked
+                        ? [...f.accessLevels, l.id]
+                        : f.accessLevels.filter(x => x !== l.id),
                     }))}
                   />
-                  <span>{p.label}</span>
+                  <span className={styles.permLevelDot} style={{ background: l.color }} />
+                  <span>{l.label}</span>
                 </label>
               ))}
             </div>
-          </div>
-        ) : null;
-      })()}
+          )}
+          {form.accessLevels.length > 0 && (() => {
+            const effective = [...new Set(
+              accessLevels
+                .filter(l => form.accessLevels.includes(l.id))
+                .flatMap(l => l.permissions ?? [])
+            )].sort();
+            return (
+              <p className={styles.permPreview}>
+                <strong>{effective.length}</strong> effective permission{effective.length !== 1 ? 's' : ''} once saved.
+              </p>
+            );
+          })()}
+        </div>
+      )}
 
       <div className={styles.modalFooter}>
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -476,6 +483,10 @@ function AddUserModal({ onClose, onCreated, myRole, myUserId, myTeam, allTeams, 
         parentId: form.parentId.trim() || null,
         company: form.company.trim(), contact: form.contact.trim(), email: form.email.trim(),
         firstLogin: true, status: 'active', createdAt: new Date(),
+        // Default to the seeded level matching their role, so a brand-new
+        // user isn't locked out of everything until an admin remembers to
+        // assign one — access is otherwise purely opt-in via Access Levels.
+        accessLevels: [ROLE_LEVEL_SEED[form.role]?.id].filter(Boolean),
       };
       await setDoc(doc(db, 'users', uid), userData);
       toast.success(`User ${uid} created`);

@@ -4,6 +4,7 @@ import { PlusIcon, CheckCircleIcon, ExclamationTriangleIcon, TrashIcon } from '@
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { todaySG, fmtDate } from '../../utils/attendanceUtils';
 import styles from './Attendance.module.css';
 
@@ -17,6 +18,7 @@ const TEAMS = [
 export default function SubconAudit() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
 
   const [view,     setView]     = useState('list'); // 'list' | 'new'
   const [audits,   setAudits]   = useState([]);
@@ -32,7 +34,7 @@ export default function SubconAudit() {
   const [entries,      setEntries]      = useState([{ name: '', workerId: '', registered: null }]);
   const [saving,       setSaving]       = useState(false);
 
-  const isAdmin = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const isAdmin = can('attendance:manage');
 
   useEffect(() => {
     // Load audits + projects + registered workers

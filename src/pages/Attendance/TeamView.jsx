@@ -4,6 +4,7 @@ import { PencilSquareIcon, MapPinIcon, FlagIcon } from '@heroicons/react/24/outl
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { fmtDate, fmtTime, calcHours, mapsLink, todaySG, timeInputSG } from '../../utils/attendanceUtils';
 import styles from './Attendance.module.css';
 
@@ -12,6 +13,7 @@ const TEAM_LABELS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'H
 export default function TeamView() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
 
   const [records,   setRecords]   = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -22,7 +24,7 @@ export default function TeamView() {
   const [editReason, setEditReason] = useState('');
   const [saving,    setSaving]    = useState(false);
 
-  const isAdmin = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const isAdmin = can('attendance:manage');
 
   const load = async () => {
     setLoading(true);

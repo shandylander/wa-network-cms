@@ -4,6 +4,7 @@ import { PrinterIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { calcPayslip, monthRange, fmtSGD, printPayslip } from '../../utils/salaryUtils';
 import { todayInputSG } from '../../utils/helpers';
 import styles from './HR.module.css';
@@ -13,8 +14,8 @@ const THIS_MONTH = todayInputSG().slice(0, 7);
 export default function PayslipGenerator() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const role = userProfile?.role;
-  const isAdmin = ['owner', 'manager'].includes(role);
+  const { can }         = usePermissions();
+  const isAdmin = can('salary:manage-payslips');
 
   const [month,     setMonth]     = useState(THIS_MONTH);
   const [rows,      setRows]      = useState(null);   // generated preview rows

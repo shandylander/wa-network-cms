@@ -4,6 +4,7 @@ import { PlusIcon, TrashIcon, PaperClipIcon, DocumentIcon } from '@heroicons/rea
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useTeams, useCertTypes } from '../../hooks/useAppConfig';
 import { compressImage, uploadWorkerDoc } from '../../utils/workerDocs';
 import Modal from '../../components/UI/Modal';
@@ -24,9 +25,10 @@ function certBadge(expiry) {
 export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, userTeam }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }          = usePermissions();
   const { teams: TEAMS, teamOptions } = useTeams();
   const { certTypes }   = useCertTypes();
-  const isAdmin = ['owner', 'manager', 'supervisor'].includes(userRole);
+  const isAdmin = can('workers:assign-any-team');
   const certFileRef = useRef(null);
 
   const [form, setForm] = useState({

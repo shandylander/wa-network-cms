@@ -9,6 +9,7 @@ import { db } from '../../firebase';
 import { TEAMS } from '../../utils/permissions';
 import { getOverallProgress, todayInputSG, toDateInputSG } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import ImportReport from './ImportReport';
 import styles from './Reports.module.css';
 
@@ -86,8 +87,9 @@ async function copyText(text) {
 
 export default function Reports({ blocks, setBlocks, project, setProject, userRole, userTeam }) {
   const { toast }  = useToast();
+  const { can }    = usePermissions();
   const isWorker   = ['staff', 'subcon-admin', 'subcon'].includes(userRole);
-  const canAdmin   = ['owner', 'manager', 'supervisor'].includes(userRole);
+  const canAdmin   = can('generate:reports');
 
   // Derive teams that actually have blocks in this project
   const teams = useMemo(() => {

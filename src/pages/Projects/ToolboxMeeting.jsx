@@ -4,6 +4,7 @@ import { PlusIcon, XMarkIcon, ChevronDownIcon, UserGroupIcon } from '@heroicons/
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate, todayInputSG } from '../../utils/helpers';
 import styles from './ToolboxMeeting.module.css';
 
@@ -12,7 +13,8 @@ const TEAMS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur
 export default function ToolboxMeeting({ project }) {
   const { userProfile } = useAuth();
   const { toast }        = useToast();
-  const isAdmin = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const { can }           = usePermissions();
+  const isAdmin = can('toolbox:manage');
 
   const [meetings, setMeetings] = useState([]);
   const [workers,  setWorkers]  = useState([]);

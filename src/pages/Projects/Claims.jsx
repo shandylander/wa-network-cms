@@ -9,6 +9,7 @@ import {
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { TEAMS } from '../../utils/permissions';
 import { todayInputSG } from '../../utils/helpers';
 import Modal from '../../components/UI/Modal';
@@ -259,9 +260,9 @@ function SubconRatesConfig({ project, setProject }) {
 /* ── Main Component ─────────────────────────────────────────────── */
 
 export default function Claims({ project, setProject, blocks, userRole }) {
-  const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const canAdmin        = ['owner', 'manager'].includes(userRole);
+  const { can }         = usePermissions();
+  const canAdmin        = can('view:claims');
 
   const [innerTab, setInnerTab] = useState('certis');
   const [claims,   setClaims]   = useState([]);

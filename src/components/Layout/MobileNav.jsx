@@ -118,7 +118,7 @@ export default function MobileNav() {
                 <CurrencyDollarIcon width={20} /> Finance
               </NavLink>
             )}
-            {['owner', 'manager'].includes(role) && (
+            {can('view:uploads-audit') && (
               <NavLink to="/audit" className={styles.drawerItem} onClick={() => setDrawer(false)}>
                 <DocumentMagnifyingGlassIcon width={20} /> Uploads Audit
               </NavLink>

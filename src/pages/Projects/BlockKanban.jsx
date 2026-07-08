@@ -8,7 +8,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { hasPermission, TEAMS } from '../../utils/permissions';
+import { usePermissions } from '../../hooks/usePermissions';
+import { TEAMS } from '../../utils/permissions';
 import { getStageStatus } from '../../utils/helpers';
 import BlockModal from './BlockModal';
 import styles from './BlockKanban.module.css';
@@ -88,11 +89,12 @@ function BlockCard({ block, onClick, isDragging, asOverlay }) {
 export default function BlockKanban({ projectId, blocks, setBlocks, userRole, userTeam }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
   const [activeBlock,   setActiveBlock]   = useState(null); // for DragOverlay
   const [editBlock,     setEditBlock]     = useState(null); // for BlockModal
 
   const isWorker = ['staff', 'subcon-admin', 'subcon'].includes(userRole);
-  const canEdit  = hasPermission(userRole, 'update:blocks');
+  const canEdit  = can('update:blocks');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })

@@ -4,6 +4,7 @@ import { PlusIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outlin
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/helpers';
 import styles from './SnagList.module.css';
 
@@ -26,7 +27,8 @@ const TEAMS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur
 export default function SnagList({ project }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const isAdmin      = ['owner','manager','supervisor'].includes(userProfile?.role);
+  const { can }         = usePermissions();
+  const isAdmin      = can('snags:manage-status');
   const isSubconRole = ['subcon-admin','subcon'].includes(userProfile?.role);
   const myTeam       = userProfile?.team;
 

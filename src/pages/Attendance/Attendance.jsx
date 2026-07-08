@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import ClockPanel   from './ClockPanel';
 import TeamView     from './TeamView';
 import PhotoReview  from './PhotoReview';
 import SubconAudit  from './SubconAudit';
 import WorkerClock  from '../Worker/WorkerClock';
 import styles from './Attendance.module.css';
-
-const TABS = {
-  owner:       ['clock', 'team', 'photos', 'audit'],
-  manager:     ['clock', 'team', 'photos', 'audit'],
-  supervisor:  ['clock', 'team', 'audit'],
-  staff:       ['clock'],
-  'subcon-admin': ['audit'],
-  subcon:      [],
-};
 
 const TAB_LABELS = {
   clock:  'My Attendance',
@@ -25,8 +17,16 @@ const TAB_LABELS = {
 
 export default function Attendance() {
   const { userProfile } = useAuth();
+  const { can }         = usePermissions();
   const role = userProfile?.role ?? 'staff';
-  const tabs = TABS[role] ?? ['clock'];
+
+  // Reproduces the original role => tabs map exactly: attendance:manage
+  // (owner/manager/supervisor) unlocks team + audit, plus photos for
+  // owner/manager (attendance:photo-review); subcon-admin sees only their
+  // own site audit; everyone else just clocks in/out.
+  const tabs = can('attendance:manage')
+    ? ['clock', 'team', ...(can('attendance:photo-review') ? ['photos'] : []), 'audit']
+    : role === 'subcon-admin' ? ['audit'] : ['clock'];
 
   const [active, setActive] = useState(tabs[0] ?? 'clock');
 

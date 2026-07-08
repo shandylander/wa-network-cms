@@ -4,7 +4,8 @@ import { ArrowDownTrayIcon, ShieldCheckIcon, LockClosedIcon } from '@heroicons/r
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { hasPermission, TEAMS } from '../../utils/permissions';
+import { usePermissions } from '../../hooks/usePermissions';
+import { TEAMS } from '../../utils/permissions';
 import Card, { CardHeader } from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
 import styles from './HSEHome.module.css';
@@ -14,13 +15,14 @@ const TEAM_KEYS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
 export default function HSEHome() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
   const [projectId, setProjectId] = useState(null);
   const [docs,      setDocs]      = useState([]);
   const [loading,   setLoading]   = useState(true);
 
   const role    = userProfile?.role;
   const myTeam  = userProfile?.team;
-  const canAdmin = hasPermission(role, 'manage:blocks'); // owner + manager
+  const canAdmin = can('manage:blocks'); // owner + manager
   const isWorker = ['staff', 'subcon-admin', 'subcon'].includes(role);
   const isSubconRole = ['subcon-admin', 'subcon'].includes(role);
   // Staff are WA employees — their document access flag is 'own' regardless

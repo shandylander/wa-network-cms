@@ -10,7 +10,24 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { formatDateTime, formatTimeAgo } from '../../utils/helpers';
+import { hasPermission } from '../../utils/permissions';
 import styles from './Announcements.module.css';
+
+// These take arbitrary user profile objects (not just the current session's,
+// e.g. when checking who a "management" bulletin targets), so they check
+// effectivePermissions directly rather than via usePermissions().
+const canViewManagement = (profile) => {
+  const effective = profile?.effectivePermissions;
+  return effective !== undefined
+    ? effective.includes('view:management-alerts')
+    : hasPermission(profile?.role, 'view:management-alerts');
+};
+const canPostAnnouncements = (profile) => {
+  const effective = profile?.effectivePermissions;
+  return effective !== undefined
+    ? effective.includes('manage:announcements')
+    : hasPermission(profile?.role, 'manage:announcements');
+};
 
 const AUDIENCE_LABELS = {
   all:        'Everyone',
@@ -32,8 +49,6 @@ const AUDIENCE_OPTIONS = [
   { value: 'alamin',     label: 'Alamin (Seabiz)' },
 ];
 
-const MGMT_ROLES = ['owner', 'manager', 'supervisor'];
-
 const SEV_CFG = {
   critical: { label: 'Critical', cls: 'sevCritical' },
   warning:  { label: 'Warning',  cls: 'sevWarning'  },
@@ -43,7 +58,7 @@ const SEV_CFG = {
 function userSees(ann, userProfile) {
   const a = ann.audience ?? 'all';
   if (a === 'all') return true;
-  if (a === 'management') return MGMT_ROLES.includes(userProfile.role);
+  if (a === 'management') return canViewManagement(userProfile);
   return a === userProfile.team || a === userProfile.role;
 }
 
@@ -52,7 +67,7 @@ function getTargeted(ann, allUsers) {
   return allUsers.filter(u => {
     if (u.status !== 'active') return false;
     if (a === 'all') return true;
-    if (a === 'management') return MGMT_ROLES.includes(u.role);
+    if (a === 'management') return canViewManagement(u);
     return u.team === a;
   });
 }
@@ -61,7 +76,7 @@ function getTargeted(ann, allUsers) {
 function AckModal({ ann, allUsers, currentUser, onClose, onMarkRead }) {
   const readBy   = ann.readBy ?? [];
   const isRead   = readBy.includes(currentUser.userId);
-  const canTrack = MGMT_ROLES.includes(currentUser.role);
+  const canTrack = canViewManagement(currentUser);
   const sev      = SEV_CFG[ann.severity ?? 'info'] ?? SEV_CFG.info;
 
   const targeted = canTrack ? getTargeted(ann, allUsers) : [];
@@ -201,8 +216,8 @@ function Composer({ onClose }) {
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function Announcements() {
   const { userProfile } = useAuth();
-  const canPost    = ['owner', 'manager'].includes(userProfile?.role);
-  const canTrack   = MGMT_ROLES.includes(userProfile?.role);
+  const canPost    = canPostAnnouncements(userProfile);
+  const canTrack   = canViewManagement(userProfile);
 
   const [announcements, setAnnouncements] = useState([]);
   const [allUsers,      setAllUsers]      = useState([]);

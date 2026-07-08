@@ -138,7 +138,7 @@ export default function Sidebar() {
         })}
 
         {/* Uploads audit — management only */}
-        {['owner', 'manager'].includes(role) && (
+        {can('view:uploads-audit') && (
           <NavLink to="/audit"
             className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
             <DocumentMagnifyingGlassIcon className={styles.navIcon} />

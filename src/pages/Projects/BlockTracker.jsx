@@ -8,7 +8,8 @@ import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { hasPermission, TEAMS } from '../../utils/permissions';
+import { usePermissions } from '../../hooks/usePermissions';
+import { TEAMS } from '../../utils/permissions';
 import { getStageStatus, formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import BlockModal from './BlockModal';
@@ -157,6 +158,7 @@ function DocViewerModal({ block, onClose }) {
 export default function BlockTracker({ projectId, blocks, setBlocks, userRole, userTeam }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const { can }         = usePermissions();
 
   const [search,      setSearch]      = useState('');
   const [teamFilter,  setTeamFilter]  = useState('');
@@ -168,9 +170,9 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
   const [viewDocBlock, setViewDocBlock] = useState(null);
 
   const isWorker  = ['staff', 'subcon-admin', 'subcon'].includes(userRole);
-  const canEdit   = hasPermission(userRole, 'update:blocks');
-  const canManage = ['owner', 'manager'].includes(userRole);
-  const canBulk   = ['owner', 'manager', 'supervisor'].includes(userRole);
+  const canEdit   = can('update:blocks');
+  const canManage = can('blocks:delete');
+  const canBulk   = can('blocks:bulk-edit');
   const [addMode, setAddMode] = useState(false);
 
   const [selectedIds,  setSelectedIds]  = useState(() => new Set());

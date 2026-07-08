@@ -9,7 +9,8 @@ import {
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { hasPermission, TEAMS } from '../../utils/permissions';
+import { TEAMS } from '../../utils/permissions';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate, getOverallProgress, toDateInputSG } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Card, { CardHeader } from '../../components/UI/Card';
@@ -50,9 +51,10 @@ const getTabsForType = (projectType) => {
 
 function MilestoneSection({ project, setProject, userProfile }) {
   const { toast }  = useToast();
+  const { can }    = usePermissions();
   const [input,    setInput]   = useState('');
   const [saving,   setSaving]  = useState(false);
-  const canEdit    = hasPermission(userProfile?.role, 'manage:blocks');
+  const canEdit    = can('manage:blocks');
   const milestones = project.milestones ?? [];
   const done       = milestones.filter(m => m.done).length;
 
@@ -134,7 +136,8 @@ const toDateInput = toDateInputSG;
 
 function TeamStartDatesSection({ project, setProject, blocks, userProfile }) {
   const { toast } = useToast();
-  const canEdit   = hasPermission(userProfile?.role, 'manage:blocks');
+  const { can }   = usePermissions();
+  const canEdit   = can('manage:blocks');
   const [editing, setEditing] = useState(false);
   const [dates,   setDates]   = useState({});
   const [saving,  setSaving]  = useState(false);
@@ -219,6 +222,7 @@ export default function ProjectDetail() {
   const { id }     = useParams();
   const navigate   = useNavigate();
   const { userProfile } = useAuth();
+  const { can }    = usePermissions();
   const [project,   setProject]  = useState(null);
   const [blocks,    setBlocks]   = useState([]);
   const [loading,   setLoading]  = useState(true);
@@ -255,16 +259,16 @@ export default function ProjectDetail() {
   if (!project) return null;
 
   // Money data (claim rates, payments) is restricted to owner/manager
-  const canViewMoney = hasPermission(userProfile?.role, 'view:claims');
+  const canViewMoney = can('view:claims');
   // Materials/DO data is readable only by internal roles (see firestore.rules);
   // hide the tab from field/subcon roles so they don't hit a load error.
-  const isInternal   = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const canViewMaterials = can('materials:view');
   // Incidents are internal/staff-only (see firestore.rules); hide the tab
   // from sub-con roles so they don't hit a load error.
   const TABS    = getTabsForType(project.projectType ?? 'pcs')
     .filter(t => (t !== 'claims' || canViewMoney)
-      && (t !== 'materials' || isInternal)
-      && (t !== 'incidents' || !isSubconRole));
+      && (t !== 'materials' || canViewMaterials)
+      && (t !== 'incidents' || can('incidents:view')));
   const isCctv  = ['pcs', 'cctv'].includes(project.projectType ?? 'pcs');
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;

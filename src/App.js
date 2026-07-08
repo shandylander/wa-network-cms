@@ -12,6 +12,7 @@ import Profile        from './pages/Profile';
 import Settings       from './pages/Settings/Settings';
 import UserManagement from './pages/Settings/UserManagement';
 import Permissions    from './pages/Settings/Permissions';
+import AccessLevels   from './pages/Settings/AccessLevels';
 import ProjectList    from './pages/Projects/ProjectList';
 import ProjectDetail  from './pages/Projects/ProjectDetail';
 import WorkerRegistry from './pages/Workers/WorkerRegistry';
@@ -69,6 +70,7 @@ function ProtectedRoutes() {
         <Route path="settings"          element={<Settings />} />
         <Route path="settings/users"       element={<UserManagement />} />
         <Route path="settings/permissions" element={<Permissions />} />
+        <Route path="settings/access-levels" element={<AccessLevels />} />
         <Route path="*"                 element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

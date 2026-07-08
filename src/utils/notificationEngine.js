@@ -1,9 +1,20 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { hasPermission } from './permissions';
 
 const CERT_WARN_DAYS = 30;
 const CLAIM_WARN_DAYS = 3;
-const ADMINISH = ['owner', 'manager', 'supervisor'];
+
+// Not a React component — can't use usePermissions(). Checks
+// effectivePermissions directly, falling back to the legacy role map only
+// for the brief pre-backfill window (view:management-alerts is a new key,
+// so this fallback is effectively inert once every user has been backfilled).
+const canViewManagementAlerts = (userProfile) => {
+  const effective = userProfile?.effectivePermissions;
+  return effective !== undefined
+    ? effective.includes('view:management-alerts')
+    : hasPermission(userProfile?.role, 'view:management-alerts');
+};
 
 const blockEligible = (b, stage) => {
   if (stage === 'S1') return (b.fix1 ?? 0) >= 100 && (b.fix2 ?? 0) >= 100;
@@ -37,8 +48,6 @@ function certAlerts(workers) {
   return alerts;
 }
 
-const MGMT_ROLES = ['owner', 'manager', 'supervisor'];
-
 async function announcementAlerts(userProfile) {
   const alerts = [];
   try {
@@ -50,7 +59,7 @@ async function announcementAlerts(userProfile) {
         audience === 'all' ||
         audience === userProfile.team ||
         audience === userProfile.role ||
-        (audience === 'management' && MGMT_ROLES.includes(userProfile.role));
+        (audience === 'management' && canViewManagementAlerts(userProfile));
       const read = (a.readBy ?? []).includes(userProfile.userId);
       if (targeted && !read) {
         alerts.push({
@@ -124,10 +133,9 @@ async function projectAlerts() {
 
 export async function getAlerts(userProfile) {
   if (!userProfile) return [];
-  const isAdminish = ADMINISH.includes(userProfile.role);
   const tasks = [announcementAlerts(userProfile)];
 
-  if (isAdminish) {
+  if (canViewManagementAlerts(userProfile)) {
     tasks.push(
       getDocs(collection(db, 'workers'))
         .then(snap => certAlerts(snap.docs.map(d => ({ id: d.id, ...d.data() }))))

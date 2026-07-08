@@ -5,7 +5,7 @@ import { PlusIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { hasPermission } from '../../utils/permissions';
+import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
@@ -19,13 +19,14 @@ export default function ProjectList() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { toast } = useToast();
+  const { can }   = usePermissions();
   const [projects, setProjects] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showAdd,  setShowAdd]  = useState(false);
   const [form,     setForm]     = useState(EMPTY_FORM);
   const [saving,   setSaving]   = useState(false);
 
-  const canAdd = hasPermission(userProfile?.role, 'manage:blocks');
+  const canAdd = can('manage:blocks');
 
   useEffect(() => { load(); }, []);
 
