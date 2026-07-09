@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
 import {
   ArrowLeftIcon, CubeIcon, CheckCircleIcon,
   BuildingOfficeIcon, TableCellsIcon, ViewColumnsIcon,
-  PlusIcon, TrashIcon, PencilIcon,
+  PlusIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { TEAMS } from '../../utils/permissions';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useTeamGroups } from '../../hooks/useTeamGroups';
 import { formatDate, getOverallProgress, toDateInputSG } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Card, { CardHeader } from '../../components/UI/Card';
@@ -132,14 +132,13 @@ function MilestoneSection({ project, setProject, userProfile }) {
   );
 }
 
-const ASSIGNABLE_TEAMS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
-
 // Controls project.assignedTeams — the field firestore.rules checks to decide
 // whether a sub-con can see this project at all. Owner/manager only: the
 // list of who else is on a project isn't something other sub-cons need to see.
 function AssignedTeamsSection({ project, setProject }) {
   const { toast } = useToast();
   const { can }   = usePermissions();
+  const { teamOptions, teams: TEAMS } = useTeamGroups();
   const canEdit   = can('manage:blocks');
   const [editing,  setEditing]  = useState(false);
   const [selected, setSelected] = useState([]);
@@ -180,7 +179,7 @@ function AssignedTeamsSection({ project, setProject }) {
       {editing ? (
         <>
           <div className={styles.teamCheckGrid}>
-            {ASSIGNABLE_TEAMS.map(t => (
+            {teamOptions.map(t => (
               <label key={t} className={styles.teamCheckOption}>
                 <input type="checkbox" checked={selected.includes(t)} onChange={() => toggleTeam(t)} />
                 {TEAMS[t] ?? t}
@@ -210,6 +209,7 @@ const toDateInput = toDateInputSG;
 function TeamStartDatesSection({ project, setProject, blocks, userProfile }) {
   const { toast } = useToast();
   const { can }   = usePermissions();
+  const { teams: TEAMS } = useTeamGroups();
   const canEdit   = can('manage:blocks');
   const [editing, setEditing] = useState(false);
   const [dates,   setDates]   = useState({});
@@ -301,6 +301,18 @@ export default function ProjectDetail() {
   const [loading,   setLoading]  = useState(true);
   const [tab,       setTab]      = useState('overview');
   const [blockView, setBlockView] = useState('table'); // 'table' | 'kanban'
+  const tabsRef = useRef(null);
+  const [canScrollTabsLeft,  setCanScrollTabsLeft]  = useState(false);
+  const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
+
+  const updateTabScrollState = useCallback(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    setCanScrollTabsLeft(el.scrollLeft > 4);
+    setCanScrollTabsRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scrollTabs = (dir) => tabsRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' });
 
   const isSubconRole = ['subcon-admin', 'subcon'].includes(userProfile?.role);
   const myTeam       = userProfile?.team;
@@ -327,6 +339,19 @@ export default function ProjectDetail() {
     };
     load();
   }, [id, navigate, isSubconRole, myTeam]);
+
+  // Re-check whenever the tab strip's own size changes (project load, tab
+  // list changing with project type, or the window resizing) so the arrow
+  // buttons stay in sync with whether there's actually more to scroll to.
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    updateTabScrollState();
+    el.addEventListener('scroll', updateTabScrollState);
+    const ro = new ResizeObserver(updateTabScrollState);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', updateTabScrollState); ro.disconnect(); };
+  }, [updateTabScrollState, loading, project]);
 
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
   if (!project) return null;
@@ -363,16 +388,30 @@ export default function ProjectDetail() {
         <p className={styles.client}>{project.client}{project.location ? ` · ${project.location}` : ''}</p>
       </div>
 
-      <div className={styles.tabs}>
-        {TABS.map(t => (
-          <button
-            key={t}
-            className={[styles.tab, tab === t ? styles.tabActive : ''].join(' ')}
-            onClick={() => setTab(t)}
-          >
-            {TAB_LABELS[t] ?? (t.charAt(0).toUpperCase() + t.slice(1))}
+      <div className={styles.tabsWrap}>
+        {canScrollTabsLeft && (
+          <button className={[styles.tabScrollBtn, styles.tabScrollLeft].join(' ')}
+            onClick={() => scrollTabs(-1)} aria-label="Scroll tabs left">
+            <ChevronLeftIcon width={15} />
           </button>
-        ))}
+        )}
+        <div className={styles.tabs} ref={tabsRef}>
+          {TABS.map(t => (
+            <button
+              key={t}
+              className={[styles.tab, tab === t ? styles.tabActive : ''].join(' ')}
+              onClick={() => setTab(t)}
+            >
+              {TAB_LABELS[t] ?? (t.charAt(0).toUpperCase() + t.slice(1))}
+            </button>
+          ))}
+        </div>
+        {canScrollTabsRight && (
+          <button className={[styles.tabScrollBtn, styles.tabScrollRight].join(' ')}
+            onClick={() => scrollTabs(1)} aria-label="Scroll tabs right">
+            <ChevronRightIcon width={15} />
+          </button>
+        )}
       </div>
 
       {tab === 'overview' && (

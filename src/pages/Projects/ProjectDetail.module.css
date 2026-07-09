@@ -34,17 +34,39 @@
 
 /* Tabs — horizontally scrollable strip so a long tab list slides instead of
    forcing the whole page wider (which made the page shift while scrolling
-   on mobile). */
+   on mobile). Arrow buttons give desktop mouse users a visible, clickable
+   way to reach tabs past the fold — a hidden scrollbar alone isn't
+   discoverable without a trackpad/touchscreen. */
+.tabsWrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+}
 .tabs {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 24px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
+.tabScrollBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  border: none;
+  background: var(--card);
+  color: var(--text-sec);
+  cursor: pointer;
+  z-index: 1;
+}
+.tabScrollBtn:hover { color: var(--red); }
+.tabScrollLeft  { box-shadow: 6px 0 8px -6px rgba(0,0,0,0.2); }
+.tabScrollRight { box-shadow: -6px 0 8px -6px rgba(0,0,0,0.2); }
 .tab {
   padding: 10px 20px;
   font-size: 14px;
