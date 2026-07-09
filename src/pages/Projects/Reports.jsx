@@ -85,11 +85,12 @@ async function copyText(text) {
 
 /* ─── Main component ─────────────────────────────────────────────── */
 
-export default function Reports({ blocks, setBlocks, project, setProject, userRole, userTeam }) {
+export default function Reports({ blocks, setBlocks, project, setProject, userRole, userTeam, onGoToBlocks }) {
   const { toast }  = useToast();
   const { can }    = usePermissions();
   const isWorker   = ['staff', 'subcon-admin', 'subcon'].includes(userRole);
   const canAdmin   = can('generate:reports');
+  const canBulk    = can('blocks:bulk-edit');
 
   // Derive teams that actually have blocks in this project
   const teams = useMemo(() => {
@@ -253,6 +254,11 @@ export default function Reports({ blocks, setBlocks, project, setProject, userRo
             <input type="checkbox" checked={hideClosedClusters} onChange={e => setHideClosedClusters(e.target.checked)} className={styles.checkbox} />
             Hide closed clusters
           </label>
+          {canBulk && onGoToBlocks && (
+            <button type="button" className={styles.linkBtn} onClick={onGoToBlocks}>
+              Close a cluster in Block Tracker →
+            </button>
+          )}
         </div>
         <div className={styles.blockCount}>
           <strong>{baseBlocks.length}</strong> blocks

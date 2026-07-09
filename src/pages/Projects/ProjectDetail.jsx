@@ -373,6 +373,7 @@ export default function ProjectDetail() {
           blocks={blocks} setBlocks={setBlocks}
           project={project} setProject={setProject}
           userRole={userProfile?.role} userTeam={userProfile?.team}
+          onGoToBlocks={() => setTab('blocks')}
         />
       )}
 
