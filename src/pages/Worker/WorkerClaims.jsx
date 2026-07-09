@@ -10,7 +10,8 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useLang, LangSwitch } from '../../context/LanguageContext';
-import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/workerDocs';
+import { compressImage, uploadWorkerDoc, extractDocument, hashFile, checkReceiptDuplicate } from '../../utils/workerDocs';
+import { formatDateTime } from '../../utils/helpers';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './Worker.module.css';
 
@@ -36,7 +37,7 @@ const isISO   = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? '') && !Number.isNaN(Date
 
 const EMPTY_FORM = {
   date: '', category: 'other', description: '', amount: '',
-  receiptUrl: '', receiptFileName: '', receiptPreview: null,
+  receiptUrl: '', receiptHash: '', receiptFileName: '', receiptPreview: null,
 };
 
 export default function WorkerClaims() {
@@ -77,6 +78,13 @@ export default function WorkerClaims() {
     if (raw.size > 10 * 1024 * 1024) { toast.error(t('fileTooBig')); return; }
     setOcrState('working');
     try {
+      const hash = await hashFile(raw);
+      const dup = await checkReceiptDuplicate({ hash, excludeId: editingId }).catch(() => null);
+      if (dup?.duplicate) {
+        setOcrState('none');
+        toast.error(t('receiptClaimedBy').replace('{name}', dup.claimantName));
+        return;
+      }
       const file = await compressImage(raw);
       const [url, ocr] = await Promise.all([
         uploadWorkerDoc(file, 'receipts', userId),
@@ -86,6 +94,7 @@ export default function WorkerClaims() {
       setForm(f => ({
         ...f,
         receiptUrl: url,
+        receiptHash: hash,
         receiptFileName: raw.name,
         receiptPreview: preview,
         date: isISO(ocr?.date) ? ocr.date : (f.date || todaySG()),
@@ -115,6 +124,7 @@ export default function WorkerClaims() {
       description: claim.description ?? '',
       amount: String(claim.amount ?? ''),
       receiptUrl: claim.receiptUrl ?? '',
+      receiptHash: claim.receiptHash ?? '',
       receiptFileName: 'Receipt',
       receiptPreview: claim.receiptUrl && isImageUrl(claim.receiptUrl) ? claim.receiptUrl : null,
     });
@@ -135,6 +145,7 @@ export default function WorkerClaims() {
         description: form.description.trim() || CATEGORIES.find(c => c.value === form.category)?.value || 'claim',
         amount: parseFloat(form.amount),
         receiptUrl: form.receiptUrl,
+        receiptHash: form.receiptHash,
       };
 
       if (editingId) {
@@ -315,6 +326,13 @@ export default function WorkerClaims() {
                 <p className={styles.appTitle}>{c.description}</p>
                 <p className={styles.appSub}>{fmtDate(c.date)} · {t(CATEGORIES.find(x => x.value === c.category)?.tKey ?? 'catOther')}</p>
                 {c.rejectionReason && <p className={styles.appReject}>{t('rejectedReason')}: {c.rejectionReason}</p>}
+                {c.status !== 'pending' && c.reviewedByName && (
+                  <p className={styles.appSub} style={{ marginTop: 2 }}>
+                    {t(c.status === 'approved' ? 'approvedByOn' : 'rejectedByOn')
+                      .replace('{name}', c.reviewedByName)
+                      .replace('{date}', formatDateTime(c.reviewedAt))}
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                 <p className={styles.appAmt}>{fmtAmt(c.amount)}</p>

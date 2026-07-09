@@ -5,6 +5,8 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { checkReceiptDuplicate } from '../../utils/workerDocs';
+import { formatDateTime } from '../../utils/helpers';
 import WorkerClaims from '../Worker/WorkerClaims';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
@@ -74,6 +76,14 @@ export default function PettyCash() {
     if (!form.amount || parseFloat(form.amount) <= 0) { toast.error('Please enter a valid amount.'); return; }
     setSaving(true);
     try {
+      if (form.receiptUrl.trim()) {
+        const dup = await checkReceiptDuplicate({ url: form.receiptUrl.trim() }).catch(() => null);
+        if (dup?.duplicate) {
+          toast.error(`This receipt has already been claimed by ${dup.claimantName}.`);
+          setSaving(false);
+          return;
+        }
+      }
       const payload = {
         userId: userProfile.userId, name: userProfile.name, team: userProfile.team ?? '',
         date: form.date, category: form.category,
@@ -97,7 +107,8 @@ export default function PettyCash() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'pettyCashClaims', claim.id), {
-        status: 'approved', reviewedBy: userProfile.userId, reviewedAt: Timestamp.now(), rejectionReason: null,
+        status: 'approved', reviewedBy: userProfile.userId, reviewedByName: userProfile.name,
+        reviewedAt: Timestamp.now(), rejectionReason: null,
       });
       setClaims(c => c.filter(x => x.id !== claim.id));
       toast.success('Claim approved');
@@ -110,7 +121,8 @@ export default function PettyCash() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'pettyCashClaims', rejectId), {
-        status: 'rejected', reviewedBy: userProfile.userId, reviewedAt: Timestamp.now(), rejectionReason: rejectNote.trim(),
+        status: 'rejected', reviewedBy: userProfile.userId, reviewedByName: userProfile.name,
+        reviewedAt: Timestamp.now(), rejectionReason: rejectNote.trim(),
       });
       setClaims(c => c.filter(x => x.id !== rejectId));
       toast.success('Claim rejected');
@@ -172,6 +184,11 @@ export default function PettyCash() {
                       </a>
                     )}
                     {c.rejectionReason && <p className={styles.appReject}>Rejected: {c.rejectionReason}</p>}
+                    {c.status !== 'pending' && c.reviewedByName && (
+                      <p className={styles.pcMeta}>
+                        {c.status === 'approved' ? 'Approved' : 'Rejected'} by {c.reviewedByName} · {formatDateTime(c.reviewedAt)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className={styles.pcCardRight}>

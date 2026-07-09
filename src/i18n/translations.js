@@ -64,6 +64,9 @@ const en = {
   myClaims: 'My Claims', noClaimsYet: 'No claims yet',
   submitClaim: 'Send Claim', claimSent: 'Claim sent!',
   receipt: 'Receipt',
+  receiptClaimedBy: 'This receipt has already been claimed by {name}.',
+  approvedByOn: 'Approved by {name} on {date}',
+  rejectedByOn: 'Rejected by {name} on {date}',
 };
 
 const bn = {
@@ -124,6 +127,9 @@ const bn = {
   myClaims: 'আমার ক্লেইম', noClaimsYet: 'এখনো কোনো ক্লেইম নেই',
   submitClaim: 'ক্লেইম পাঠান', claimSent: 'ক্লেইম পাঠানো হয়েছে!',
   receipt: 'রসিদ',
+  receiptClaimedBy: 'এই রসিদটি ইতিমধ্যে {name} দাবি করেছেন।',
+  approvedByOn: '{name} অনুমোদন করেছেন — {date}',
+  rejectedByOn: '{name} প্রত্যাখ্যান করেছেন — {date}',
 };
 
 const ta = {
@@ -184,6 +190,9 @@ const ta = {
   myClaims: 'என் கோரிக்கைகள்', noClaimsYet: 'கோரிக்கைகள் இல்லை',
   submitClaim: 'கோரிக்கை அனுப்பு', claimSent: 'கோரிக்கை அனுப்பப்பட்டது!',
   receipt: 'ரசீது',
+  receiptClaimedBy: 'இந்த ரசீது ஏற்கனவே {name} என்பவரால் கோரப்பட்டது.',
+  approvedByOn: '{name} — {date} அன்று ஒப்புதல் அளித்தார்',
+  rejectedByOn: '{name} — {date} அன்று நிராகரித்தார்',
 };
 
 export const LANGS = [

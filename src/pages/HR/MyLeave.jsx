@@ -7,6 +7,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
+import { formatDateTime } from '../../utils/helpers';
 import styles from './HR.module.css';
 
 const LEAVE_TYPES = [
@@ -200,6 +201,11 @@ export default function MyLeave() {
                     </p>
                     <p className={styles.appReason}>{app.reason}</p>
                     {app.rejectionReason && <p className={styles.appReject}>Rejected: {app.rejectionReason}</p>}
+                    {app.status !== 'pending' && app.reviewedByName && (
+                      <p className={styles.appReason}>
+                        {app.status === 'approved' ? 'Approved' : 'Rejected'} by {app.reviewedByName} · {formatDateTime(app.reviewedAt)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className={styles.appCardRight}>

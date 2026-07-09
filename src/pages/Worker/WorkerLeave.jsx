@@ -13,6 +13,7 @@ import { useToast } from '../../context/ToastContext';
 import { useLang, LangSwitch } from '../../context/LanguageContext';
 import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/workerDocs';
 import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
+import { formatDateTime } from '../../utils/helpers';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './Worker.module.css';
 
@@ -487,6 +488,13 @@ export default function WorkerLeave() {
                 </p>
                 {app.rejectionReason && (
                   <p className={styles.appReject}>{t('rejectedReason')}: {app.rejectionReason}</p>
+                )}
+                {app.status !== 'pending' && app.reviewedByName && (
+                  <p className={styles.appSub}>
+                    {t(app.status === 'approved' ? 'approvedByOn' : 'rejectedByOn')
+                      .replace('{name}', app.reviewedByName)
+                      .replace('{date}', formatDateTime(app.reviewedAt))}
+                  </p>
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>

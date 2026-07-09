@@ -178,6 +178,38 @@ exports.extractDocument = onCall(
   }
 );
 
+// ── Petty cash duplicate-receipt check ──────────────────────────────────
+// Runs server-side (admin SDK) because a claimant's own Firestore rules only
+// let them read their own claims — this needs to see everyone's to catch a
+// receipt someone else already claimed.
+exports.checkReceiptDuplicate = onCall(
+  {
+    region: 'asia-southeast1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    maxInstances: 5,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+    const { hash, url, excludeId } = request.data ?? {};
+    const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+    const field = hash && typeof hash === 'string' ? 'receiptHash' : trimmedUrl ? 'receiptUrl' : null;
+    const value = field === 'receiptHash' ? hash : trimmedUrl;
+    if (!field) {
+      throw new HttpsError('invalid-argument', 'Missing receipt hash or url.');
+    }
+
+    const db = getFirestore();
+    const snap = await db.collection('pettyCashClaims').where(field, '==', value).get();
+    // A rejected claim didn't consume the receipt — resubmission is fine.
+    const match = snap.docs.find((d) => d.id !== excludeId && d.data().status !== 'rejected');
+    if (!match) return { duplicate: false };
+    return { duplicate: true, claimantName: match.data().name ?? 'another staff member' };
+  }
+);
+
 // ── Dropbox document upload ─────────────────────────────────────────────
 // Moves Dropbox credentials server-side — the old client code shipped the
 // app key/secret/refresh token in the CRA bundle (public to anyone).

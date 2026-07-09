@@ -4,6 +4,7 @@ import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { formatDateTime } from '../../utils/helpers';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
 
@@ -54,13 +55,15 @@ export default function ApprovalQueue() {
   const approve = async (app) => {
     setSaving(true);
     try {
+      const reviewedAt = Timestamp.now();
       await updateDoc(doc(db, 'leaveApplications', app.id), {
         status: 'approved',
         reviewedBy: userProfile.userId,
-        reviewedAt: Timestamp.now(),
+        reviewedByName: userProfile.name,
+        reviewedAt,
         rejectionReason: null,
       });
-      setApps(a => a.map(x => x.id === app.id ? { ...x, status: 'approved' } : x));
+      setApps(a => a.map(x => x.id === app.id ? { ...x, status: 'approved', reviewedByName: userProfile.name, reviewedAt } : x));
       toast.success(`Approved ${app.name}'s ${app.type} application`);
     } catch { toast.error('Failed to approve'); }
     finally { setSaving(false); }
@@ -71,13 +74,17 @@ export default function ApprovalQueue() {
     setSaving(true);
     const app = apps.find(a => a.id === rejectId);
     try {
+      const reviewedAt = Timestamp.now();
       await updateDoc(doc(db, 'leaveApplications', rejectId), {
         status: 'rejected',
         reviewedBy: userProfile.userId,
-        reviewedAt: Timestamp.now(),
+        reviewedByName: userProfile.name,
+        reviewedAt,
         rejectionReason: rejectNote.trim(),
       });
-      setApps(a => a.map(x => x.id === rejectId ? { ...x, status: 'rejected', rejectionReason: rejectNote.trim() } : x));
+      setApps(a => a.map(x => x.id === rejectId
+        ? { ...x, status: 'rejected', rejectionReason: rejectNote.trim(), reviewedByName: userProfile.name, reviewedAt }
+        : x));
       toast.success(`Rejected ${app?.name}'s application`);
       setRejectId(null);
       setRejectNote('');
@@ -131,6 +138,11 @@ export default function ApprovalQueue() {
                     <p className={styles.queueReason}>{app.reason}</p>
                     {app.rejectionReason && (
                       <p className={styles.queueReject}>Reason: {app.rejectionReason}</p>
+                    )}
+                    {app.status !== 'pending' && app.reviewedByName && (
+                      <p className={styles.queueDates}>
+                        {app.status === 'approved' ? 'Approved' : 'Rejected'} by {app.reviewedByName} · {formatDateTime(app.reviewedAt)}
+                      </p>
                     )}
                     {app.mcUrl && (
                       <a href={app.mcUrl} target="_blank" rel="noreferrer" className={styles.mcLink}

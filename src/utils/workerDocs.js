@@ -58,3 +58,20 @@ export const extractDocument = async (file, docType) => {
   const res      = await callable({ data, mimeType: file.type || 'application/pdf', docType });
   return res.data;
 };
+
+/* SHA-256 hex digest of a file's raw bytes — used to spot the same receipt
+   photo being submitted more than once. */
+export const hashFile = async (file) => {
+  const buf    = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+/* Ask the server whether this receipt (by file hash or, for manually-entered
+   links, by URL) already belongs to another claim. The check has to run
+   server-side since a caller can't read other users' claims directly. */
+export const checkReceiptDuplicate = async ({ hash, url, excludeId } = {}) => {
+  const callable = httpsCallable(functions, 'checkReceiptDuplicate', { timeout: 30000 });
+  const res = await callable({ hash, url, excludeId: excludeId ?? null });
+  return res.data;
+};
