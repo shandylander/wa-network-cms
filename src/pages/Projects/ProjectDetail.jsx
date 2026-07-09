@@ -132,6 +132,79 @@ function MilestoneSection({ project, setProject, userProfile }) {
   );
 }
 
+const ASSIGNABLE_TEAMS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
+
+// Controls project.assignedTeams — the field firestore.rules checks to decide
+// whether a sub-con can see this project at all. Owner/manager only: the
+// list of who else is on a project isn't something other sub-cons need to see.
+function AssignedTeamsSection({ project, setProject }) {
+  const { toast } = useToast();
+  const { can }   = usePermissions();
+  const canEdit   = can('manage:blocks');
+  const [editing,  setEditing]  = useState(false);
+  const [selected, setSelected] = useState([]);
+  const [saving,   setSaving]   = useState(false);
+
+  if (!canEdit) return null;
+
+  const assigned = project.assignedTeams ?? [];
+
+  const startEdit = () => { setSelected(assigned); setEditing(true); };
+  const toggleTeam = (t) => setSelected(s => s.includes(t) ? s.filter(x => x !== t) : [...s, t]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'projects', project.id), { assignedTeams: selected });
+      setProject(p => ({ ...p, assignedTeams: selected }));
+      setEditing(false);
+      toast.success('Assigned teams saved');
+    } catch {
+      toast.error('Failed to save assigned teams');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Assigned Teams"
+        subtitle="Sub-cons only see this project if their team is checked here"
+        action={canEdit && !editing && (
+          <button className={styles.editDatesBtn} onClick={startEdit}>
+            <PencilIcon width={13} /> Edit
+          </button>
+        )}
+      />
+      {editing ? (
+        <>
+          <div className={styles.teamCheckGrid}>
+            {ASSIGNABLE_TEAMS.map(t => (
+              <label key={t} className={styles.teamCheckOption}>
+                <input type="checkbox" checked={selected.includes(t)} onChange={() => toggleTeam(t)} />
+                {TEAMS[t] ?? t}
+              </label>
+            ))}
+          </div>
+          <div className={styles.dateActions}>
+            <button className={styles.cancelDatesBtn} onClick={() => setEditing(false)}>Cancel</button>
+            <button className={styles.saveDatesBtn} onClick={save} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </>
+      ) : assigned.length === 0 ? (
+        <p className={styles.msEmpty}>No teams assigned — sub-cons won't see this project at all.</p>
+      ) : (
+        <div className={styles.teamChipRow}>
+          {assigned.map(t => <span key={t} className={styles.teamAssignedChip}>{TEAMS[t] ?? t}</span>)}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 const toDateInput = toDateInputSG;
 
 function TeamStartDatesSection({ project, setProject, blocks, userProfile }) {
@@ -333,6 +406,7 @@ export default function ProjectDetail() {
               </>}
             </div>
           </Card>
+          <AssignedTeamsSection project={project} setProject={setProject} />
           <TeamStartDatesSection project={project} setProject={setProject} blocks={blocks} userProfile={userProfile} />
           <MilestoneSection project={project} setProject={setProject} userProfile={userProfile} />
         </div>

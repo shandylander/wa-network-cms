@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
 import { PlusIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -28,12 +28,20 @@ export default function ProjectList() {
 
   const canAdd = can('manage:blocks');
 
-  useEffect(() => { load(); }, []);
+  // Sub-cons may only read projects where their team is in assignedTeams (see
+  // firestore.rules) — an unfiltered query has no way to match that per-doc
+  // condition, so it gets rejected outright. The query must mirror the rule.
+  const isSubconRole = ['subcon-admin', 'subcon'].includes(userProfile?.role);
+  const myTeam        = userProfile?.team;
+
+  useEffect(() => { load(); }, [isSubconRole, myTeam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'projects'));
+      const snap = await getDocs(isSubconRole
+        ? query(collection(db, 'projects'), where('assignedTeams', 'array-contains', myTeam))
+        : collection(db, 'projects'));
       setProjects(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch {
       toast.error('Failed to load projects');

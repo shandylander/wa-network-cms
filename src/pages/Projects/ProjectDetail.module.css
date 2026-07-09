@@ -147,6 +147,29 @@
 .msAddBtn:hover:not(:disabled) { background: var(--red-dark); }
 .msAddBtn:disabled { opacity: 0.5; cursor: default; }
 
+/* Assigned teams */
+.teamCheckGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.teamCheckOption {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text);
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.teamCheckOption:has(input:checked) { border-color: var(--red); background: var(--red-light); }
+.teamChipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.teamAssignedChip {
+  font-size: 12px; font-weight: 600; color: var(--text-sec);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 12px;
+}
+
 /* Team start dates */
 .editDatesBtn {
   display: inline-flex; align-items: center; gap: 5px;
