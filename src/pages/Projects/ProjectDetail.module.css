@@ -32,13 +32,19 @@
 .name { font-size: 26px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
 .client { font-size: 14px; color: var(--text-sec); }
 
-/* Tabs */
+/* Tabs — horizontally scrollable strip so a long tab list slides instead of
+   forcing the whole page wider (which made the page shift while scrolling
+   on mobile). */
 .tabs {
   display: flex;
   gap: 0;
   border-bottom: 2px solid var(--border);
   margin-bottom: 24px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
   padding: 10px 20px;
   font-size: 14px;
@@ -52,6 +58,8 @@
   font-family: inherit;
   transition: color 0.15s;
   text-transform: capitalize;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tab:hover { color: var(--text); }
 .tabActive { color: var(--red); border-bottom-color: var(--red); }
