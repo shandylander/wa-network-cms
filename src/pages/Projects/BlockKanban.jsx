@@ -9,7 +9,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { TEAMS } from '../../utils/permissions';
+import { useTeamGroups } from '../../hooks/useTeamGroups';
 import { getStageStatus } from '../../utils/helpers';
 import BlockModal from './BlockModal';
 import styles from './BlockKanban.module.css';
@@ -28,7 +28,7 @@ const COLUMN_FIX = {
   'stage2-complete': { fix1: 100, fix2: 100, fix3: 100, fix4: 100 },
 };
 
-function KanbanColumn({ col, blocks, onCardClick, activeId }) {
+function KanbanColumn({ col, blocks, onCardClick, activeId, teams }) {
   const { isOver, setNodeRef } = useDroppable({ id: col.id });
   return (
     <div
@@ -44,6 +44,7 @@ function KanbanColumn({ col, blocks, onCardClick, activeId }) {
           <BlockCard
             key={b.id}
             block={b}
+            teams={teams}
             onClick={() => onCardClick(b)}
             isDragging={activeId === b.id}
           />
@@ -56,7 +57,7 @@ function KanbanColumn({ col, blocks, onCardClick, activeId }) {
   );
 }
 
-function BlockCard({ block, onClick, isDragging, asOverlay }) {
+function BlockCard({ block, teams, onClick, isDragging, asOverlay }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: block.id });
   const style = !asOverlay && transform
     ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
@@ -77,7 +78,7 @@ function BlockCard({ block, onClick, isDragging, asOverlay }) {
       <div className={styles.cardNo}>{block.no}</div>
       <div className={styles.cardStreet}>{block.street}</div>
       {block.team && (
-        <div className={styles.cardTeam}>{TEAMS[block.team] ?? block.team}</div>
+        <div className={styles.cardTeam}>{teams?.[block.team] ?? block.team}</div>
       )}
       {block.cam > 0 && (
         <div className={styles.cardCam}>🎥 {block.cam}{block.rack ? ` (${block.rack})` : ''}</div>
@@ -90,6 +91,7 @@ export default function BlockKanban({ projectId, blocks, setBlocks, userRole, us
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
+  const { teams }       = useTeamGroups();
   const [activeBlock,   setActiveBlock]   = useState(null); // for DragOverlay
   const [editBlock,     setEditBlock]     = useState(null); // for BlockModal
 
@@ -178,13 +180,14 @@ export default function BlockKanban({ projectId, blocks, setBlocks, userRole, us
               blocks={grouped[col.id] ?? []}
               onCardClick={(b) => setEditBlock(b)}
               activeId={activeBlock?.id}
+              teams={teams}
             />
           ))}
         </div>
 
         <DragOverlay dropAnimation={null}>
           {activeBlock && (
-            <BlockCard block={activeBlock} onClick={() => {}} asOverlay />
+            <BlockCard block={activeBlock} teams={teams} onClick={() => {}} asOverlay />
           )}
         </DragOverlay>
       </DndContext>

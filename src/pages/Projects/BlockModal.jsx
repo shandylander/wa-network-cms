@@ -5,13 +5,12 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { TEAMS } from '../../utils/permissions';
+import { useTeamGroups } from '../../hooks/useTeamGroups';
 import { formatDate } from '../../utils/helpers';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import styles from './BlockModal.module.css';
 
-const TEAM_OPTIONS   = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
 const QUICK          = [0, 25, 50, 75, 100];
 const EMPTY_BLOCK    = { no: '', type: 'RESIDENTIAL', street: '', survey: 'ip', team: '', cam: 0, rack: '', fix1: 0, fix2: 0, fix3: 0, fix4: 0, surveyUrl: '', floorplanUrl: '', cluster: '' };
 
@@ -57,6 +56,7 @@ export default function BlockModal({
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
+  const { teamOptions, teams: TEAMS } = useTeamGroups();
 
   const canAssign = can('blocks:assign-team');
   const canManage = can('blocks:delete');
@@ -229,7 +229,7 @@ export default function BlockModal({
               <label className={styles.label}>Team</label>
               <select className={styles.select} value={form.team} onChange={setE('team')}>
                 <option value="">Unassigned</option>
-                {TEAM_OPTIONS.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
+                {teamOptions.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
               </select>
             </div>
             <div className={styles.field}>

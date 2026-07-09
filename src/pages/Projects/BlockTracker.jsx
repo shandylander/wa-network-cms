@@ -9,13 +9,11 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { TEAMS } from '../../utils/permissions';
+import { useTeamGroups } from '../../hooks/useTeamGroups';
 import { getStageStatus, formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import BlockModal from './BlockModal';
 import styles from './BlockTracker.module.css';
-
-const TEAM_OPTIONS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
 
 const STAGE_META = {
   'stage2-complete': { label: 'Stage 2',     color: 'green'   },
@@ -159,6 +157,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
+  const { teamOptions, teams: TEAMS } = useTeamGroups();
 
   const [search,      setSearch]      = useState('');
   const [teamFilter,  setTeamFilter]  = useState('');
@@ -351,7 +350,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
           <select className={styles.select} value={bulkTeam} onChange={e => setBulkTeam(e.target.value)}>
             <option value="">Team…</option>
             <option value="__unassigned__">Unassigned</option>
-            {TEAM_OPTIONS.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
+            {teamOptions.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
           </select>
           <input
             className={styles.search}
