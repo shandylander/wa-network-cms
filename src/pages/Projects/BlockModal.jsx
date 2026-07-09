@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { doc, addDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
-import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, LockClosedIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -158,6 +158,27 @@ export default function BlockModal({
         <div className={styles.blockMeta}>
           <span className={styles.metaType}>{block.type}</span>
           <span className={styles.metaStreet}>{block.street}</span>
+        </div>
+      )}
+
+      {/* Quick-open document links — visible to everyone who can open this block
+          (not just canAssign editors), since field staff on site need this most. */}
+      {!isAdd && (block.surveyUrl || block.floorplanUrl) && (
+        <div className={styles.docQuickLinks}>
+          {block.surveyUrl && (
+            <a href={block.surveyUrl} target="_blank" rel="noreferrer" className={styles.docQuickLink}>
+              <DocumentTextIcon width={17} />
+              Survey Report
+              <ArrowTopRightOnSquareIcon width={13} className={styles.docQuickLinkExt} />
+            </a>
+          )}
+          {block.floorplanUrl && (
+            <a href={block.floorplanUrl} target="_blank" rel="noreferrer" className={styles.docQuickLink}>
+              <DocumentTextIcon width={17} />
+              Floor Plan
+              <ArrowTopRightOnSquareIcon width={13} className={styles.docQuickLinkExt} />
+            </a>
+          )}
         </div>
       )}
 
