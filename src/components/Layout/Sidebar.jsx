@@ -5,6 +5,7 @@ import { VERSION_LABEL } from '../../utils/version';
 import {
   HomeIcon,
   FolderIcon,
+  BuildingOffice2Icon,
   UsersIcon,
   UserGroupIcon,
   ShieldCheckIcon,
@@ -37,6 +38,7 @@ const EMP_CHILDREN = [
 const NAV = [
   { to: '/',        label: 'Dashboard', Icon: HomeIcon,           perm: 'view:dashboard' },
   { to: '/projects',label: 'Projects',  Icon: FolderIcon,         perm: 'view:projects'  },
+  { to: '/customers',label: 'Customers',Icon: BuildingOffice2Icon,perm: 'manage:customers' },
   { to: '/workers', label: 'Workers',   Icon: UsersIcon,          perm: 'manage:workers' },
   { to: '/hse',     label: 'HSE',       Icon: ShieldCheckIcon,    perm: 'view:hse'       },
   { to: '/finance', label: 'Finance',   Icon: CurrencyDollarIcon, perm: 'view:claims'    },

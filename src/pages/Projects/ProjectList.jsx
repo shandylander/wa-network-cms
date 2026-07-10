@@ -1,32 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
-import { PlusIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
+import { collection, getDocs, addDoc, query, where, Timestamp } from 'firebase/firestore';
+import { PlusIcon, FolderOpenIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useWorkTypes } from '../../hooks/useAppConfig';
 import { formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
 import Modal from '../../components/UI/Modal';
+import WorkTypeManager from './WorkTypeManager';
 import styles from './ProjectList.module.css';
 
 const STATUS_COLOR = { active: 'green', upcoming: 'amber', completed: 'default' };
-const EMPTY_FORM = { name: '', client: '', type: 'CCTV Installation', projectType: 'cctv', location: '', status: 'upcoming', startDate: '' };
+const EMPTY_FORM = { name: '', customerName: '', type: 'CCTV Installation', projectType: 'cctv', location: '', status: 'upcoming', startDate: '' };
 
 export default function ProjectList() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const { can }   = usePermissions();
+  const { workTypes, saveWorkTypes } = useWorkTypes();
   const [projects, setProjects] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showAdd,  setShowAdd]  = useState(false);
+  const [showTypes,setShowTypes]= useState(false);
   const [form,     setForm]     = useState(EMPTY_FORM);
   const [saving,   setSaving]   = useState(false);
 
-  const canAdd = can('manage:blocks');
+  // Creating a project always creates/links a customer record too (see
+  // handleAdd), which needs manage:customers on top of manage:blocks —
+  // require both so the button never appears for someone who'd hit a
+  // permission-denied on the customer write partway through.
+  const canAdd = can('manage:blocks') && can('manage:customers');
 
   // Sub-cons may only read projects where their team is in assignedTeams (see
   // firestore.rules) — an unfiltered query has no way to match that per-doc
@@ -35,6 +44,15 @@ export default function ProjectList() {
   const myTeam        = userProfile?.team;
 
   useEffect(() => { load(); }, [isSubconRole, myTeam]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Customers are only needed for the New Project picker, which only
+  // owner/manager ever see — skip the read entirely for everyone else.
+  useEffect(() => {
+    if (!canAdd) return;
+    getDocs(collection(db, 'customers'))
+      .then(snap => setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, [canAdd]);
 
   const load = async () => {
     setLoading(true);
@@ -52,10 +70,30 @@ export default function ProjectList() {
 
   const handleAdd = async (e) => {
     e.preventDefault();
+    const customerName = form.customerName.trim();
+    if (!customerName) { toast.error('Customer is required'); return; }
     setSaving(true);
     try {
+      // Reuse an existing customer if the typed name matches one; otherwise
+      // create a new customer record on the fly.
+      const existing = customers.find(c => (c.name ?? '').toLowerCase() === customerName.toLowerCase());
+      let customerId = existing?.id;
+      if (!customerId) {
+        const ref = await addDoc(collection(db, 'customers'), {
+          name: customerName,
+          contactPerson: '', phone: '', email: '', address: '', notes: '',
+          createdAt: Timestamp.now(),
+          createdBy: userProfile.userId,
+        });
+        customerId = ref.id;
+        setCustomers(prev => [...prev, { id: ref.id, name: customerName }]);
+      }
+
+      const { customerName: _drop, ...rest } = form;
       await addDoc(collection(db, 'projects'), {
-        ...form,
+        ...rest,
+        client: customerName,
+        customerId,
         startDate: form.startDate ? new Date(form.startDate) : null,
         rates: { s1: 0, s2: 0, s3: 0 },
         assignedTeams: [],
@@ -125,16 +163,23 @@ export default function ProjectList() {
               <input className={styles.input} value={form.name} onChange={set('name')} placeholder="e.g. PCS Batch 4" required />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Client *</label>
-              <input className={styles.input} value={form.client} onChange={set('client')} placeholder="e.g. Certis Technology" required />
+              <label className={styles.label}>Customer *</label>
+              <input className={styles.input} value={form.customerName} onChange={set('customerName')}
+                placeholder="Type to search or add new" list="customer-list" required />
+              <datalist id="customer-list">
+                {customers.map(c => <option key={c.id} value={c.name} />)}
+              </datalist>
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Work Type</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <label className={styles.label}>Work Type</label>
+                <button type="button" onClick={() => setShowTypes(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11 }}>
+                  <Cog6ToothIcon width={12} /> Manage
+                </button>
+              </div>
               <select className={styles.input} value={form.projectType} onChange={set('projectType')}>
-                <option value="pcs">PCS (Block Installation)</option>
-                <option value="cctv">CCTV Installation</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="general">General</option>
+                {workTypes.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
               </select>
             </div>
             <div className={styles.field}>
@@ -164,6 +209,10 @@ export default function ProjectList() {
           </div>
         </form>
       </Modal>
+
+      {showTypes && (
+        <WorkTypeManager workTypes={workTypes} saveWorkTypes={saveWorkTypes} onClose={() => setShowTypes(false)} />
+      )}
     </div>
   );
 }

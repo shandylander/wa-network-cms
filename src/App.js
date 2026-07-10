@@ -15,6 +15,8 @@ import Permissions    from './pages/Settings/Permissions';
 import AccessLevels   from './pages/Settings/AccessLevels';
 import ProjectList    from './pages/Projects/ProjectList';
 import ProjectDetail  from './pages/Projects/ProjectDetail';
+import CustomerList   from './pages/Customers/CustomerList';
+import CustomerDetail from './pages/Customers/CustomerDetail';
 import WorkerRegistry from './pages/Workers/WorkerRegistry';
 import HSEHome        from './pages/HSE/HSEHome';
 import Attendance      from './pages/Attendance/Attendance';
@@ -57,6 +59,8 @@ function ProtectedRoutes() {
         <Route index                    element={<Home />} />
         <Route path="projects"          element={<ProjectList />} />
         <Route path="projects/:id"      element={<ProjectDetail />} />
+        <Route path="customers"         element={<CustomerList />} />
+        <Route path="customers/:id"     element={<CustomerDetail />} />
         <Route path="workers"           element={<WorkerRegistry />} />
         <Route path="hse"               element={<HSEHome />} />
         <Route path="attendance"        element={<Attendance />} />

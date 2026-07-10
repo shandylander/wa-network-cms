@@ -35,6 +35,7 @@ const PERMISSION_CATALOG = [
   { key: 'blocks:delete',      seedRoles: ['owner', 'manager'] },
   { key: 'blocks:bulk-edit',   seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'generate:reports',   seedRoles: ['owner', 'manager', 'supervisor'] },
+  { key: 'manage:customers',   seedRoles: ['owner', 'manager'] },
   { key: 'view:claims',            seedRoles: ['owner', 'manager'] },
   { key: 'materials:view',         seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'materials:approve',      seedRoles: ['owner', 'manager'] },

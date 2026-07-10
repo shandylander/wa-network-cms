@@ -56,3 +56,44 @@ export function useCertTypes() {
 
   return { certTypes, saveCertTypes, loading };
 }
+
+// Each work type is a named category bound to one of three fixed structural
+// "shapes" that ProjectDetail.jsx's tab list actually understands:
+//   pcs     — full block tracking + claims + materials
+//   cctv    — block tracking, no claims/materials
+//   general — no block tracking (simple photos/snags/documents project)
+// The label/key set is admin-editable; the shape enum itself is not, since
+// it's wired directly into which tabs render.
+const DEFAULT_WORK_TYPES = [
+  { key: 'pcs',         label: 'PCS (Block Installation)', shape: 'pcs' },
+  { key: 'cctv',        label: 'CCTV Installation',        shape: 'cctv' },
+  { key: 'maintenance', label: 'Maintenance',              shape: 'general' },
+  { key: 'general',     label: 'General',                  shape: 'general' },
+];
+
+/* Admin-editable project work-type list (appConfig/workTypes). */
+export function useWorkTypes() {
+  const [workTypes, setWorkTypes] = useState(DEFAULT_WORK_TYPES);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    getDoc(doc(db, 'appConfig', 'workTypes'))
+      .then(snap => { if (snap.exists() && snap.data().types) setWorkTypes(snap.data().types); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const saveWorkTypes = useCallback(async (types) => {
+    await setDoc(doc(db, 'appConfig', 'workTypes'), { types });
+    setWorkTypes(types);
+  }, []);
+
+  // Orphaned/removed-type fallback: treat as a simple project rather than
+  // erroring, so deleting a work type never breaks an existing project.
+  const getShape = useCallback(
+    (key) => workTypes.find(t => t.key === key)?.shape ?? 'general',
+    [workTypes]
+  );
+
+  return { workTypes, saveWorkTypes, getShape, loading };
+}

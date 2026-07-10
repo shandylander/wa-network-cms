@@ -5,7 +5,7 @@ import {
   UserGroupIcon, ClockIcon, CalendarDaysIcon, BanknotesIcon, ReceiptPercentIcon, CurrencyDollarIcon,
   EllipsisHorizontalIcon, XMarkIcon,
   UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon,
-  DocumentMagnifyingGlassIcon,
+  DocumentMagnifyingGlassIcon, BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -116,6 +116,11 @@ export default function MobileNav() {
             {can('view:claims') && (
               <NavLink to="/finance" className={styles.drawerItem} onClick={() => setDrawer(false)}>
                 <CurrencyDollarIcon width={20} /> Finance
+              </NavLink>
+            )}
+            {can('manage:customers') && (
+              <NavLink to="/customers" className={styles.drawerItem} onClick={() => setDrawer(false)}>
+                <BuildingOffice2Icon width={20} /> Customers
               </NavLink>
             )}
             {can('view:uploads-audit') && (

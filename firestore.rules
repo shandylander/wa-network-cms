@@ -70,6 +70,13 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
+    // ── CUSTOMERS ──────────────────────────────────────────────────────────
+    // Internal-only — contact details and warranty/dispute notes are not
+    // something sub-cons should ever see.
+    match /customers/{customerId} {
+      allow read, write: if hasPerm('manage:customers');
+    }
+
     // ── PROJECTS ───────────────────────────────────────────────────────────
     match /projects/{projectId} {
       allow read: if signedIn() && (

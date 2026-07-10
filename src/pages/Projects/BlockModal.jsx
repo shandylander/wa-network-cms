@@ -5,7 +5,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { useTeamGroups } from '../../hooks/useTeamGroups';
+import { useTeams } from '../../hooks/useAppConfig';
 import { formatDate } from '../../utils/helpers';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
@@ -56,7 +56,7 @@ export default function BlockModal({
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
-  const { teamOptions, teams: TEAMS } = useTeamGroups();
+  const { teamOptions } = useTeams();
 
   const canAssign = can('blocks:assign-team');
   const canManage = can('blocks:delete');
@@ -229,7 +229,7 @@ export default function BlockModal({
               <label className={styles.label}>Team</label>
               <select className={styles.select} value={form.team} onChange={setE('team')}>
                 <option value="">Unassigned</option>
-                {teamOptions.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
+                {teamOptions.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
               </select>
             </div>
             <div className={styles.field}>

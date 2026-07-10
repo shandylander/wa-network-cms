@@ -9,7 +9,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { useTeamGroups } from '../../hooks/useTeamGroups';
+import { useTeams } from '../../hooks/useAppConfig';
 import { getStageStatus, formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import BlockModal from './BlockModal';
@@ -157,7 +157,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
-  const { teamOptions, teams: TEAMS } = useTeamGroups();
+  const { teamOptions, teams: TEAMS } = useTeams();
 
   const [search,      setSearch]      = useState('');
   const [teamFilter,  setTeamFilter]  = useState('');
@@ -350,7 +350,7 @@ export default function BlockTracker({ projectId, blocks, setBlocks, userRole, u
           <select className={styles.select} value={bulkTeam} onChange={e => setBulkTeam(e.target.value)}>
             <option value="">Team…</option>
             <option value="__unassigned__">Unassigned</option>
-            {teamOptions.map(t => <option key={t} value={t}>{TEAMS[t] ?? t}</option>)}
+            {teamOptions.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
           </select>
           <input
             className={styles.search}

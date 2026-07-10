@@ -9,7 +9,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { useTeamGroups } from '../../hooks/useTeamGroups';
+import { useTeams } from '../../hooks/useAppConfig';
 import { getStageStatus } from '../../utils/helpers';
 import BlockModal from './BlockModal';
 import styles from './BlockKanban.module.css';
@@ -91,7 +91,7 @@ export default function BlockKanban({ projectId, blocks, setBlocks, userRole, us
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
-  const { teams }       = useTeamGroups();
+  const { teams }       = useTeams();
   const [activeBlock,   setActiveBlock]   = useState(null); // for DragOverlay
   const [editBlock,     setEditBlock]     = useState(null); // for BlockModal
 

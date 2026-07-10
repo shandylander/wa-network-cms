@@ -10,7 +10,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { useTeamGroups } from '../../hooks/useTeamGroups';
+import { useTeams, useWorkTypes } from '../../hooks/useAppConfig';
 import { formatDate, getOverallProgress, toDateInputSG } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Card, { CardHeader } from '../../components/UI/Card';
@@ -138,7 +138,7 @@ function MilestoneSection({ project, setProject, userProfile }) {
 function AssignedTeamsSection({ project, setProject }) {
   const { toast } = useToast();
   const { can }   = usePermissions();
-  const { teamOptions, teams: TEAMS } = useTeamGroups();
+  const { teamOptions, teams: TEAMS } = useTeams();
   const canEdit   = can('manage:blocks');
   const [editing,  setEditing]  = useState(false);
   const [selected, setSelected] = useState([]);
@@ -180,9 +180,9 @@ function AssignedTeamsSection({ project, setProject }) {
         <>
           <div className={styles.teamCheckGrid}>
             {teamOptions.map(t => (
-              <label key={t} className={styles.teamCheckOption}>
-                <input type="checkbox" checked={selected.includes(t)} onChange={() => toggleTeam(t)} />
-                {TEAMS[t] ?? t}
+              <label key={t.key} className={styles.teamCheckOption}>
+                <input type="checkbox" checked={selected.includes(t.key)} onChange={() => toggleTeam(t.key)} />
+                {t.label}
               </label>
             ))}
           </div>
@@ -209,7 +209,7 @@ const toDateInput = toDateInputSG;
 function TeamStartDatesSection({ project, setProject, blocks, userProfile }) {
   const { toast } = useToast();
   const { can }   = usePermissions();
-  const { teams: TEAMS } = useTeamGroups();
+  const { teams: TEAMS } = useTeams();
   const canEdit   = can('manage:blocks');
   const [editing, setEditing] = useState(false);
   const [dates,   setDates]   = useState({});
@@ -296,6 +296,7 @@ export default function ProjectDetail() {
   const navigate   = useNavigate();
   const { userProfile } = useAuth();
   const { can }    = usePermissions();
+  const { getShape } = useWorkTypes();
   const [project,   setProject]  = useState(null);
   const [blocks,    setBlocks]   = useState([]);
   const [loading,   setLoading]  = useState(true);
@@ -363,11 +364,12 @@ export default function ProjectDetail() {
   const canViewMaterials = can('materials:view');
   // Incidents are internal/staff-only (see firestore.rules); hide the tab
   // from sub-con roles so they don't hit a load error.
-  const TABS    = getTabsForType(project.projectType ?? 'pcs')
+  const workShape = getShape(project.projectType ?? 'pcs');
+  const TABS    = getTabsForType(workShape)
     .filter(t => (t !== 'claims' || canViewMoney)
       && (t !== 'materials' || canViewMaterials)
       && (t !== 'incidents' || can('incidents:view')));
-  const isCctv  = ['pcs', 'cctv'].includes(project.projectType ?? 'pcs');
+  const isCctv  = ['pcs', 'cctv'].includes(workShape);
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;
   const stage1  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3 < 100).length;
