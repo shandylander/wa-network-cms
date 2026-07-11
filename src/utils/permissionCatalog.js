@@ -18,7 +18,14 @@ export const PERMISSION_CATALOG = [
   { key: 'blocks:bulk-edit',   label: 'Bulk Edit Blocks',            area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'generate:reports',   label: 'Generate WhatsApp Reports',   area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'manage:customers',   label: 'Manage Customers',            area: 'Dashboard & Projects', seedRoles: ['owner', 'manager'] },
-  { key: 'manage:service-reports', label: 'Create Service Reports',  area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor', 'staff'] },
+  // Key deliberately kept as 'manage:service-reports' even though the
+  // collection is now serviceJobs — renaming the key would orphan any
+  // Access Level grant already made against it (RBAC grants happen via the
+  // in-app Settings UI, not by this codebase, so a rename can't be
+  // re-applied automatically).
+  { key: 'manage:service-reports', label: 'Manage Service Jobs',     area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor', 'staff'] },
+  { key: 'jobs:assign',            label: 'Schedule / Assign Jobs',  area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor'] },
+  { key: 'jobs:vet',               label: 'Vet Completed Jobs',      area: 'Dashboard & Projects', seedRoles: ['owner', 'manager'] },
 
   // Finance & Claims
   { key: 'view:claims',           label: 'View Finance & Claims',      area: 'Finance & Claims', seedRoles: ['owner', 'manager'] },

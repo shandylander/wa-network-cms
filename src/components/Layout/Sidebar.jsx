@@ -16,6 +16,7 @@ import {
   ReceiptPercentIcon,
   CurrencyDollarIcon,
   DocumentMagnifyingGlassIcon,
+  WrenchScrewdriverIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   UserCircleIcon,
@@ -90,7 +91,10 @@ export default function Sidebar() {
 
         {/* Dashboard + Projects */}
         {NAV.slice(0, 2).map(({ to, label, Icon, perm }) => {
-          if (perm && !can(perm)) return null;
+          // Dashboard's route itself isn't permission-gated (staff land on
+          // WorkerHome there instead of the admin dashboard) — don't hide
+          // the link for them just because they lack view:dashboard.
+          if (perm && !can(perm) && !(to === '/' && role === 'staff')) return null;
           return (
             <NavLink key={to} to={to} end={to === '/'}
               className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
@@ -140,6 +144,15 @@ export default function Sidebar() {
             </NavLink>
           );
         })}
+
+        {/* Jobs board — whoever can schedule or vet jobs */}
+        {(can('jobs:assign') || can('jobs:vet')) && (
+          <NavLink to="/jobs"
+            className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
+            <WrenchScrewdriverIcon className={styles.navIcon} />
+            <span>Jobs</span>
+          </NavLink>
+        )}
 
         {/* Uploads audit — management only */}
         {can('view:uploads-audit') && (

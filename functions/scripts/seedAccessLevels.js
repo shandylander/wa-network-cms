@@ -37,6 +37,8 @@ const PERMISSION_CATALOG = [
   { key: 'generate:reports',   seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'manage:customers',   seedRoles: ['owner', 'manager'] },
   { key: 'manage:service-reports', seedRoles: ['owner', 'manager', 'supervisor', 'staff'] },
+  { key: 'jobs:assign',            seedRoles: ['owner', 'manager', 'supervisor'] },
+  { key: 'jobs:vet',               seedRoles: ['owner', 'manager'] },
   { key: 'view:claims',            seedRoles: ['owner', 'manager'] },
   { key: 'materials:view',         seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'materials:approve',      seedRoles: ['owner', 'manager'] },

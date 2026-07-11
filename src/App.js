@@ -26,6 +26,8 @@ import PettyCash       from './pages/HR/PettyCash';
 import Finance         from './pages/Finance/Finance';
 import UploadsAudit    from './pages/Admin/UploadsAudit';
 import Announcements   from './pages/Announcements/Announcements';
+import JobDetail       from './pages/Jobs/JobDetail';
+import JobsBoard       from './pages/Jobs/JobsBoard';
 import Setup           from './pages/Setup/Setup';
 import './App.css';
 
@@ -70,6 +72,8 @@ function ProtectedRoutes() {
         <Route path="finance"           element={<Finance />} />
         <Route path="audit"             element={<UploadsAudit />} />
         <Route path="announcements"     element={<Announcements />} />
+        <Route path="jobs"              element={<JobsBoard />} />
+        <Route path="jobs/:id"          element={<JobDetail />} />
         <Route path="profile"           element={<Profile />} />
         <Route path="settings"          element={<Settings />} />
         <Route path="settings/users"       element={<UserManagement />} />

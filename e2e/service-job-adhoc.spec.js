@@ -2,11 +2,13 @@ const { test, expect } = require('@playwright/test');
 
 // Requires real credentials, passed as env vars (never hardcoded — this
 // file is committed to a public repo):
-//   E2E_USER_ID=WA001 E2E_PIN=1234 npm run test:e2e -- service-report
+//   E2E_USER_ID=WA001 E2E_PIN=1234 npm run test:e2e -- service-job-adhoc
 // Skips itself if they're not set, so the suite stays runnable without them.
+// Only needs the manage:service-reports permission (not jobs:assign/jobs:vet)
+// — this exercises the ad-hoc, technician-self-creates-and-completes path.
 const { E2E_USER_ID, E2E_PIN } = process.env;
 
-test('create a service report end to end', async ({ page }) => {
+test('create an ad-hoc service job end to end', async ({ page }) => {
   test.skip(!E2E_USER_ID || !E2E_PIN, 'Set E2E_USER_ID and E2E_PIN to run this test');
 
   await page.goto('/login');
@@ -22,8 +24,8 @@ test('create a service report end to end', async ({ page }) => {
   await page.getByRole('heading', { level: 2 }).first().click();
   await expect(page).toHaveURL(/\/customers\/.+/);
 
-  // Service Reports section should be visible (permission was just granted)
-  await expect(page.getByRole('heading', { name: 'Service Reports' })).toBeVisible();
+  // Service Jobs section should be visible (permission was granted earlier)
+  await expect(page.getByRole('heading', { name: 'Service Jobs' })).toBeVisible();
   await page.getByRole('button', { name: 'New Report' }).click();
 
   // Modal fetches the customer record before showing the form
@@ -45,16 +47,16 @@ test('create a service report end to end', async ({ page }) => {
   await page.mouse.up();
 
   await page.getByLabel("Signer's Name").fill('E2E Test Signer');
-  await page.getByRole('button', { name: 'Save Report' }).click();
+  await page.getByRole('button', { name: 'Save Job' }).click();
 
   // Wait for the create modal to actually close (proves the Dropbox upload
   // + Firestore write succeeded) before looking for the list row — the
   // still-open form's own Job Description textarea contains the same
   // string, which would otherwise make a plain getByText(jobDescription)
   // match trivially true even if nothing was actually saved.
-  await expect(page.getByRole('heading', { name: 'New Service Report' })).not.toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole('heading', { name: 'New Service Job' })).not.toBeVisible({ timeout: 30000 });
 
-  // New report should show up at the top of the list
+  // New job should show up at the top of the list
   const row = page.getByRole('button', { name: new RegExp(jobDescription) });
   await expect(row).toBeVisible();
 

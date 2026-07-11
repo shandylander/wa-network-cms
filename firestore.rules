@@ -76,11 +76,44 @@ service cloud.firestore {
     // something sub-cons should ever see.
     match /customers/{customerId} {
       allow read, write: if hasPerm('manage:customers');
+
+      // Reference docs (floorplans, drawings, tech docs) for this customer's
+      // site — read-only for technicians so they can pull them up during a
+      // job; upload/manage stays with whoever manages the Customer record.
+      match /documents/{docId} {
+        allow read:  if hasPerm('manage:customers') || hasPerm('manage:service-reports');
+        allow write: if hasPerm('manage:customers');
+      }
     }
 
     // ── SERVICE REPORTS ────────────────────────────────────────────────────
-    match /serviceReports/{reportId} {
-      allow read, write: if hasPerm('manage:service-reports');
+    // ── SERVICE JOBS ─────────────────────────────────────────────────────
+    // Renamed from serviceReports — now a full job lifecycle (scheduled →
+    // in-progress → completed → vetted), not just a post-visit report.
+    // `manage:service-reports` is the base technician permission (kept as
+    // the original key string so the existing Owner grant stays valid);
+    // `jobs:assign` schedules/reassigns, `jobs:vet` reviews a finished job.
+    match /serviceJobs/{jobId} {
+      allow read: if hasPerm('manage:service-reports') || hasPerm('jobs:assign') || hasPerm('jobs:vet');
+
+      // Manager scheduling a job ahead of time, or a technician self-
+      // creating an ad-hoc job (must list themselves in assignedTo).
+      allow create: if hasPerm('jobs:assign')
+        || (hasPerm('manage:service-reports') && uid() in request.resource.data.assignedTo);
+
+      // Any assigned technician can drive their own job through
+      // scheduled → in-progress → completed (check in/out, add photos,
+      // submit the report) but cannot touch assignment or vet fields —
+      // those need jobs:assign / jobs:vet respectively.
+      allow update: if hasPerm('jobs:assign')
+        || hasPerm('jobs:vet')
+        || (hasPerm('manage:service-reports')
+            && uid() in resource.data.assignedTo
+            && request.resource.data.status in ['in-progress', 'completed']
+            && !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['assignedTo', 'assignedToNames', 'assignedBy', 'vettedBy', 'vettedByName', 'vettedAt']));
+
+      allow delete: if hasPerm('jobs:assign');
     }
 
     // ── PROJECTS ───────────────────────────────────────────────────────────

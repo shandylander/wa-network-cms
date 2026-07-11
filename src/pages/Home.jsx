@@ -14,6 +14,7 @@ import { TEAMS } from '../utils/permissions';
 import { buildReport } from './Projects/Reports';
 import Badge from '../components/UI/Badge';
 import BlockHeatmap from '../components/UI/BlockHeatmap';
+import WorkerHome from './Worker/WorkerHome';
 import styles from './Home.module.css';
 
 const CERT_WARN_DAYS = 30;
@@ -130,6 +131,18 @@ function SectionHeader({ title, count, icon: Icon }) {
 export default function Home() {
   const { userProfile } = useAuth();
   const { can }          = usePermissions();
+
+  // Staff get the simplified job-focused landing page instead of the full
+  // project dashboard — mirrors the existing WorkerClock/WorkerLeave/
+  // WorkerClaims role-branch pattern used elsewhere in the app.
+  if (userProfile?.role === 'staff') {
+    return <WorkerHome />;
+  }
+
+  return <HomeDashboard userProfile={userProfile} can={can} />;
+}
+
+function HomeDashboard({ userProfile, can }) {
   const [projects,        setProjects]        = useState([]);
   const [blocksByProject, setBlocksByProject] = useState({});
   const [workers,         setWorkers]         = useState([]);

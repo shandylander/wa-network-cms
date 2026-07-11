@@ -1,0 +1,164 @@
+/* ── Form (JobCompletionForm) ────────────────────────────────────────────── */
+.loadingBox { display: flex; justify-content: center; padding: 40px; }
+.spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.form { display: flex; flex-direction: column; gap: 4px; }
+
+.sectionHead {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: #fff; background: var(--navy); padding: 6px 10px; border-radius: 6px;
+  margin: 14px 0 8px;
+}
+.sectionHead:first-child { margin-top: 0; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 560px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.label { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+.opt   { font-weight: 400; color: var(--text-muted); }
+
+.input, .textarea {
+  border: 1.5px solid var(--border); border-radius: 7px; padding: 8px 10px;
+  font-size: 13px; font-family: inherit; color: var(--text); background: #fff; box-sizing: border-box;
+}
+.input:disabled { background: var(--surface); color: var(--text-sec); }
+.textarea { resize: vertical; }
+.input:focus, .textarea:focus { outline: none; border-color: var(--navy); }
+.readonlyVal { font-size: 13px; color: var(--text); padding: 8px 0 2px; }
+
+.checkRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 10px; }
+.radioRow { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.radioLabel { font-size: 12.5px; font-weight: 600; color: var(--text-sec); }
+.radioCol { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; padding-left: 4px; }
+
+.checkOption { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; white-space: nowrap; }
+.checkOption input { cursor: pointer; flex-shrink: 0; }
+
+.inlineInput {
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+  font-size: 12px; font-family: inherit; color: var(--text); margin-left: 4px; min-width: 140px;
+}
+.inlineInput:focus { outline: none; border-color: var(--navy); }
+
+.disclaimer { font-size: 11px; color: var(--text-sec); line-height: 1.5; margin: 0 0 10px; }
+
+.actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.progressText { font-size: 11.5px; color: var(--text-sec); margin-right: auto; }
+
+/* ── List ───────────────────────────────────────────────────────────────── */
+.listWrap { display: flex; flex-direction: column; gap: 8px; }
+.emptyList { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text-muted); padding: 40px 20px; text-align: center; }
+.emptyList p { font-size: 13px; margin: 0; }
+
+.reportRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; text-align: left; width: 100%; font-family: inherit;
+}
+.reportRow:hover { border-color: var(--navy); }
+.reportMain { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.reportTitle { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.reportMeta { font-size: 11.5px; color: var(--text-sec); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.reportChip { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 10.5px; }
+
+.listHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+.newBtn { display: flex; align-items: center; gap: 6px; background: var(--red); color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.newBtn:hover { background: var(--red-dark); }
+.scheduleBtn { display: flex; align-items: center; gap: 6px; background: var(--navy); color: #fff; border: none; padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.scheduleBtn:hover { background: var(--navy-mid); }
+
+/* ── Status pills (see jobStatus.js STATUS_CONFIG) ───────────────────────── */
+.pill { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.pillAmber  { background: var(--amber-bg);  color: var(--amber);  }
+.pillBlue   { background: var(--blue-bg);   color: var(--blue);   }
+.pillPurple { background: var(--purple-bg); color: var(--purple); }
+.pillGreen  { background: var(--green-bg);  color: var(--green);  }
+.pillRed    { background: var(--red-light); color: var(--red);    }
+
+/* ── Detail / print view ───────────────────────────────────────────────── */
+.printArea { background: #fff; padding: 4px; }
+.printHead { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--navy); padding-bottom: 10px; margin-bottom: 14px; }
+.printTitle { font-size: 20px; font-weight: 700; color: var(--navy); margin: 0; }
+.printCompany { font-size: 11px; color: var(--text-sec); text-align: right; line-height: 1.5; }
+
+.printSection { margin-bottom: 14px; }
+.printSectionHead { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #fff; background: var(--navy); padding: 5px 10px; border-radius: 4px; margin-bottom: 8px; }
+.printGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+.printRow { font-size: 12.5px; display: flex; gap: 6px; }
+.printKey { font-weight: 600; color: var(--text-sec); flex-shrink: 0; }
+.printVal { color: var(--text); word-break: break-word; }
+.printText { font-size: 12.5px; color: var(--text); white-space: pre-wrap; line-height: 1.5; }
+
+.sigBlock { display: flex; align-items: flex-end; gap: 24px; margin-top: 10px; }
+.sigImg { max-width: 220px; max-height: 90px; border-bottom: 1px solid var(--text); }
+.sigMeta { font-size: 11px; color: var(--text-sec); }
+
+.detailActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+@media print {
+  body * { visibility: hidden; }
+  .printArea, .printArea * { visibility: visible; }
+  .printArea { position: absolute; top: 0; left: 0; width: 100%; padding: 0; }
+  .detailActions, .printHide { display: none !important; }
+}
+
+/* ── JobDetail (worker active-job view) ──────────────────────────────────── */
+.jdBack { font-size: 15px; color: var(--text-sec); font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.jdTitle { font-size: 20px; font-weight: 700; margin: 0 0 3px; }
+.jdSub { font-size: 15px; color: var(--text-sec); margin: 0 0 16px; }
+
+.jdStatusTrack { display: flex; align-items: center; gap: 0; margin-bottom: 18px; }
+.jdStep { flex: 1; text-align: center; }
+.jdStepDot { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); color: var(--text-muted); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px; border: 1px solid var(--border); }
+.jdStepDone .jdStepDot { background: var(--green); color: #fff; border-color: var(--green); }
+.jdStepNow .jdStepDot { background: var(--red); color: #fff; border-color: var(--red); box-shadow: 0 0 0 4px var(--red-light); }
+.jdStepLbl { font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .02em; }
+.jdStepDone .jdStepLbl, .jdStepNow .jdStepLbl { color: var(--text); }
+.jdConnector { flex: 0 0 20px; height: 2px; background: var(--border); margin-bottom: 15px; }
+.jdConnectorDone { background: var(--green); }
+
+.infoCard { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.infoRow { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; gap: 10px; }
+.k { color: var(--text-sec); flex-shrink: 0; }
+.gpsChip { display: inline-flex; align-items: center; font-size: 12px; color: var(--blue); background: var(--blue-bg); padding: 4px 10px; border-radius: 20px; margin-top: 8px; text-decoration: none; }
+
+.photoStrip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
+.photoThumb { width: 68px; height: 68px; border-radius: 10px; background: linear-gradient(135deg, var(--surface), var(--border)); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.photoAdd { width: 68px; height: 68px; border-radius: 10px; border: 1.5px dashed var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: none; cursor: pointer; }
+.photoAdd:hover { border-color: var(--red); color: var(--red); }
+.photoAdd:disabled { opacity: .5; }
+
+.docRow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; text-decoration: none; color: inherit; }
+.docRow:last-child { border-bottom: none; }
+.docIco { width: 30px; height: 30px; border-radius: 7px; background: var(--blue-bg); color: var(--blue); padding: 6px; flex-shrink: 0; box-sizing: border-box; }
+.docName { font-weight: 600; color: var(--text); }
+.docSrc { font-size: 11px; color: var(--text-muted); }
+
+/* ── WorkerHome ───────────────────────────────────────────────────────────── */
+.jobCard {
+  display: block; width: 100%; text-align: left; font-family: inherit;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 15px 16px; margin-bottom: 12px; box-shadow: var(--shadow); cursor: pointer;
+}
+.jobCard:hover { border-color: var(--red); }
+.jobCardTop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 7px; }
+.jobCust { font-size: 16px; font-weight: 700; line-height: 1.3; }
+.jobNotes { font-size: 14px; color: var(--text-sec); line-height: 1.4; margin: 0 0 9px; }
+.jobMeta { font-size: 12.5px; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+.quickGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.quickBox {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px 12px; text-align: center; box-shadow: var(--shadow); cursor: pointer;
+  font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.quickBox:hover { border-color: var(--red); }
+.quickIcon { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; }
+.quickNavy   { background: var(--navy); color: #fff; }
+.quickGreen  { background: var(--green-bg);  color: var(--green);  }
+.quickBlue   { background: var(--blue-bg);   color: var(--blue);   }
+.quickPurple { background: var(--purple-bg); color: var(--purple); }
+.quickLabel { font-size: 14px; font-weight: 700; color: var(--text); }

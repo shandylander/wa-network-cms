@@ -8,7 +8,7 @@ import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import styles from './Customers.module.css';
 
-const EMPTY_FORM = { name: '', contactPerson: '', phone: '', email: '', address: '', notes: '' };
+const EMPTY_FORM = { name: '', contactPerson: '', phone: '', email: '', address: '', postalCode: '', notes: '' };
 
 export default function CustomerModal({ customer, onClose, onSaved, onDeleted }) {
   const { userProfile } = useAuth();
@@ -20,7 +20,8 @@ export default function CustomerModal({ customer, onClose, onSaved, onDeleted })
       ? {
           name: customer.name ?? '', contactPerson: customer.contactPerson ?? '',
           phone: customer.phone ?? '', email: customer.email ?? '',
-          address: customer.address ?? '', notes: customer.notes ?? '',
+          address: customer.address ?? '', postalCode: customer.postalCode ?? '',
+          notes: customer.notes ?? '',
         }
       : EMPTY_FORM
   );
@@ -87,28 +88,32 @@ export default function CustomerModal({ customer, onClose, onSaved, onDeleted })
     <Modal isOpen onClose={onClose} title={isEdit ? 'Edit Customer' : 'New Customer'} size="md">
       <div className={styles.formGrid}>
         <div className={styles.field} style={{ gridColumn: '1 / -1' }}>
-          <label className={styles.label}>Company / Customer Name *</label>
-          <input className={styles.input} value={form.name} onChange={set('name')} placeholder="e.g. Certis Technology (S) Pte Ltd" autoFocus />
+          <label className={styles.label} htmlFor="cust-name">Company / Customer Name *</label>
+          <input id="cust-name" className={styles.input} value={form.name} onChange={set('name')} placeholder="e.g. Certis Technology (S) Pte Ltd" autoFocus />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Contact Person</label>
-          <input className={styles.input} value={form.contactPerson} onChange={set('contactPerson')} placeholder="e.g. John Tan" />
+          <label className={styles.label} htmlFor="cust-contactPerson">Contact Person</label>
+          <input id="cust-contactPerson" className={styles.input} value={form.contactPerson} onChange={set('contactPerson')} placeholder="e.g. John Tan" />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Phone</label>
-          <input className={styles.input} value={form.phone} onChange={set('phone')} placeholder="e.g. 9123 4567" />
+          <label className={styles.label} htmlFor="cust-phone">Phone</label>
+          <input id="cust-phone" className={styles.input} value={form.phone} onChange={set('phone')} placeholder="e.g. 9123 4567" />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Email</label>
-          <input type="email" className={styles.input} value={form.email} onChange={set('email')} placeholder="e.g. john@certis.com" />
+          <label className={styles.label} htmlFor="cust-email">Email</label>
+          <input id="cust-email" type="email" className={styles.input} value={form.email} onChange={set('email')} placeholder="e.g. john@certis.com" />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Address</label>
-          <input className={styles.input} value={form.address} onChange={set('address')} placeholder="Billing / correspondence address" />
+          <label className={styles.label} htmlFor="cust-address">Address</label>
+          <input id="cust-address" className={styles.input} value={form.address} onChange={set('address')} placeholder="Billing / correspondence address" />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="cust-postalCode">Postal Code</label>
+          <input id="cust-postalCode" className={styles.input} value={form.postalCode} onChange={set('postalCode')} placeholder="e.g. 757515" />
         </div>
         <div className={styles.field} style={{ gridColumn: '1 / -1' }}>
-          <label className={styles.label}>Notes <span className={styles.opt}>(optional)</span></label>
-          <textarea className={styles.textarea} rows={3} value={form.notes} onChange={set('notes')}
+          <label className={styles.label} htmlFor="cust-notes">Notes <span className={styles.opt}>(optional)</span></label>
+          <textarea id="cust-notes" className={styles.textarea} rows={3} value={form.notes} onChange={set('notes')}
             placeholder="Warranty terms, special arrangements, anything worth remembering about this customer" />
         </div>
       </div>

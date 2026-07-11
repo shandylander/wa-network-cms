@@ -5,7 +5,7 @@ import {
   UserGroupIcon, ClockIcon, CalendarDaysIcon, BanknotesIcon, ReceiptPercentIcon, CurrencyDollarIcon,
   EllipsisHorizontalIcon, XMarkIcon,
   UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon,
-  DocumentMagnifyingGlassIcon, BuildingOffice2Icon, MegaphoneIcon,
+  DocumentMagnifyingGlassIcon, BuildingOffice2Icon, MegaphoneIcon, WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -41,7 +41,10 @@ export default function MobileNav() {
     navigate('/login');
   };
 
-  const visibleTabs = MAIN_TABS.filter(t => !t.perm || can(t.perm));
+  // Home's route itself isn't permission-gated (staff land on WorkerHome
+  // there instead of the admin dashboard) — so the tab shouldn't be hidden
+  // for them just because they lack view:dashboard.
+  const visibleTabs = MAIN_TABS.filter(t => !t.perm || can(t.perm) || (t.to === '/' && role === 'staff'));
   const visibleEmp  = EMP_CHILDREN.filter(c => c.roles.includes(role));
   const showEmp     = visibleEmp.length > 0;
   const empActive   = EMP_ROUTES.some(r => pathname.startsWith(r));
@@ -121,6 +124,11 @@ export default function MobileNav() {
             {can('manage:customers') && (
               <NavLink to="/customers" className={styles.drawerItem} onClick={() => setDrawer(false)}>
                 <BuildingOffice2Icon width={20} /> Customers
+              </NavLink>
+            )}
+            {(can('jobs:assign') || can('jobs:vet')) && (
+              <NavLink to="/jobs" className={styles.drawerItem} onClick={() => setDrawer(false)}>
+                <WrenchScrewdriverIcon width={20} /> Jobs
               </NavLink>
             )}
             {can('view:uploads-audit') && (

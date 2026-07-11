@@ -26,14 +26,14 @@ import Permits from './Permits';
 import ToolboxMeeting from './ToolboxMeeting';
 import IncidentReport from './IncidentReport';
 import ProjectDocuments from './ProjectDocuments';
-import ServiceReportList from '../ServiceReports/ServiceReportList';
+import JobList from '../Jobs/JobList';
 import styles from './ProjectDetail.module.css';
 
 const STATUS_COLOR = { active: 'green', upcoming: 'amber', completed: 'default' };
 const TAB_LABELS   = {
   report: 'WhatsApp Report', claims: 'Claims & Payments', materials: 'Materials / DO',
   photos: 'Site Photos', snags: 'Snag List', permits: 'Permits (PTW)',
-  toolbox: 'Toolbox Meetings', incidents: 'Incidents', serviceReports: 'Service Reports',
+  toolbox: 'Toolbox Meetings', incidents: 'Incidents', serviceReports: 'Service Jobs',
 };
 
 const getTabsForType = (projectType) => {
@@ -371,7 +371,7 @@ export default function ProjectDetail() {
     .filter(t => (t !== 'claims' || canViewMoney)
       && (t !== 'materials' || canViewMaterials)
       && (t !== 'incidents' || can('incidents:view'))
-      && (t !== 'serviceReports' || can('manage:service-reports')));
+      && (t !== 'serviceReports' || can('manage:service-reports') || can('jobs:assign')));
   const isCctv  = ['pcs', 'cctv'].includes(workShape);
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;
@@ -514,7 +514,7 @@ export default function ProjectDetail() {
       {tab === 'documents' && <ProjectDocuments project={project} />}
 
       {tab === 'serviceReports' && project.customerId && (
-        <ServiceReportList
+        <JobList
           customerId={project.customerId}
           customerName={project.client}
           projectId={project.id}

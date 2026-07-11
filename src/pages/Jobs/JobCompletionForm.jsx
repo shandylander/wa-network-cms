@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { collection, doc, getDoc, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, addDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { uploadToDropbox } from '../../utils/dropboxUpload';
+import { stamp } from './jobUtils';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import SignaturePad from '../../components/UI/SignaturePad';
-import styles from './ServiceReports.module.css';
+import styles from './Jobs.module.css';
 
 const todaySG = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
 
@@ -27,15 +28,14 @@ const JOB_OPTIONS = [
   { value: 'others',      label: 'Others' },
 ];
 
-const emptyForm = (attendedBy) => ({
+const emptyForm = () => ({
   contactName: '', address: '', postalCode: '', contactNo: '', email: '',
   equipmentTypes: [], equipmentOther: '',
   jobTypes: [], jobOther: '',
   jobDescription: '', actionTaken: '',
   chargeable: '', billingBasis: '', salesEstimateNo: '', cashAmount: '',
   remarks: '', followUpRequired: '',
-  visitDate: todaySG(), arrivalTime: '', departureTime: '',
-  attendedBy, invoiceNo: '',
+  invoiceNo: '',
 });
 
 function dataUrlToFile(dataUrl, filename) {
@@ -49,14 +49,19 @@ function dataUrlToFile(dataUrl, filename) {
 
 const toggle = (arr, value) => arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
 
-// Digital equivalent of the paper "Service Report" form — customer contact
-// fields are pre-filled from the linked Customer record but stay editable
-// per-visit (a different contact person may be on-site that day) without
-// mutating the master Customer record.
-export default function ServiceReportModal({ customerId, customerName, projectId, projectName, onClose, onSaved }) {
+// Digital equivalent of the paper "Service Report" form — now doubles as the
+// job-completion step. Two modes:
+//  - ad-hoc (no existingJob): technician creates + completes a job in one
+//    session, exactly like the original single-step flow.
+//  - completing a scheduled job (existingJob passed in): stamps this user's
+//    check-out on the shared crew record and marks the job completed.
+// Customer contact fields are pre-filled from the linked Customer record but
+// stay editable per-visit (a different contact person may be on-site that
+// day) without mutating the master Customer record.
+export default function JobCompletionForm({ customerId, customerName, projectId, projectName, existingJob, onClose, onSaved }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const [form,       setForm]       = useState(emptyForm(userProfile.name));
+  const [form,       setForm]       = useState(emptyForm());
   const [signature,  setSignature]  = useState(null);
   const [signerName, setSignerName] = useState('');
   const [loading,    setLoading]    = useState(true);
@@ -64,6 +69,11 @@ export default function ServiceReportModal({ customerId, customerName, projectId
   const [progress,   setProgress]   = useState('');
 
   useEffect(() => {
+    if (existingJob) {
+      setForm(f => ({ ...f, ...existingJob }));
+      setLoading(false);
+      return;
+    }
     getDoc(doc(db, 'customers', customerId))
       .then(snap => {
         if (!snap.exists()) return;
@@ -72,13 +82,14 @@ export default function ServiceReportModal({ customerId, customerName, projectId
           ...f,
           contactName: c.contactPerson ?? '',
           address: c.address ?? '',
+          postalCode: c.postalCode ?? '',
           contactNo: c.phone ?? '',
           email: c.email ?? '',
         }));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [customerId]);
+  }, [customerId, existingJob]);
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
@@ -91,25 +102,56 @@ export default function ServiceReportModal({ customerId, customerName, projectId
     try {
       setProgress('Uploading signature…');
       const sigFile = dataUrlToFile(signature, `signature-${Date.now()}.png`);
-      const signatureUrl = await uploadToDropbox(sigFile, `/WA! Network Asia CMS/Service Reports/${customerName}`);
-      setProgress('Saving report…');
+      const signatureUrl = await uploadToDropbox(sigFile, `/WA! Network Asia CMS/Service Jobs/${customerName}`);
 
-      const payload = {
-        customerId, customerName,
-        projectId: projectId ?? null, projectName: projectName ?? null,
-        ...form,
+      const reportFields = {
+        contactName: form.contactName, address: form.address, postalCode: form.postalCode,
+        contactNo: form.contactNo, email: form.email,
+        equipmentTypes: form.equipmentTypes, equipmentOther: form.equipmentOther,
+        jobTypes: form.jobTypes, jobOther: form.jobOther,
+        jobDescription: form.jobDescription, actionTaken: form.actionTaken,
+        chargeable: form.chargeable, billingBasis: form.billingBasis,
+        salesEstimateNo: form.salesEstimateNo,
         cashAmount: form.cashAmount ? parseFloat(form.cashAmount) : null,
+        remarks: form.remarks, followUpRequired: form.followUpRequired,
+        invoiceNo: form.invoiceNo,
         signatureUrl, signerName: signerName.trim(), signedAt: Timestamp.now(),
-        createdBy: userProfile.userId, createdByName: userProfile.name,
-        createdAt: Timestamp.now(),
       };
-      const ref = await addDoc(collection(db, 'serviceReports'), payload);
-      toast.success('Service report saved');
-      onSaved({ id: ref.id, ...payload });
+
+      if (existingJob) {
+        setProgress('Checking out…');
+        const checkOut = await stamp();
+        const crew = { ...(existingJob.crew ?? {}) };
+        const mine = crew[userProfile.userId] ?? { name: userProfile.name, checkIn: null };
+        crew[userProfile.userId] = { ...mine, checkOut };
+
+        const payload = { ...reportFields, status: 'completed', crew };
+        await updateDoc(doc(db, 'serviceJobs', existingJob.id), payload);
+        toast.success('Job completed');
+        onSaved({ ...existingJob, ...payload });
+      } else {
+        setProgress('Saving job…');
+        const now = await stamp();
+        const payload = {
+          customerId, customerName,
+          projectId: projectId ?? null, projectName: projectName ?? null,
+          ...reportFields,
+          status: 'completed',
+          assignedTo: [userProfile.userId], assignedToNames: [userProfile.name],
+          assignedBy: null, scheduledDate: todaySG(), scheduledNotes: '',
+          crew: { [userProfile.userId]: { name: userProfile.name, checkIn: now, checkOut: now } },
+          vettedBy: null, vettedByName: null, vettedAt: null, vetNotes: null,
+          createdBy: userProfile.userId, createdByName: userProfile.name,
+          createdAt: Timestamp.now(),
+        };
+        const ref = await addDoc(collection(db, 'serviceJobs'), payload);
+        toast.success('Service job saved');
+        onSaved({ id: ref.id, ...payload });
+      }
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save report — check your connection and try again.');
+      toast.error('Failed to save — check your connection and try again.');
     } finally {
       setSaving(false);
       setProgress('');
@@ -117,7 +159,7 @@ export default function ServiceReportModal({ customerId, customerName, projectId
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="New Service Report" size="xl">
+    <Modal isOpen onClose={onClose} title={existingJob ? 'Complete Job' : 'New Service Job'} size="xl">
       {loading ? (
         <div className={styles.loadingBox}><div className={styles.spinner} /></div>
       ) : (
@@ -241,20 +283,14 @@ export default function ServiceReportModal({ customerId, customerName, projectId
           <p className={styles.sectionHead}>Visit Details</p>
           <div className={styles.grid3}>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="sr-visitDate">Date</label>
-              <input id="sr-visitDate" type="date" className={styles.input} value={form.visitDate} onChange={set('visitDate')} />
+              <span className={styles.label}>Date</span>
+              <span className={styles.readonlyVal}>{existingJob ? existingJob.scheduledDate : todaySG()}</span>
             </div>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="sr-arrivalTime">Arrival Time</label>
-              <input id="sr-arrivalTime" type="time" className={styles.input} value={form.arrivalTime} onChange={set('arrivalTime')} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="sr-departureTime">Departure Time</label>
-              <input id="sr-departureTime" type="time" className={styles.input} value={form.departureTime} onChange={set('departureTime')} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="sr-attendedBy">Attended By</label>
-              <input id="sr-attendedBy" className={styles.input} value={form.attendedBy} onChange={set('attendedBy')} />
+              <span className={styles.label}>{existingJob ? 'Crew' : 'Attended By'}</span>
+              <span className={styles.readonlyVal}>
+                {existingJob ? existingJob.assignedToNames?.join(', ') : userProfile.name}
+              </span>
             </div>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="sr-invoiceNo">Invoice No. <span className={styles.opt}>(optional)</span></label>
@@ -280,7 +316,7 @@ export default function ServiceReportModal({ customerId, customerName, projectId
           <div className={styles.actions}>
             {progress && <span className={styles.progressText}>{progress}</span>}
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={submit} loading={saving}>Save Report</Button>
+            <Button onClick={submit} loading={saving}>{existingJob ? 'Complete & Sign Off' : 'Save Job'}</Button>
           </div>
         </div>
       )}

@@ -12,7 +12,8 @@ import { formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Card, { CardHeader } from '../../components/UI/Card';
 import CustomerModal from './CustomerModal';
-import ServiceReportList from '../ServiceReports/ServiceReportList';
+import CustomerDocuments from './CustomerDocuments';
+import JobList from '../Jobs/JobList';
 import styles from './Customers.module.css';
 
 const STATUS_COLOR = { active: 'green', upcoming: 'amber', completed: 'default' };
@@ -82,7 +83,7 @@ export default function CustomerDetail() {
             <div className={styles.contactRow}><EnvelopeIcon width={15} /> {customer.email}</div>
           )}
           {customer.address && (
-            <div className={styles.contactRow}><MapPinIcon width={15} /> {customer.address}</div>
+            <div className={styles.contactRow}><MapPinIcon width={15} /> {customer.address}{customer.postalCode ? ` (${customer.postalCode})` : ''}</div>
           )}
           {!customer.contactPerson && !customer.phone && !customer.email && !customer.address && (
             <p className={styles.noContact}>No contact details on file.</p>
@@ -118,10 +119,15 @@ export default function CustomerDetail() {
         )}
       </Card>
 
-      {can('manage:service-reports') && (
+      <Card style={{ marginTop: 16 }}>
+        <CardHeader title="Documents" subtitle="Floorplans, drawings and technical docs for this customer's site" />
+        <CustomerDocuments customer={customer} />
+      </Card>
+
+      {(can('manage:service-reports') || can('jobs:assign')) && (
         <Card style={{ marginTop: 16 }}>
-          <CardHeader title="Service Reports" subtitle="Post-visit reports across all this customer's projects" />
-          <ServiceReportList customerId={customer.id} customerName={customer.name} showProjectColumn />
+          <CardHeader title="Service Jobs" subtitle="Scheduled visits and post-visit reports across all this customer's projects" />
+          <JobList customerId={customer.id} customerName={customer.name} showProjectColumn />
         </Card>
       )}
 
