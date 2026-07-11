@@ -82,6 +82,8 @@
 .printArea { background: #fff; padding: 4px; }
 .printHead { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--navy); padding-bottom: 10px; margin-bottom: 14px; }
 .printTitle { font-size: 20px; font-weight: 700; color: var(--navy); margin: 0; }
+.printBanner { display: flex; align-items: flex-start; gap: 12px; }
+.printLogo { height: 42px; width: auto; display: block; flex-shrink: 0; }
 .printCompany { font-size: 11px; color: var(--text-sec); text-align: right; line-height: 1.5; }
 
 .printSection { margin-bottom: 14px; }
@@ -99,9 +101,36 @@
 .detailActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
 @media print {
+  @page { margin: 12mm; }
+
+  /* Reset the Modal's fixed/overflow-clipped screen chrome (see the
+     print-modal-* hooks added in Modal.jsx) — a position:fixed ancestor
+     or an overflow:auto/max-height container stops print engines from
+     paginating tall content across multiple physical pages, silently
+     truncating it instead (confirmed: the customer signature block was
+     disappearing entirely off the bottom of longer reports). */
+  :global(.print-modal-overlay) {
+    position: static !important; inset: auto !important; display: block !important;
+    background: none !important; padding: 0 !important; backdrop-filter: none !important;
+  }
+  :global(.print-modal-shell) {
+    position: static !important; max-height: none !important;
+    box-shadow: none !important; border-radius: 0 !important; display: block !important;
+  }
+  :global(.print-modal-body) { overflow: visible !important; max-height: none !important; padding: 0 !important; }
+
+  html, body { height: auto !important; }
   body * { visibility: hidden; }
-  .printArea, .printArea * { visibility: visible; }
-  .printArea { position: absolute; top: 0; left: 0; width: 100%; padding: 0; }
+  .printArea, .printArea * {
+    visibility: visible;
+    /* Force background colors to actually print — off by default in every
+       major browser's print dialog, which otherwise strips the navy
+       section-header bars down to unstyled grey text. */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .printArea { position: static; width: 100%; padding: 0; }
+  .printSection { break-inside: avoid-page; page-break-inside: avoid; }
   .detailActions, .printHide { display: none !important; }
 }
 

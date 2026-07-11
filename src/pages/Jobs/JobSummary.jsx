@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from '../../utils/helpers';
 import { STATUS_CONFIG } from './jobStatus';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
+import logo from '../../assets/logo.png';
 import styles from './Jobs.module.css';
 
 const EQUIPMENT_LABELS = { cctv: 'CCTV', doorAccess: 'Door Access', network: 'Network', others: 'Others' };
@@ -75,11 +76,13 @@ export default function JobSummary({ job, onClose, onUpdated }) {
       <div className={styles.printArea}>
         <div className={styles.printHead}>
           <h1 className={styles.printTitle}>Service Report</h1>
-          <div className={styles.printCompany}>
-            <strong>WA! NETWORK ASIA</strong><br />
-            Tel: (65) 6966 7034 · Mobile: (65) 9729 4378<br />
-            Email: andy.ng@wanetwork.asia<br />
-            186 Woodlands Industrial Park E5 #04-01L S757515
+          <div className={styles.printBanner}>
+            <img src={logo} alt="WA! Network Asia" className={styles.printLogo} />
+            <div className={styles.printCompany}>
+              Tel: (65) 6966 7034 · Mobile: (65) 9729 4378<br />
+              Email: andy.ng@wanetwork.asia<br />
+              186 Woodlands Industrial Park E5 #04-01L S757515
+            </div>
           </div>
         </div>
 

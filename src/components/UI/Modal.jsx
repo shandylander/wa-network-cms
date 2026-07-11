@@ -17,9 +17,15 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    // The "print-modal-*" classes are deliberately plain (not CSS-module
+    // scoped) global hooks — a page that needs to print a modal's content
+    // (e.g. JobSummary) lives in a different CSS module and can't target
+    // Modal.module.css's hashed class names directly. Any print stylesheet
+    // can reset these three to escape the fixed/overflow-clipped screen
+    // chrome, which otherwise silently truncates tall printed content.
+    <div className={`${styles.overlay} print-modal-overlay`} onClick={onClose}>
       <div
-        className={[styles.modal, styles[size]].join(' ')}
+        className={[styles.modal, styles[size], 'print-modal-shell'].join(' ')}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -31,7 +37,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
             <XMarkIcon width={18} />
           </button>
         </div>
-        <div className={styles.body}>{children}</div>
+        <div className={`${styles.body} print-modal-body`}>{children}</div>
       </div>
     </div>
   );
