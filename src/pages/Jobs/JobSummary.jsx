@@ -10,6 +10,7 @@ import { STATUS_CONFIG } from './jobStatus';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import logo from '../../assets/logo.png';
+import banner from '../../assets/banner.png';
 import styles from './Jobs.module.css';
 
 const EQUIPMENT_LABELS = { cctv: 'CCTV', doorAccess: 'Door Access', network: 'Network', others: 'Others' };
@@ -185,6 +186,10 @@ export default function JobSummary({ job, onClose, onUpdated }) {
             </p>
           </div>
         )}
+
+        <div className={styles.printFooter}>
+          <img src={banner} alt="" className={styles.printFooterImg} />
+        </div>
       </div>
 
       {canVet && job.status === 'completed' && (
