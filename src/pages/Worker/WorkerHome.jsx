@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import {
   ClockIcon, CalendarDaysIcon, ReceiptPercentIcon, MegaphoneIcon,
 } from '@heroicons/react/24/outline';
@@ -31,16 +31,19 @@ export default function WorkerHome() {
 
   useEffect(() => {
     if (!userProfile?.userId) return;
-    getDocs(query(collection(db, 'serviceJobs'), where('assignedTo', 'array-contains', userProfile.userId)))
-      .then(snap => {
+    const unsub = onSnapshot(
+      query(collection(db, 'serviceJobs'), where('assignedTo', 'array-contains', userProfile.userId)),
+      snap => {
         const open = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(j => j.status === 'scheduled' || j.status === 'in-progress')
           .sort((a, b) => (a.scheduledDate ?? '').localeCompare(b.scheduledDate ?? ''));
         setJobs(open);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
+    return unsub;
   }, [userProfile?.userId]);
 
   return (

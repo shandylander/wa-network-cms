@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { PrinterIcon, CheckCircleIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+import { PrinterIcon, CheckCircleIcon, ArrowUturnLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from '../../utils/helpers';
 import { STATUS_CONFIG } from './jobStatus';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
+import AssignJobModal from './AssignJobModal';
 import logo from '../../assets/logo.png';
 import banner from '../../assets/banner.png';
 import styles from './Jobs.module.css';
@@ -40,11 +41,13 @@ export default function JobSummary({ job, onClose, onUpdated }) {
   const { toast }        = useToast();
   const { can }           = usePermissions();
   const canVet = can('jobs:vet');
+  const canAssign = can('jobs:assign');
   const sc = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.completed;
 
   const [vetting,    setVetting]    = useState(false);
   const [vetNotes,   setVetNotes]   = useState('');
   const [saving,     setSaving]     = useState(false);
+  const [editing,    setEditing]    = useState(false);
 
   const crewEntries = Object.entries(job.crew ?? {});
 
@@ -71,6 +74,18 @@ export default function JobSummary({ job, onClose, onUpdated }) {
       setSaving(false);
     }
   };
+
+  if (editing) {
+    return (
+      <AssignJobModal
+        customerId={job.customerId} customerName={job.customerName}
+        projectId={job.projectId} projectName={job.projectName}
+        existingJob={job}
+        onClose={() => setEditing(false)}
+        onSaved={(updated) => { onUpdated?.(updated); setEditing(false); }}
+      />
+    );
+  }
 
   return (
     <Modal isOpen onClose={onClose} title="Service Report" size="xl">
@@ -218,6 +233,11 @@ export default function JobSummary({ job, onClose, onUpdated }) {
 
       <div className={[styles.detailActions, styles.printHide].join(' ')}>
         <Button variant="secondary" onClick={onClose}>Close</Button>
+        {canAssign && job.status === 'scheduled' && (
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            <PencilSquareIcon width={15} style={{ marginRight: 6 }} /> Edit / Reschedule
+          </Button>
+        )}
         <Button onClick={() => window.print()}>
           <PrinterIcon width={15} style={{ marginRight: 6 }} /> Print / Save as PDF
         </Button>

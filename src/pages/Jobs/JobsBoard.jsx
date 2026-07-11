@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { WrenchScrewdriverIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
@@ -30,21 +30,21 @@ export default function JobsBoard() {
   const [assigning, setAssigning] = useState(false);
   const [selected,  setSelected]  = useState(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const snap = await getDocs(collection(db, 'serviceJobs'));
+  // Live listener (not a one-time fetch) so this board always reflects jobs
+  // scheduled/updated from elsewhere (Customer/Project's own Service Jobs
+  // list, or a technician checking in) without needing a manual refresh.
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'serviceJobs'), snap => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       list.sort((a, b) => (a.scheduledDate ?? '').localeCompare(b.scheduledDate ?? ''));
       setJobs(list);
-    } catch {
-      toast.error('Failed to load jobs');
-    } finally {
       setLoading(false);
-    }
+    }, () => {
+      toast.error('Failed to load jobs');
+      setLoading(false);
+    });
+    return unsub;
   }, [toast]);
-
-  useEffect(() => { load(); }, [load]);
 
   if (!canAssign && !canVet) {
     return <p className={styles.emptyList}>You don't have access to this page.</p>;

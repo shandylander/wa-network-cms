@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -13,17 +13,25 @@ const todaySG = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapo
 // one or more technicians pre-assigned. The technician fills in the actual
 // report (job description, action taken, signature) later via JobDetail's
 // "Complete Job" step, which reuses JobCompletionForm.
-export default function AssignJobModal({ customerId, customerName, projectId, projectName, onClose, onSaved }) {
+//
+// Pass `existingJob` to reuse this same form to reassign/reschedule a job
+// that's already been created (edit mode) — e.g. wrong technician picked,
+// date changed, or picking which of a customer's several open jobs a
+// technician should go to. Only offered for status:'scheduled' jobs (see
+// JobSummary) so we never touch a crew member's already-recorded GPS
+// check-in/out by editing a job that's in progress.
+export default function AssignJobModal({ customerId, customerName, projectId, projectName, existingJob, onClose, onSaved }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
+  const editing = !!existingJob;
 
   const [technicians, setTechnicians] = useState([]);
   const [loading,      setLoading]     = useState(true);
   const [saving,        setSaving]     = useState(false);
 
-  const [selectedTechs, setSelectedTechs] = useState([]);
-  const [scheduledDate, setScheduledDate] = useState(todaySG());
-  const [notes,         setNotes]         = useState('');
+  const [selectedTechs, setSelectedTechs] = useState(existingJob?.assignedTo ?? []);
+  const [scheduledDate, setScheduledDate] = useState(existingJob?.scheduledDate ?? todaySG());
+  const [notes,         setNotes]         = useState(existingJob?.scheduledNotes ?? '');
 
   useEffect(() => {
     getDocs(query(collection(db, 'users'), where('role', '==', 'staff'), where('status', '==', 'active')))
@@ -32,9 +40,14 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
       .finally(() => setLoading(false));
   }, [toast]);
 
-  const toggleTech = (userId) => setSelectedTechs(prev =>
-    prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-  );
+  // A technician who's already checked in can't be unselected — removing
+  // them would silently discard their GPS check-in record.
+  const isLocked = (userId) => !!existingJob?.crew?.[userId]?.checkIn;
+
+  const toggleTech = (userId) => {
+    if (isLocked(userId)) return;
+    setSelectedTechs(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  };
 
   const submit = async () => {
     if (selectedTechs.length === 0) { toast.error('Select at least one technician.'); return; }
@@ -42,35 +55,49 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
     try {
       const picked = technicians.filter(t => selectedTechs.includes(t.id));
       const crew = {};
-      picked.forEach(t => { crew[t.id] = { name: t.name, checkIn: null, checkOut: null }; });
+      picked.forEach(t => {
+        crew[t.id] = existingJob?.crew?.[t.id] ?? { name: t.name, checkIn: null, checkOut: null };
+      });
 
-      const payload = {
-        customerId, customerName,
-        projectId: projectId ?? null, projectName: projectName ?? null,
-        status: 'scheduled',
-        assignedTo: picked.map(t => t.id),
-        assignedToNames: picked.map(t => t.name),
-        assignedBy: userProfile.userId,
-        scheduledDate, scheduledNotes: notes.trim(),
-        crew,
-        vettedBy: null, vettedByName: null, vettedAt: null, vetNotes: null,
-        createdBy: userProfile.userId, createdByName: userProfile.name,
-        createdAt: Timestamp.now(),
-      };
-      const ref = await addDoc(collection(db, 'serviceJobs'), payload);
-      toast.success('Job scheduled');
-      onSaved({ id: ref.id, ...payload });
+      if (editing) {
+        const update = {
+          assignedTo: picked.map(t => t.id),
+          assignedToNames: picked.map(t => t.name),
+          scheduledDate, scheduledNotes: notes.trim(),
+          crew,
+        };
+        await updateDoc(doc(db, 'serviceJobs', existingJob.id), update);
+        toast.success('Job updated');
+        onSaved({ ...existingJob, ...update });
+      } else {
+        const payload = {
+          customerId, customerName,
+          projectId: projectId ?? null, projectName: projectName ?? null,
+          status: 'scheduled',
+          assignedTo: picked.map(t => t.id),
+          assignedToNames: picked.map(t => t.name),
+          assignedBy: userProfile.userId,
+          scheduledDate, scheduledNotes: notes.trim(),
+          crew,
+          vettedBy: null, vettedByName: null, vettedAt: null, vetNotes: null,
+          createdBy: userProfile.userId, createdByName: userProfile.name,
+          createdAt: Timestamp.now(),
+        };
+        const ref = await addDoc(collection(db, 'serviceJobs'), payload);
+        toast.success('Job scheduled');
+        onSaved({ id: ref.id, ...payload });
+      }
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to schedule job');
+      toast.error(editing ? 'Failed to update job' : 'Failed to schedule job');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="Schedule Job" size="md">
+    <Modal isOpen onClose={onClose} title={editing ? 'Reschedule Job' : 'Schedule Job'} size="md">
       {loading ? (
         <div className={styles.loadingBox}><div className={styles.spinner} /></div>
       ) : (
@@ -93,9 +120,14 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
             ) : (
               <div className={styles.checkRow}>
                 {technicians.map(t => (
-                  <label key={t.id} className={styles.checkOption}>
-                    <input type="checkbox" checked={selectedTechs.includes(t.id)} onChange={() => toggleTech(t.id)} />
-                    {t.name}
+                  <label key={t.id} className={styles.checkOption} style={isLocked(t.id) ? { opacity: .7, cursor: 'default' } : undefined}>
+                    <input
+                      type="checkbox"
+                      checked={selectedTechs.includes(t.id)}
+                      disabled={isLocked(t.id)}
+                      onChange={() => toggleTech(t.id)}
+                    />
+                    {t.name}{isLocked(t.id) ? ' (checked in)' : ''}
                   </label>
                 ))}
               </div>
@@ -118,7 +150,7 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
 
           <div className={styles.actions}>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={submit} loading={saving}>Schedule Job</Button>
+            <Button onClick={submit} loading={saving}>{editing ? 'Save Changes' : 'Schedule Job'}</Button>
           </div>
         </div>
       )}

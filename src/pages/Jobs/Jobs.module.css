@@ -104,7 +104,7 @@
 .detailActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
 @media print {
-  @page { margin: 12mm; }
+  @page { size: A4; margin: 12mm; }
 
   /* Reset the Modal's fixed/overflow-clipped screen chrome (see the
      print-modal-* hooks added in Modal.jsx) — a position:fixed ancestor
@@ -141,7 +141,7 @@
     padding-top: 10px; border-top: 1px solid var(--border);
     break-inside: avoid-page; page-break-inside: avoid;
   }
-  .printFooterImg { width: 100%; max-width: 420px; height: auto; }
+  .printFooterImg { width: 100%; max-width: 260px; height: auto; }
 }
 
 /* ── JobDetail (worker active-job view) ──────────────────────────────────── */

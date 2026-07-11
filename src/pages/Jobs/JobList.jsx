@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { DocumentTextIcon, PlusIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
@@ -26,26 +26,27 @@ export default function JobList({ customerId, customerName, projectId, projectNa
   const [assigning, setAssigning] = useState(false);
   const [selected, setSelected] = useState(null);
 
-  const load = useCallback(async () => {
+  // Live listener (not a one-time fetch) so this list stays in sync with
+  // jobs scheduled/updated from the cross-cutting Jobs board or a
+  // technician's own check-in, without needing a manual refresh.
+  useEffect(() => {
     setLoading(true);
-    try {
-      const field = projectId ? 'projectId' : 'customerId';
-      const value = projectId ?? customerId;
-      // Sort client-side rather than combining where+orderBy in the query —
-      // avoids needing a composite index, matching this codebase's existing
-      // pattern for similar filtered lists (e.g. ProjectDocuments.jsx).
-      const snap = await getDocs(query(collection(db, 'serviceJobs'), where(field, '==', value)));
+    const field = projectId ? 'projectId' : 'customerId';
+    const value = projectId ?? customerId;
+    // Sort client-side rather than combining where+orderBy in the query —
+    // avoids needing a composite index, matching this codebase's existing
+    // pattern for similar filtered lists (e.g. ProjectDocuments.jsx).
+    const unsub = onSnapshot(query(collection(db, 'serviceJobs'), where(field, '==', value)), snap => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       list.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
       setJobs(list);
-    } catch {
-      toast.error('Failed to load service jobs');
-    } finally {
       setLoading(false);
-    }
+    }, () => {
+      toast.error('Failed to load service jobs');
+      setLoading(false);
+    });
+    return unsub;
   }, [projectId, customerId, toast]);
-
-  useEffect(() => { load(); }, [load]);
 
   if (!canManage && !canAssign) return null;
 

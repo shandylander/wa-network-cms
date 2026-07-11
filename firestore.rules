@@ -94,7 +94,11 @@ service cloud.firestore {
     // the original key string so the existing Owner grant stays valid);
     // `jobs:assign` schedules/reassigns, `jobs:vet` reviews a finished job.
     match /serviceJobs/{jobId} {
-      allow read: if hasPerm('manage:service-reports') || hasPerm('jobs:assign') || hasPerm('jobs:vet');
+      // Self-scoped read lets an assigned technician see their own job even
+      // if they don't hold the broader manage:service-reports grant — this
+      // is what WorkerHome's "assignedTo array-contains me" query relies on.
+      allow read: if hasPerm('manage:service-reports') || hasPerm('jobs:assign') || hasPerm('jobs:vet')
+        || ('assignedTo' in resource.data && uid() in resource.data.assignedTo);
 
       // Manager scheduling a job ahead of time, or a technician self-
       // creating an ad-hoc job (must list themselves in assignedTo).
