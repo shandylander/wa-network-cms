@@ -28,6 +28,15 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "overrides": [
+      {
+        "files": ["e2e/**/*.js"],
+        "rules": {
+          "testing-library/prefer-screen-queries": "off",
+          "jest/valid-title": "off"
+        }
+      }
     ]
   },
   "browserslist": {

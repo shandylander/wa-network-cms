@@ -125,28 +125,28 @@ export default function ServiceReportModal({ customerId, customerName, projectId
           <p className={styles.sectionHead}>Customer Details</p>
           <div className={styles.grid2}>
             <div className={styles.field}>
-              <label className={styles.label}>Name of Company</label>
-              <input className={styles.input} value={customerName} disabled />
+              <label className={styles.label} htmlFor="sr-company">Name of Company</label>
+              <input id="sr-company" className={styles.input} value={customerName} disabled />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Name of Customer</label>
-              <input className={styles.input} value={form.contactName} onChange={set('contactName')} placeholder="Dr / Mr / Miss / Mrs / Mdm ..." />
+              <label className={styles.label} htmlFor="sr-contactName">Name of Customer</label>
+              <input id="sr-contactName" className={styles.input} value={form.contactName} onChange={set('contactName')} placeholder="Dr / Mr / Miss / Mrs / Mdm ..." />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Customer Address</label>
-              <input className={styles.input} value={form.address} onChange={set('address')} />
+              <label className={styles.label} htmlFor="sr-address">Customer Address</label>
+              <input id="sr-address" className={styles.input} value={form.address} onChange={set('address')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Postal Code</label>
-              <input className={styles.input} value={form.postalCode} onChange={set('postalCode')} />
+              <label className={styles.label} htmlFor="sr-postalCode">Postal Code</label>
+              <input id="sr-postalCode" className={styles.input} value={form.postalCode} onChange={set('postalCode')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Contact No.</label>
-              <input className={styles.input} value={form.contactNo} onChange={set('contactNo')} />
+              <label className={styles.label} htmlFor="sr-contactNo">Contact No.</label>
+              <input id="sr-contactNo" className={styles.input} value={form.contactNo} onChange={set('contactNo')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Email of Customer</label>
-              <input type="email" className={styles.input} value={form.email} onChange={set('email')} />
+              <label className={styles.label} htmlFor="sr-email">Email of Customer</label>
+              <input id="sr-email" type="email" className={styles.input} value={form.email} onChange={set('email')} />
             </div>
           </div>
 
@@ -180,13 +180,13 @@ export default function ServiceReportModal({ customerId, customerName, projectId
             )}
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>Job Description</label>
-            <textarea className={styles.textarea} rows={3} value={form.jobDescription} onChange={set('jobDescription')} />
+            <label className={styles.label} htmlFor="sr-jobDescription">Job Description</label>
+            <textarea id="sr-jobDescription" className={styles.textarea} rows={3} value={form.jobDescription} onChange={set('jobDescription')} />
           </div>
 
-          <p className={styles.sectionHead}>Action Taken</p>
+          <label className={styles.sectionHead} htmlFor="sr-actionTaken" style={{ display: 'block' }}>Action Taken</label>
           <div className={styles.field}>
-            <textarea className={styles.textarea} rows={5} value={form.actionTaken} onChange={set('actionTaken')}
+            <textarea id="sr-actionTaken" className={styles.textarea} rows={5} value={form.actionTaken} onChange={set('actionTaken')}
               placeholder="What was done on-site" />
           </div>
 
@@ -224,8 +224,8 @@ export default function ServiceReportModal({ customerId, customerName, projectId
           )}
 
           <div className={styles.field}>
-            <label className={styles.label}>Remarks</label>
-            <textarea className={styles.textarea} rows={2} value={form.remarks} onChange={set('remarks')} />
+            <label className={styles.label} htmlFor="sr-remarks">Remarks</label>
+            <textarea id="sr-remarks" className={styles.textarea} rows={2} value={form.remarks} onChange={set('remarks')} />
           </div>
           <div className={styles.radioRow}>
             <span className={styles.radioLabel}>Follow-up required?</span>
@@ -241,24 +241,24 @@ export default function ServiceReportModal({ customerId, customerName, projectId
           <p className={styles.sectionHead}>Visit Details</p>
           <div className={styles.grid3}>
             <div className={styles.field}>
-              <label className={styles.label}>Date</label>
-              <input type="date" className={styles.input} value={form.visitDate} onChange={set('visitDate')} />
+              <label className={styles.label} htmlFor="sr-visitDate">Date</label>
+              <input id="sr-visitDate" type="date" className={styles.input} value={form.visitDate} onChange={set('visitDate')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Arrival Time</label>
-              <input type="time" className={styles.input} value={form.arrivalTime} onChange={set('arrivalTime')} />
+              <label className={styles.label} htmlFor="sr-arrivalTime">Arrival Time</label>
+              <input id="sr-arrivalTime" type="time" className={styles.input} value={form.arrivalTime} onChange={set('arrivalTime')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Departure Time</label>
-              <input type="time" className={styles.input} value={form.departureTime} onChange={set('departureTime')} />
+              <label className={styles.label} htmlFor="sr-departureTime">Departure Time</label>
+              <input id="sr-departureTime" type="time" className={styles.input} value={form.departureTime} onChange={set('departureTime')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Attended By</label>
-              <input className={styles.input} value={form.attendedBy} onChange={set('attendedBy')} />
+              <label className={styles.label} htmlFor="sr-attendedBy">Attended By</label>
+              <input id="sr-attendedBy" className={styles.input} value={form.attendedBy} onChange={set('attendedBy')} />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Invoice No. <span className={styles.opt}>(optional)</span></label>
-              <input className={styles.input} value={form.invoiceNo} onChange={set('invoiceNo')} />
+              <label className={styles.label} htmlFor="sr-invoiceNo">Invoice No. <span className={styles.opt}>(optional)</span></label>
+              <input id="sr-invoiceNo" className={styles.input} value={form.invoiceNo} onChange={set('invoiceNo')} />
             </div>
           </div>
 
@@ -272,8 +272,8 @@ export default function ServiceReportModal({ customerId, customerName, projectId
             liability is permissible by law.
           </p>
           <div className={styles.field}>
-            <label className={styles.label}>Signer's Name</label>
-            <input className={styles.input} value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="Name of person signing" />
+            <label className={styles.label} htmlFor="sr-signerName">Signer's Name</label>
+            <input id="sr-signerName" className={styles.input} value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="Name of person signing" />
           </div>
           <SignaturePad onChange={setSignature} />
 
