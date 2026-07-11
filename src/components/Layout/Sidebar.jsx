@@ -8,6 +8,7 @@ import {
   BuildingOffice2Icon,
   UsersIcon,
   UserGroupIcon,
+  MegaphoneIcon,
   ShieldCheckIcon,
   ClockIcon,
   CalendarDaysIcon,
@@ -42,6 +43,7 @@ const NAV = [
   { to: '/workers', label: 'Workers',   Icon: UsersIcon,          perm: 'manage:workers' },
   { to: '/hse',     label: 'HSE',       Icon: ShieldCheckIcon,    perm: 'view:hse'       },
   { to: '/finance', label: 'Finance',   Icon: CurrencyDollarIcon, perm: 'view:claims'    },
+  { to: '/announcements', label: 'Announcements', Icon: MegaphoneIcon }, // no perm — every signed-in user can read
 ];
 
 const ACCOUNT = [

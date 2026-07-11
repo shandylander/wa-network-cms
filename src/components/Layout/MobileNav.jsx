@@ -5,7 +5,7 @@ import {
   UserGroupIcon, ClockIcon, CalendarDaysIcon, BanknotesIcon, ReceiptPercentIcon, CurrencyDollarIcon,
   EllipsisHorizontalIcon, XMarkIcon,
   UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon,
-  DocumentMagnifyingGlassIcon, BuildingOffice2Icon,
+  DocumentMagnifyingGlassIcon, BuildingOffice2Icon, MegaphoneIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -128,6 +128,9 @@ export default function MobileNav() {
                 <DocumentMagnifyingGlassIcon width={20} /> Uploads Audit
               </NavLink>
             )}
+            <NavLink to="/announcements" className={styles.drawerItem} onClick={() => setDrawer(false)}>
+              <MegaphoneIcon width={20} /> Announcements
+            </NavLink>
             <NavLink to="/profile" className={styles.drawerItem} onClick={() => setDrawer(false)}>
               <UserCircleIcon width={20} /> Profile
             </NavLink>

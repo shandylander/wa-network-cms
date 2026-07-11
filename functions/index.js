@@ -606,6 +606,43 @@ exports.notifyOnIncidentReport = onDocumentCreated(
   }
 );
 
+// Team-key audiences (kvm/sree/habibur/alamin/own) map 1:1 to the users.team
+// field. 'all' and 'management' are resolved separately below.
+async function announcementRecipientIds(db, audience, excludeUserId) {
+  let ids;
+  if (audience === 'management') {
+    ids = await managementRecipientIds(db);
+  } else {
+    let q = db.collection('users').where('status', '==', 'active');
+    if (audience && audience !== 'all') q = q.where('team', '==', audience);
+    const snap = await q.get();
+    ids = snap.docs.map((d) => d.id);
+  }
+  return ids.filter((id) => id !== excludeUserId);
+}
+
+const SEVERITY_TITLE = { critical: '⚠ Safety Alert', warning: 'Warning Bulletin', info: 'New Bulletin' };
+
+// System notifications (leave/petty-cash submissions posted into this same
+// collection to reach management via the in-app bell) already get their own
+// push from notifyOnLeaveApplication/notifyOnPettyCashClaim — skip those here
+// so they don't fire twice.
+exports.notifyOnAnnouncement = onDocumentCreated(
+  { document: 'announcements/{id}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
+  async (event) => {
+    const ann = event.data?.data();
+    if (!ann || ann.isSystemNotification) return;
+    const db = getFirestore();
+    const recipients = await announcementRecipientIds(db, ann.audience ?? 'all', ann.createdBy);
+    await sendPushToUserIds(db, recipients, {
+      title: SEVERITY_TITLE[ann.severity] ?? SEVERITY_TITLE.info,
+      body: ann.message,
+      link: '/announcements',
+      tag: 'announcement-new',
+    });
+  }
+);
+
 exports.notifyOnLeaveDecision = onDocumentUpdated(
   { document: 'leaveApplications/{id}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
   async (event) => {

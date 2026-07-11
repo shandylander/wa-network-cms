@@ -21,8 +21,9 @@ const TYPE_ICON = {
 };
 
 const AUDIENCE_OPTIONS = [
-  { value: 'all',      label: 'Everyone' },
-  { value: 'own',      label: 'WA! Direct Staff' },
+  { value: 'all',        label: 'Everyone' },
+  { value: 'management', label: 'Management only' },
+  { value: 'own',        label: 'WA! Direct Staff' },
   { value: 'kvm',      label: 'KVM' },
   { value: 'sree',     label: 'Sree Ram' },
   { value: 'habibur',  label: 'Habibur' },
