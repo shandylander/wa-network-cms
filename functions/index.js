@@ -607,21 +607,33 @@ exports.notifyOnIncidentReport = onDocumentCreated(
 );
 
 // Team-key audiences (kvm/sree/habibur/alamin/own) map 1:1 to the users.team
-// field. 'all' and 'management' are resolved separately below.
+// field. 'all' and 'management' are resolved separately. Bulletins can now
+// target several audiences at once — union the recipients across all of them.
 async function announcementRecipientIds(db, audience, excludeUserId) {
-  let ids;
-  if (audience === 'management') {
-    ids = await managementRecipientIds(db);
-  } else {
+  const list = Array.isArray(audience) ? audience : [audience ?? 'all'];
+  const idSets = await Promise.all(list.map(async (a) => {
+    if (a === 'management') return managementRecipientIds(db);
     let q = db.collection('users').where('status', '==', 'active');
-    if (audience && audience !== 'all') q = q.where('team', '==', audience);
+    if (a && a !== 'all') q = q.where('team', '==', a);
     const snap = await q.get();
-    ids = snap.docs.map((d) => d.id);
-  }
-  return ids.filter((id) => id !== excludeUserId);
+    return snap.docs.map((d) => d.id);
+  }));
+  const merged = new Set(idSets.flat());
+  merged.delete(excludeUserId);
+  return [...merged];
 }
 
-const SEVERITY_TITLE = { critical: '⚠ Safety Alert', warning: 'Warning Bulletin', info: 'New Bulletin' };
+// Category labels are admin-editable (appConfig/announcementSeverities) —
+// look up the live label so the push title matches what's shown in-app,
+// falling back to a capitalized key if the doc/category is missing.
+async function announcementSeverityLabel(db, key) {
+  try {
+    const snap = await db.collection('appConfig').doc('announcementSeverities').get();
+    const match = snap.exists ? (snap.data().types ?? []).find((t) => t.key === key) : null;
+    if (match) return match.label;
+  } catch { /* fall through to default */ }
+  return key ? key.charAt(0).toUpperCase() + key.slice(1) : 'Info';
+}
 
 // System notifications (leave/petty-cash submissions posted into this same
 // collection to reach management via the in-app bell) already get their own
@@ -633,9 +645,12 @@ exports.notifyOnAnnouncement = onDocumentCreated(
     const ann = event.data?.data();
     if (!ann || ann.isSystemNotification) return;
     const db = getFirestore();
-    const recipients = await announcementRecipientIds(db, ann.audience ?? 'all', ann.createdBy);
+    const [recipients, label] = await Promise.all([
+      announcementRecipientIds(db, ann.audience ?? 'all', ann.createdBy),
+      announcementSeverityLabel(db, ann.severity ?? 'info'),
+    ]);
     await sendPushToUserIds(db, recipients, {
-      title: SEVERITY_TITLE[ann.severity] ?? SEVERITY_TITLE.info,
+      title: `${label} Bulletin`,
       body: ann.message,
       link: '/announcements',
       tag: 'announcement-new',

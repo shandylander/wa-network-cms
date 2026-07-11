@@ -162,6 +162,13 @@ export default function WorkerClaims() {
         };
         const ref = await addDoc(collection(db, 'pettyCashClaims'), payload);
         setClaims(c => [{ id: ref.id, ...payload }, ...c]);
+        addDoc(collection(db, 'announcements'), {
+          message: `Petty cash claim: ${userProfile.name} — ${fmtAmt(fields.amount)} (${fields.description})`,
+          severity: 'info', audience: ['management'],
+          createdBy: userId, createdByName: userProfile.name,
+          createdAt: Timestamp.now(), readBy: [],
+          isSystemNotification: true, link: '/petty-cash', claimId: ref.id,
+        }).catch(() => {});
       }
       toast.success(t('claimSent'));
       setWizard(false);

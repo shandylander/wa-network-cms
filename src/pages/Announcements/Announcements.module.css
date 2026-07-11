@@ -43,22 +43,10 @@
 .metaText { font-size: 11px; color: var(--text-sec); }
 .rowRight { flex-shrink: 0; }
 
-/* Severity dot (colored circle) */
-.sevDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-.sevCritical.sevDot { background: var(--red); }
-.sevWarning.sevDot  { background: var(--amber); }
-.sevInfo.sevDot     { background: var(--blue); }
-
-/* Severity badge */
-.sevBadge     { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
-.sevCritical.sevBadge { background: var(--red-light); color: var(--red); }
-.sevWarning.sevBadge  { background: var(--amber-bg); color: var(--amber); }
-.sevInfo.sevBadge     { background: var(--blue-bg); color: var(--blue); }
-
-/* Modal severity badge (standalone, no .sevDot/.sevBadge combinator needed) */
-.sevCritical { background: var(--red-light); color: var(--red); }
-.sevWarning  { background: var(--amber-bg);  color: var(--amber); }
-.sevInfo     { background: var(--blue-bg);   color: var(--blue); }
+/* Severity dot/badge — colors now come from the admin-editable category
+   list (useSeverities), applied inline, since keys are no longer fixed. */
+.sevDot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.sevBadge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 
 .audBadge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--surface); color: var(--text-sec); border: 1px solid var(--border); }
 
@@ -74,9 +62,30 @@
 .composerTitle   { font-size: 14px; font-weight: 600; color: var(--text); }
 .composerClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
 .composerInput   { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; color: var(--text); background: #fff; box-sizing: border-box; margin-bottom: 8px; }
-.composerRow     { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.composerRow     { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
 .composerSelect  { flex: 1; min-width: 120px; border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px; font-size: 12px; color: var(--text); background: #fff; }
-.composerActions { display: flex; justify-content: flex-end; gap: 8px; }
+.manageSevBtn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text-sec); cursor: pointer; flex-shrink: 0; }
+.manageSevBtn:hover { color: var(--navy); border-color: var(--navy); }
+.attachBtn { display: flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text-sec); padding: 0 10px; height: 30px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.attachBtn:hover { color: var(--navy); border-color: var(--navy); }
+.attachBtn:disabled { opacity: .5; cursor: default; }
+
+.audienceGrid { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; padding: 10px; background: #fff; border: 1px solid var(--border); border-radius: 6px; }
+.audienceOption { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); cursor: pointer; white-space: nowrap; }
+.audienceOption input { cursor: pointer; }
+.audienceOption input:disabled { cursor: default; }
+
+.attachList { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.attachChip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3px 6px 3px 10px; text-decoration: none; max-width: 220px; }
+.attachChip:hover { border-color: var(--navy); }
+.attachName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachSize { color: var(--text-sec); font-size: 10.5px; flex-shrink: 0; }
+.attachRemove { display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--text-sec); cursor: pointer; padding: 3px; border-radius: 50%; }
+.attachRemove:hover { color: var(--red); background: var(--red-light); }
+.attachHint { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; color: var(--text-sec); margin-bottom: 4px; }
+
+.composerActions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.progressText { font-size: 11.5px; color: var(--text-sec); margin-right: auto; }
 .cancelBtn { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 7px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; }
 .sendBtn   { background: var(--red); color: #fff; border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .sendBtn:disabled { opacity: .6; cursor: default; }

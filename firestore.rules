@@ -187,11 +187,14 @@ service cloud.firestore {
     match /announcements/{annId} {
       allow read: if signedIn();
       // Owner/manager can post anything; signed-in users can post system
-      // notifications (leave requests etc.) targeted to management only
+      // notifications (leave requests etc.) targeted to management only.
+      // Audience is now a list (bulletins can target several groups at
+      // once) — system notifications always write it as the single-item
+      // ['management'] list.
       allow create: if hasPerm('manage:announcements')
         || (signedIn()
             && request.resource.data.isSystemNotification == true
-            && request.resource.data.audience == 'management');
+            && request.resource.data.audience == ['management']);
       allow update: if hasPerm('manage:announcements')
         // Any signed-in user may add their own userId to readBy (acknowledge)
         || (signedIn()

@@ -3,48 +3,70 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, doc, updateDoc, arrayUnion, Timestamp, onSnapshot } from 'firebase/firestore';
 import {
   BellIcon, XMarkIcon, MegaphoneIcon, ExclamationTriangleIcon,
-  IdentificationIcon, ShieldExclamationIcon, BanknotesIcon, PlusIcon,
+  IdentificationIcon, ShieldExclamationIcon, BanknotesIcon, CalendarDaysIcon, PlusIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useSeverities } from '../../hooks/useAppConfig';
 import { getAlerts, SEVERITY_ORDER } from '../../utils/notificationEngine';
 import styles from './NotificationBell.module.css';
 
 const TYPE_ICON = {
-  announcement: MegaphoneIcon,
   cert: IdentificationIcon,
   incident: ShieldExclamationIcon,
   permit: ExclamationTriangleIcon,
   claim: BanknotesIcon,
 };
 
+// System notifications (leave/petty-cash submissions) come through as
+// type:'announcement' too, but carry a link — give those a more specific
+// icon than the generic bulletin megaphone.
+function iconFor(alert) {
+  if (alert.type === 'announcement') {
+    if (alert.link === '/leave') return CalendarDaysIcon;
+    if (alert.link === '/petty-cash') return BanknotesIcon;
+    return MegaphoneIcon;
+  }
+  return TYPE_ICON[alert.type] ?? BellIcon;
+}
+
 const AUDIENCE_OPTIONS = [
   { value: 'all',        label: 'Everyone' },
   { value: 'management', label: 'Management only' },
   { value: 'own',        label: 'WA! Direct Staff' },
-  { value: 'kvm',      label: 'KVM' },
-  { value: 'sree',     label: 'Sree Ram' },
-  { value: 'habibur',  label: 'Habibur' },
-  { value: 'alamin',   label: 'Alamin (Seabiz)' },
+  { value: 'kvm',        label: 'KVM' },
+  { value: 'sree',       label: 'Sree Ram' },
+  { value: 'habibur',    label: 'Habibur' },
+  { value: 'alamin',     label: 'Alamin (Seabiz)' },
 ];
 
-function Composer({ onClose, onPosted }) {
+function Composer({ severities, onClose, onPosted }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
-  const [message,  setMessage]  = useState('');
-  const [severity, setSeverity] = useState('info');
-  const [audience, setAudience] = useState('all');
-  const [saving,   setSaving]   = useState(false);
+  const [message,   setMessage]   = useState('');
+  const [severity,  setSeverity]  = useState(severities[0]?.key ?? 'info');
+  const [audiences, setAudiences] = useState(['all']);
+  const [saving,    setSaving]    = useState(false);
+
+  const toggleAudience = (value) => {
+    setAudiences(prev => {
+      if (value === 'all') return prev.includes('all') ? [] : ['all'];
+      const withoutAll = prev.filter(a => a !== 'all');
+      return withoutAll.includes(value)
+        ? withoutAll.filter(a => a !== value)
+        : [...withoutAll, value];
+    });
+  };
 
   const post = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || audiences.length === 0) return;
     setSaving(true);
     try {
       await addDoc(collection(db, 'announcements'), {
         message: message.trim(),
-        severity, audience,
+        severity, audience: audiences,
         createdBy: userProfile.userId,
         createdByName: userProfile.name,
         createdAt: Timestamp.now(),
@@ -69,19 +91,32 @@ function Composer({ onClose, onPosted }) {
         value={message}
         onChange={e => setMessage(e.target.value)}
       />
-      <div className={styles.composerRow}>
-        <select className={styles.composerSelect} value={severity} onChange={e => setSeverity(e.target.value)}>
-          <option value="info">Info</option>
-          <option value="warning">Warning</option>
-          <option value="critical">Critical</option>
-        </select>
-        <select className={styles.composerSelect} value={audience} onChange={e => setAudience(e.target.value)}>
-          {AUDIENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+      <select className={styles.composerSelect} value={severity} onChange={e => setSeverity(e.target.value)}>
+        {severities.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+      </select>
+      <div className={styles.audienceGrid}>
+        {AUDIENCE_OPTIONS.map(o => (
+          <label key={o.value} className={styles.audienceOption}>
+            <input
+              type="checkbox"
+              checked={audiences.includes(o.value)}
+              onChange={() => toggleAudience(o.value)}
+              disabled={o.value !== 'all' && audiences.includes('all')}
+            />
+            {o.label}
+          </label>
+        ))}
       </div>
+      <p className={styles.composerHint}>
+        Need to attach a photo or PDF? Use "View all announcements" → New Bulletin instead.
+      </p>
       <div className={styles.composerActions}>
         <button className={styles.composerCancel} onClick={onClose}>Cancel</button>
-        <button className={styles.composerSend} onClick={post} disabled={saving || !message.trim()}>
+        <button
+          className={styles.composerSend}
+          onClick={post}
+          disabled={saving || !message.trim() || audiences.length === 0}
+        >
           {saving ? 'Sending…' : 'Send Bulletin'}
         </button>
       </div>
@@ -93,6 +128,7 @@ export default function NotificationBell() {
   const { userProfile } = useAuth();
   const { can }          = usePermissions();
   const navigate          = useNavigate();
+  const { severities }    = useSeverities();
   const [alerts,    setAlerts]    = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [open,      setOpen]      = useState(false);
@@ -134,11 +170,20 @@ export default function NotificationBell() {
     } catch { /* ignore */ }
   };
 
+  // Bulletins/system-notices with a link (leave, petty cash, or a future
+  // bulletin type) navigate there in addition to being marked read; plain
+  // bulletins with no link just acknowledge in place, as before.
   const handleClick = (alert) => {
-    if (alert.type === 'announcement') { dismissAnnouncement(alert); return; }
+    if (alert.type === 'announcement') {
+      dismissAnnouncement(alert);
+      if (alert.link) { setOpen(false); navigate(alert.link); }
+      return;
+    }
     setOpen(false);
     if (alert.link) navigate(alert.link);
   };
+
+  const severityColor = (key) => severities.find(s => s.key === key)?.color ?? 'var(--text-sec)';
 
   return (
     <div className={styles.wrap} ref={ref}>
@@ -158,7 +203,7 @@ export default function NotificationBell() {
             )}
           </div>
 
-          {composing && <Composer onClose={() => setComposing(false)} onPosted={load} />}
+          {composing && <Composer severities={severities} onClose={() => setComposing(false)} onPosted={load} />}
 
           <div className={styles.list}>
             {loading ? (
@@ -167,14 +212,14 @@ export default function NotificationBell() {
               <p className={styles.empty}>You're all caught up.</p>
             ) : (
               alerts.map(a => {
-                const Icon = TYPE_ICON[a.type] ?? BellIcon;
+                const Icon = iconFor(a);
                 return (
                   <button
                     key={a.id}
-                    className={[styles.item, styles[`sev_${a.severity}`]].join(' ')}
+                    className={styles.item}
                     onClick={() => handleClick(a)}
                   >
-                    <Icon width={16} className={styles.itemIcon} />
+                    <Icon width={16} className={styles.itemIcon} style={{ color: severityColor(a.severity) }} />
                     <span className={styles.itemText}>{a.message}</span>
                     {a.type === 'announcement' && <XMarkIcon width={14} className={styles.itemDismiss} />}
                   </button>

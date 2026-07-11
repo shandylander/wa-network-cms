@@ -97,3 +97,37 @@ export function useWorkTypes() {
 
   return { workTypes, saveWorkTypes, getShape, loading };
 }
+
+// Colors double as the badge background/text — kept close to the existing
+// design-system severity tones (red/amber/blue) so default look is unchanged.
+const DEFAULT_SEVERITIES = [
+  { key: 'info',     label: 'Info',     color: '#1a5fa8' },
+  { key: 'warning',  label: 'Warning',  color: '#d97b00' },
+  { key: 'critical', label: 'Critical', color: '#CC0000' },
+];
+
+/* Admin-editable bulletin severity/category list (appConfig/announcementSeverities). */
+export function useSeverities() {
+  const [severities, setSeverities] = useState(DEFAULT_SEVERITIES);
+  const [loading,    setLoading]    = useState(true);
+
+  useEffect(() => {
+    getDoc(doc(db, 'appConfig', 'announcementSeverities'))
+      .then(snap => { if (snap.exists() && snap.data().types) setSeverities(snap.data().types); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const saveSeverities = useCallback(async (types) => {
+    await setDoc(doc(db, 'appConfig', 'announcementSeverities'), { types });
+    setSeverities(types);
+  }, []);
+
+  // Orphaned/removed-category fallback so an old bulletin never renders blank.
+  const getSeverity = useCallback(
+    (key) => severities.find(s => s.key === key) ?? { key, label: key ?? 'Info', color: '#5a6577' },
+    [severities]
+  );
+
+  return { severities, saveSeverities, getSeverity, loading };
+}

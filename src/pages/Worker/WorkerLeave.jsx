@@ -219,10 +219,10 @@ export default function WorkerLeave() {
           : fmtDate(form.dateFrom);
       addDoc(collection(db, 'announcements'), {
         message: `Leave request: ${userProfile.name} — ${typeLabel}, ${dateRange} (${days} day${days !== 1 ? 's' : ''})`,
-        severity: 'info', audience: 'management',
+        severity: 'info', audience: ['management'],
         createdBy: userProfile.userId, createdByName: userProfile.name,
         createdAt: Timestamp.now(), readBy: [],
-        isSystemNotification: true, leaveId: ref.id,
+        isSystemNotification: true, link: '/leave', leaveId: ref.id,
       }).catch(() => {});
 
       toast.success(t('submitted'));

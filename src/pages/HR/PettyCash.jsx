@@ -96,6 +96,13 @@ export default function PettyCash() {
       };
       const ref = await addDoc(collection(db, 'pettyCashClaims'), payload);
       if (tab === 'my') setClaims(c => [{ id: ref.id, ...payload }, ...c]);
+      addDoc(collection(db, 'announcements'), {
+        message: `Petty cash claim: ${userProfile.name} — $${payload.amount.toFixed(2)} (${payload.description})`,
+        severity: 'info', audience: ['management'],
+        createdBy: userProfile.userId, createdByName: userProfile.name,
+        createdAt: Timestamp.now(), readBy: [],
+        isSystemNotification: true, link: '/petty-cash', claimId: ref.id,
+      }).catch(() => {});
       toast.success('Claim submitted');
       setShowForm(false);
       setForm({ date: todaySG(), category: 'transport', description: '', amount: '', receiptUrl: '' });

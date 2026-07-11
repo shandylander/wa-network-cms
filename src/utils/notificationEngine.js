@@ -54,17 +54,20 @@ async function announcementAlerts(userProfile) {
     const snap = await getDocs(collection(db, 'announcements'));
     snap.docs.forEach(d => {
       const a = d.data();
-      const audience = a.audience ?? 'all';
+      // Older bulletins stored audience as a single string — normalize to
+      // an array so both formats target the same way.
+      const rawAudience = a.audience ?? 'all';
+      const audience = Array.isArray(rawAudience) ? rawAudience : [rawAudience];
       const targeted =
-        audience === 'all' ||
-        audience === userProfile.team ||
-        audience === userProfile.role ||
-        (audience === 'management' && canViewManagementAlerts(userProfile));
+        audience.includes('all') ||
+        audience.includes(userProfile.team) ||
+        audience.includes(userProfile.role) ||
+        (audience.includes('management') && canViewManagementAlerts(userProfile));
       const read = (a.readBy ?? []).includes(userProfile.userId);
       if (targeted && !read) {
         alerts.push({
           id: `ann-${d.id}`, type: 'announcement', severity: a.severity ?? 'info',
-          message: a.message, link: null, docId: d.id, createdAt: a.createdAt,
+          message: a.message, link: a.link ?? null, docId: d.id, createdAt: a.createdAt,
         });
       }
     });
