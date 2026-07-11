@@ -24,3 +24,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Project instructions — contains default employee PINs, keep out of the
+# (public) remote. Never tracked, but listed here so a stray `git add -A`
+# can't accidentally sweep it into a commit.
+CLAUDE.md
