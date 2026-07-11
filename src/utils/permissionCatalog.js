@@ -18,6 +18,7 @@ export const PERMISSION_CATALOG = [
   { key: 'blocks:bulk-edit',   label: 'Bulk Edit Blocks',            area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'generate:reports',   label: 'Generate WhatsApp Reports',   area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'manage:customers',   label: 'Manage Customers',            area: 'Dashboard & Projects', seedRoles: ['owner', 'manager'] },
+  { key: 'manage:service-reports', label: 'Create Service Reports',  area: 'Dashboard & Projects', seedRoles: ['owner', 'manager', 'supervisor', 'staff'] },
 
   // Finance & Claims
   { key: 'view:claims',           label: 'View Finance & Claims',      area: 'Finance & Claims', seedRoles: ['owner', 'manager'] },

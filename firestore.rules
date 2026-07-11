@@ -78,6 +78,11 @@ service cloud.firestore {
       allow read, write: if hasPerm('manage:customers');
     }
 
+    // ── SERVICE REPORTS ────────────────────────────────────────────────────
+    match /serviceReports/{reportId} {
+      allow read, write: if hasPerm('manage:service-reports');
+    }
+
     // ── PROJECTS ───────────────────────────────────────────────────────────
     match /projects/{projectId} {
       allow read: if signedIn() && (

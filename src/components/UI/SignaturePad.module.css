@@ -1,0 +1,39 @@
+.wrap {
+  position: relative;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 140px;
+  touch-action: none;
+  cursor: crosshair;
+  border-radius: 8px;
+}
+.canvasDisabled { cursor: default; }
+
+.hint {
+  position: absolute;
+  bottom: 8px; left: 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.clearBtn {
+  position: absolute;
+  top: 6px; right: 6px;
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-sec);
+  cursor: pointer;
+}
+.clearBtn:hover { color: var(--text); border-color: var(--navy); }
+.clearBtn:disabled { opacity: 0.4; cursor: default; }

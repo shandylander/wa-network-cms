@@ -12,6 +12,7 @@ import { formatDate } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Card, { CardHeader } from '../../components/UI/Card';
 import CustomerModal from './CustomerModal';
+import ServiceReportList from '../ServiceReports/ServiceReportList';
 import styles from './Customers.module.css';
 
 const STATUS_COLOR = { active: 'green', upcoming: 'amber', completed: 'default' };
@@ -116,6 +117,13 @@ export default function CustomerDetail() {
           </div>
         )}
       </Card>
+
+      {can('manage:service-reports') && (
+        <Card style={{ marginTop: 16 }}>
+          <CardHeader title="Service Reports" subtitle="Post-visit reports across all this customer's projects" />
+          <ServiceReportList customerId={customer.id} customerName={customer.name} showProjectColumn />
+        </Card>
+      )}
 
       {editing && (
         <CustomerModal
