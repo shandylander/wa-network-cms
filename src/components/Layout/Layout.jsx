@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar   from './Sidebar';
 import MobileNav from './MobileNav';
 import Header    from './Header';
+import NotificationPrompt from './NotificationPrompt';
 import styles    from './Layout.module.css';
 
 export default function Layout() {
@@ -11,6 +12,7 @@ export default function Layout() {
       <Sidebar />
       <div className={styles.main}>
         <Header />
+        <NotificationPrompt />
         <main className={styles.content}>
           <Outlet />
         </main>

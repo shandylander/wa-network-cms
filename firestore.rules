@@ -60,8 +60,9 @@ service cloud.firestore {
         isOwner()
         || (isManager()     && resource.data.role != 'owner')
         || (isSubconAdmin() && resource.data.team == myTeam())
-        // users may flip their own firstLogin flag during forced PIN change
-        || (uid() == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstLogin']))
+        // users may flip their own firstLogin flag during forced PIN change,
+        // and manage their own device push-notification tokens
+        || (uid() == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstLogin', 'fcmTokens']))
       )
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['effectivePermissions'])
         // role/accessLevels assignment is never delegable — owner/manager only,

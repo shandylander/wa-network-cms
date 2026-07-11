@@ -1,9 +1,10 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
 
 initializeApp();
 
@@ -489,5 +490,161 @@ exports.reconcileAllPermissions = onSchedule(
       });
       if (anyChange) await batch.commit();
     }
+  }
+);
+
+// ── Push notifications ──────────────────────────────────────────────────
+
+const LEAVE_TYPE_LABEL = { AL: 'Annual Leave', MC: 'Medical Leave', NPL: 'No-Pay Leave', OIL: 'Off-in-Lieu' };
+
+// Sends one push to every device token belonging to the given user ids, and
+// prunes any token Firebase reports as dead so the list doesn't grow stale
+// forever. Silently no-ops if nobody has a token yet (e.g. before anyone has
+// opted in on their device) — this is a best-effort channel, never load-
+// bearing the way the in-app announcement/alert system already is.
+async function sendPushToUserIds(db, userIds, { title, body, link, tag }) {
+  const uniqueIds = [...new Set(userIds)].filter(Boolean);
+  if (!uniqueIds.length) return;
+
+  const userDocs = await db.getAll(...uniqueIds.map((id) => db.collection('users').doc(id)));
+  const tokenOwners = [];
+  userDocs.forEach((snap) => {
+    if (!snap.exists) return;
+    (snap.data().fcmTokens ?? []).forEach((token) => tokenOwners.push({ token, userId: snap.id }));
+  });
+  if (!tokenOwners.length) return;
+
+  let response;
+  try {
+    response = await getMessaging().sendEachForMulticast({
+      tokens: tokenOwners.map((t) => t.token),
+      notification: { title, body },
+      data: { link: link ?? '/', ...(tag ? { tag } : {}) },
+      webpush: { fcmOptions: { link: link ?? '/' } },
+    });
+  } catch (err) {
+    console.error('Push send failed:', err);
+    return;
+  }
+
+  const staleTokensByUser = {};
+  response.responses.forEach((r, i) => {
+    if (r.success) return;
+    const code = r.error?.code;
+    if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-argument') {
+      const { token, userId } = tokenOwners[i];
+      (staleTokensByUser[userId] ??= []).push(token);
+    }
+  });
+  await Promise.all(
+    Object.entries(staleTokensByUser).map(([userId, tokens]) =>
+      db.collection('users').doc(userId).update({ fcmTokens: FieldValue.arrayRemove(...tokens) })
+    )
+  );
+}
+
+// Same recipient set as the existing in-app management-alerts system
+// (cert expiry, incidents, permits) — owner/manager/supervisor by default,
+// but driven by the real Access Levels permission, not a hardcoded role list.
+async function managementRecipientIds(db) {
+  const snap = await db.collection('users')
+    .where('effectivePermissions', 'array-contains', 'view:management-alerts')
+    .get();
+  return snap.docs.map((d) => d.id);
+}
+
+exports.notifyOnLeaveApplication = onDocumentCreated(
+  { document: 'leaveApplications/{id}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
+  async (event) => {
+    const app = event.data?.data();
+    if (!app) return;
+    const db = getFirestore();
+    const recipients = await managementRecipientIds(db);
+    const typeLabel = LEAVE_TYPE_LABEL[app.type] ?? app.type;
+    await sendPushToUserIds(db, recipients, {
+      title: 'New Leave Application',
+      body: `${app.name} — ${typeLabel}, ${app.days} day${app.days !== 1 ? 's' : ''}`,
+      link: '/leave',
+      tag: 'leave-new',
+    });
+  }
+);
+
+exports.notifyOnPettyCashClaim = onDocumentCreated(
+  { document: 'pettyCashClaims/{id}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
+  async (event) => {
+    const claim = event.data?.data();
+    if (!claim) return;
+    const db = getFirestore();
+    const recipients = await managementRecipientIds(db);
+    await sendPushToUserIds(db, recipients, {
+      title: 'New Petty Cash Claim',
+      body: `${claim.name} — $${Number(claim.amount ?? 0).toFixed(2)} (${claim.description ?? claim.category ?? 'claim'})`,
+      link: '/petty-cash',
+      tag: 'pettycash-new',
+    });
+  }
+);
+
+exports.notifyOnIncidentReport = onDocumentCreated(
+  { document: 'projects/{projectId}/incidents/{incidentId}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
+  async (event) => {
+    const inc = event.data?.data();
+    if (!inc) return;
+    const db = getFirestore();
+    const [recipients, projSnap] = await Promise.all([
+      managementRecipientIds(db),
+      db.collection('projects').doc(event.params.projectId).get(),
+    ]);
+    const projectName = projSnap.exists ? (projSnap.data().name ?? 'Project') : 'Project';
+    await sendPushToUserIds(db, recipients, {
+      title: 'Incident Reported',
+      body: `${projectName}: ${inc.type ?? 'Incident'}${inc.severity ? ` (${inc.severity})` : ''}`,
+      link: `/projects/${event.params.projectId}`,
+      tag: 'incident-new',
+    });
+  }
+);
+
+exports.notifyOnLeaveDecision = onDocumentUpdated(
+  { document: 'leaveApplications/{id}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+    if (!before || !after || !after.userId) return;
+    if (before.status === after.status) return;
+    if (after.status !== 'approved' && after.status !== 'rejected') return;
+
+    const db = getFirestore();
+    const typeLabel = LEAVE_TYPE_LABEL[after.type] ?? after.type;
+    const decided = after.status === 'approved' ? 'Approved' : 'Rejected';
+    await sendPushToUserIds(db, [after.userId], {
+      title: `Leave ${decided}`,
+      body: `${typeLabel}, ${after.days} day${after.days !== 1 ? 's' : ''}`
+        + (after.status === 'rejected' && after.rejectionReason ? ` — ${after.rejectionReason}` : ''),
+      link: '/leave',
+      tag: 'leave-decision',
+    });
+  }
+);
+
+exports.notifyOnPettyCashDecision = onDocumentUpdated(
+  { document: 'pettyCashClaims/{id}', region: REGION, memory: '256MiB', timeoutSeconds: 30 },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+    if (!before || !after || !after.userId) return;
+    if (before.status === after.status) return;
+    if (after.status !== 'approved' && after.status !== 'rejected') return;
+
+    const db = getFirestore();
+    const decided = after.status === 'approved' ? 'Approved' : 'Rejected';
+    await sendPushToUserIds(db, [after.userId], {
+      title: `Petty Cash ${decided}`,
+      body: `$${Number(after.amount ?? 0).toFixed(2)}`
+        + (after.status === 'rejected' && after.rejectionReason ? ` — ${after.rejectionReason}` : ''),
+      link: '/petty-cash',
+      tag: 'pettycash-decision',
+    });
   }
 );
