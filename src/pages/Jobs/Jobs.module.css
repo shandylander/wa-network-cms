@@ -119,6 +119,12 @@
   :global(.print-modal-shell) {
     position: static !important; max-height: none !important;
     box-shadow: none !important; border-radius: 0 !important; display: block !important;
+    /* Modal.module.css's .sm/.md/.lg/.xl size classes set a fixed
+       on-screen max-width (e.g. 960px for size="xl") — left unreset here,
+       that's wider than A4's printable area, so the report bled off the
+       right edge of the page instead of filling it (confirmed via a real
+       generated PDF from the live app). */
+    width: 100% !important; max-width: 100% !important;
   }
   :global(.print-modal-body) { overflow: visible !important; max-height: none !important; padding: 0 !important; }
 
