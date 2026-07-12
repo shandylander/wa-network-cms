@@ -4,7 +4,7 @@ import { doc, getDoc, collection, getDocs, updateDoc, query, where, writeBatch }
 import {
   ArrowLeftIcon, CubeIcon, CheckCircleIcon,
   BuildingOfficeIcon, TableCellsIcon, ViewColumnsIcon,
-  PlusIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon,
+  PlusIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, LockClosedIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -395,10 +395,14 @@ export default function ProjectDetail() {
   // conditions exactly (role-based, not a hasPerm(...) catalog key — see
   // the rule file's own comment on why that conversion was left undone).
   const canEditProject   = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
-  const canDeleteProject = userProfile?.role === 'owner';
+  // Owner can always edit the lock flag itself (even on a locked project —
+  // otherwise a lock could never be undone); actual deletion is blocked
+  // separately below whenever deleteProtected is set.
+  const canDeleteProject = userProfile?.role === 'owner' && !project.deleteProtected;
+  const isLocked = !!project.deleteProtected;
 
   const handleDeleteProject = async () => {
-    if (deleteConfirmText.trim() !== project.name) return;
+    if (isLocked || deleteConfirmText.trim() !== project.name) return;
     setDeletingProject(true);
     try {
       await deleteProjectCascade(project.id);
@@ -440,18 +444,29 @@ export default function ProjectDetail() {
           <div className={styles.headerMeta}>
             <Badge color={STATUS_COLOR[project.status] ?? 'default'}>{project.status}</Badge>
             {project.type && <span className={styles.type}>{project.type}</span>}
+            {isLocked && (
+              <span className={styles.lockedBadge} title="Protected from deletion — toggle off in Edit Project to change">
+                <LockClosedIcon width={11} /> Protected
+              </span>
+            )}
           </div>
-          {(canEditProject || canDeleteProject) && (
+          {(canEditProject || userProfile?.role === 'owner') && (
             <div className={styles.headerActions}>
               {canEditProject && (
                 <button className={styles.editDatesBtn} onClick={() => setEditingProject(true)}>
                   <PencilIcon width={13} /> Edit Project
                 </button>
               )}
-              {canDeleteProject && (
-                <button className={styles.deleteProjectBtn} onClick={() => setShowDeleteConfirm(true)}>
-                  <TrashIcon width={13} /> Delete
-                </button>
+              {userProfile?.role === 'owner' && (
+                canDeleteProject ? (
+                  <button className={styles.deleteProjectBtn} onClick={() => setShowDeleteConfirm(true)}>
+                    <TrashIcon width={13} /> Delete
+                  </button>
+                ) : (
+                  <span className={styles.deleteProjectBtnLocked} title="Protected from deletion — toggle off in Edit Project to delete">
+                    <LockClosedIcon width={13} /> Delete
+                  </span>
+                )
               )}
             </div>
           )}
@@ -464,6 +479,7 @@ export default function ProjectDetail() {
         <ProjectEditModal
           project={project}
           canViewMoney={canViewMoney}
+          canLock={userProfile?.role === 'owner'}
           onClose={() => setEditingProject(false)}
           onSaved={(updated) => { setProject(updated); setEditingProject(false); }}
         />

@@ -133,7 +133,12 @@ service cloud.firestore {
       // single catalog permission's role-set without either narrowing
       // supervisor out (regression) or widening a narrower key (over-grant).
       allow update: if ownerOrManager() || isSupervisor();
-      allow delete: if isOwner();
+      // deleteProtected (set via Edit Project, owner-only in the UI) blocks
+      // deletion at the backend too — not just a hidden button — so a
+      // project like PCS Batch 3 can't be removed even via direct API
+      // calls once flagged. Only isOwner() can delete at all in the first
+      // place, so this only needs to check the resource, not who's asking.
+      allow delete: if isOwner() && !resource.data.get('deleteProtected', false);
 
       // Blocks
       match /blocks/{blockId} {

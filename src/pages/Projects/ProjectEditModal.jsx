@@ -14,7 +14,7 @@ import listStyles from './ProjectList.module.css';
 // a project that already has block data would be destructive, not a normal
 // edit. Name/client/type-label/location/status/date/rates are all safe to
 // change after creation.
-export default function ProjectEditModal({ project, canViewMoney, onClose, onSaved }) {
+export default function ProjectEditModal({ project, canViewMoney, canLock, onClose, onSaved }) {
   const { toast } = useToast();
   const [form, setForm] = useState({
     name: project.name ?? '',
@@ -28,6 +28,7 @@ export default function ProjectEditModal({ project, canViewMoney, onClose, onSav
     s1: project.rates?.s1 ?? 0,
     s2: project.rates?.s2 ?? 0,
     s3: project.rates?.s3 ?? 0,
+    deleteProtected: project.deleteProtected ?? false,
   });
   const [saving, setSaving] = useState(false);
 
@@ -49,6 +50,9 @@ export default function ProjectEditModal({ project, canViewMoney, onClose, onSav
       };
       if (canViewMoney) {
         update.rates = { s1: Number(form.s1) || 0, s2: Number(form.s2) || 0, s3: Number(form.s3) || 0 };
+      }
+      if (canLock) {
+        update.deleteProtected = form.deleteProtected;
       }
       await updateDoc(doc(db, 'projects', project.id), update);
       toast.success('Project updated');
@@ -109,6 +113,18 @@ export default function ProjectEditModal({ project, canViewMoney, onClose, onSav
             </>
           )}
         </div>
+        {canLock && (
+          <label className={listStyles.field} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, margin: '14px 0 0', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={form.deleteProtected}
+              onChange={e => setForm(f => ({ ...f, deleteProtected: e.target.checked }))}
+            />
+            <span style={{ fontSize: 13, color: 'var(--text)' }}>
+              Protect this project from deletion — hides/disables the Delete button for everyone, including Owner, until unchecked.
+            </span>
+          </label>
+        )}
         <div className={listStyles.formActions}>
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="submit" loading={saving}>Save Changes</Button>
