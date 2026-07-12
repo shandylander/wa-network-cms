@@ -17,9 +17,10 @@ const todaySG = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapo
 // Pass `existingJob` to reuse this same form to reassign/reschedule a job
 // that's already been created (edit mode) — e.g. wrong technician picked,
 // date changed, or picking which of a customer's several open jobs a
-// technician should go to. Only offered for status:'scheduled' jobs (see
-// JobSummary) so we never touch a crew member's already-recorded GPS
-// check-in/out by editing a job that's in progress.
+// technician should go to. Offered regardless of job status (see
+// JobSummary) — a technician who's already checked in is locked (see
+// isLocked below) so we never discard their already-recorded GPS
+// check-in/out, but the office/date/crew can still be corrected any time.
 export default function AssignJobModal({ customerId, customerName, projectId, projectName, existingJob, onClose, onSaved }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();

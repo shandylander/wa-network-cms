@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { PrinterIcon, CheckCircleIcon, ArrowUturnLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { PrinterIcon, CheckCircleIcon, ArrowUturnLeftIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -57,6 +57,8 @@ export default function JobSummary({ job, onClose, onUpdated }) {
   const [vetNotes,   setVetNotes]   = useState('');
   const [saving,     setSaving]     = useState(false);
   const [editing,    setEditing]    = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
 
   const crewEntries = Object.entries(job.crew ?? {});
   const checkIns  = crewEntries.map(([, c]) => toDate(c.checkIn)).filter(Boolean);
@@ -86,6 +88,18 @@ export default function JobSummary({ job, onClose, onUpdated }) {
       toast.error('Failed to record decision');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'serviceJobs', job.id));
+      toast.success('Report deleted');
+      onClose();
+    } catch {
+      toast.error('Failed to delete report');
+      setDeleting(false);
     }
   };
 
@@ -274,9 +288,26 @@ export default function JobSummary({ job, onClose, onUpdated }) {
         </div>
       )}
 
+      {confirmDel && (
+        <div className={[styles.printHide, styles.deleteConfirm].join(' ')}>
+          <p className={styles.deleteConfirmText}>
+            Delete this report permanently? This can't be undone — the job, its photos, and its signature will all be removed.
+          </p>
+          <div className={styles.actions}>
+            <Button variant="secondary" onClick={() => setConfirmDel(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="danger" onClick={handleDelete} loading={deleting}>Delete Permanently</Button>
+          </div>
+        </div>
+      )}
+
       <div className={[styles.detailActions, styles.printHide].join(' ')}>
+        {canAssign && (
+          <Button variant="danger" onClick={() => setConfirmDel(true)} style={{ marginRight: 'auto' }}>
+            <TrashIcon width={15} style={{ marginRight: 6 }} /> Delete
+          </Button>
+        )}
         <Button variant="secondary" onClick={onClose}>Close</Button>
-        {canAssign && job.status === 'scheduled' && (
+        {canAssign && (
           <Button variant="secondary" onClick={() => setEditing(true)}>
             <PencilSquareIcon width={15} style={{ marginRight: 6 }} /> Edit / Reschedule
           </Button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 import {
   ArrowLeftIcon, CubeIcon, CheckCircleIcon,
   BuildingOfficeIcon, TableCellsIcon, ViewColumnsIcon,
@@ -13,6 +13,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTeams, useWorkTypes } from '../../hooks/useAppConfig';
 import { formatDate, getOverallProgress, toDateInputSG } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
+import Button from '../../components/UI/Button';
 import Card, { CardHeader } from '../../components/UI/Card';
 import StatCard from '../../components/UI/StatCard';
 import BlockTracker from './BlockTracker';
@@ -26,8 +27,34 @@ import Permits from './Permits';
 import ToolboxMeeting from './ToolboxMeeting';
 import IncidentReport from './IncidentReport';
 import ProjectDocuments from './ProjectDocuments';
+import ProjectEditModal from './ProjectEditModal';
 import JobList from '../Jobs/JobList';
 import styles from './ProjectDetail.module.css';
+
+// Every subcollection a project can have data in — deleting a project
+// cascades through all of these first so it doesn't leave orphaned data
+// behind (confirmed exhaustive by grepping every `collection(db, 'projects',
+// id, '<sub>')` call in this folder).
+const PROJECT_SUBCOLLECTIONS = [
+  'blocks', 'documents', 'permits', 'incidents', 'toolboxMeetings',
+  'snags', 'sitePhotos', 'claims', 'deliveryOrders', 'materialOrders',
+];
+
+async function deleteProjectCascade(projectId) {
+  const refs = [];
+  for (const sub of PROJECT_SUBCOLLECTIONS) {
+    const snap = await getDocs(collection(db, 'projects', projectId, sub));
+    snap.docs.forEach(d => refs.push(d.ref));
+  }
+  refs.push(doc(db, 'projects', projectId));
+
+  // Firestore batch limit is 500 ops — chunk conservatively below that.
+  for (let i = 0; i < refs.length; i += 450) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + 450).forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+}
 
 const STATUS_COLOR = { active: 'green', upcoming: 'amber', completed: 'default' };
 const TAB_LABELS   = {
@@ -304,6 +331,11 @@ export default function ProjectDetail() {
   const [loading,   setLoading]  = useState(true);
   const [tab,       setTab]      = useState('overview');
   const [blockView, setBlockView] = useState('table'); // 'table' | 'kanban'
+  const [editingProject, setEditingProject] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+  const { toast } = useToast();
   const tabsRef = useRef(null);
   const [canScrollTabsLeft,  setCanScrollTabsLeft]  = useState(false);
   const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
@@ -359,6 +391,25 @@ export default function ProjectDetail() {
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
   if (!project) return null;
 
+  // Edit/delete mirror firestore.rules' /projects/{projectId} update/delete
+  // conditions exactly (role-based, not a hasPerm(...) catalog key — see
+  // the rule file's own comment on why that conversion was left undone).
+  const canEditProject   = ['owner', 'manager', 'supervisor'].includes(userProfile?.role);
+  const canDeleteProject = userProfile?.role === 'owner';
+
+  const handleDeleteProject = async () => {
+    if (deleteConfirmText.trim() !== project.name) return;
+    setDeletingProject(true);
+    try {
+      await deleteProjectCascade(project.id);
+      toast.success('Project deleted');
+      navigate('/projects');
+    } catch {
+      toast.error('Failed to delete project');
+      setDeletingProject(false);
+    }
+  };
+
   // Money data (claim rates, payments) is restricted to owner/manager
   const canViewMoney = can('view:claims');
   // Materials/DO data is readable only by internal roles (see firestore.rules);
@@ -385,13 +436,67 @@ export default function ProjectDetail() {
       </button>
 
       <div className={styles.header}>
-        <div className={styles.headerMeta}>
-          <Badge color={STATUS_COLOR[project.status] ?? 'default'}>{project.status}</Badge>
-          {project.type && <span className={styles.type}>{project.type}</span>}
+        <div className={styles.headerTop}>
+          <div className={styles.headerMeta}>
+            <Badge color={STATUS_COLOR[project.status] ?? 'default'}>{project.status}</Badge>
+            {project.type && <span className={styles.type}>{project.type}</span>}
+          </div>
+          {(canEditProject || canDeleteProject) && (
+            <div className={styles.headerActions}>
+              {canEditProject && (
+                <button className={styles.editDatesBtn} onClick={() => setEditingProject(true)}>
+                  <PencilIcon width={13} /> Edit Project
+                </button>
+              )}
+              {canDeleteProject && (
+                <button className={styles.deleteProjectBtn} onClick={() => setShowDeleteConfirm(true)}>
+                  <TrashIcon width={13} /> Delete
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <h1 className={styles.name}>{project.name}</h1>
         <p className={styles.client}>{project.client}{project.location ? ` · ${project.location}` : ''}</p>
       </div>
+
+      {editingProject && (
+        <ProjectEditModal
+          project={project}
+          canViewMoney={canViewMoney}
+          onClose={() => setEditingProject(false)}
+          onSaved={(updated) => { setProject(updated); setEditingProject(false); }}
+        />
+      )}
+
+      {showDeleteConfirm && (
+        <div className={styles.deleteOverlay} onClick={() => !deletingProject && setShowDeleteConfirm(false)}>
+          <div className={styles.deleteBox} onClick={e => e.stopPropagation()}>
+            <h2 className={styles.deleteTitle}>Delete "{project.name}"?</h2>
+            <p className={styles.deleteText}>
+              This permanently deletes the project and everything under it — blocks, documents, claims,
+              permits, incidents, toolbox meetings, snags, site photos, and material/delivery orders.
+              This cannot be undone.
+            </p>
+            <p className={styles.deleteText}>Type the project name to confirm:</p>
+            <input
+              className={styles.deleteInput}
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder={project.name}
+              autoFocus
+            />
+            <div className={styles.deleteActions}>
+              <Button variant="secondary" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }} disabled={deletingProject}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleDeleteProject} loading={deletingProject} disabled={deleteConfirmText.trim() !== project.name}>
+                Delete Permanently
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.tabsWrap}>
         {canScrollTabsLeft && (
