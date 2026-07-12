@@ -122,7 +122,16 @@
   }
   :global(.print-modal-body) { overflow: visible !important; max-height: none !important; padding: 0 !important; }
 
-  html, body { height: auto !important; }
+  /* Modal is a portal onto <body>, rendered as a sibling of #root — collapse
+     #root out of the flow entirely (display:none, not just visibility)
+     rather than relying on the visibility cascade below for it. An
+     invisible-but-present #root still reserves its full page layout height
+     (Sidebar/Header/whatever page opened the modal), which pushed the
+     printed report down and to the right instead of starting at the top of
+     the page (confirmed via a real generated PDF from the live app). */
+  :global(#root) { display: none !important; }
+
+  html, body { height: auto !important; background: #fff !important; }
   body * { visibility: hidden; }
   .printArea, .printArea * {
     visibility: visible;
