@@ -2,20 +2,29 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp,
 } from 'firebase/firestore';
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, XMarkIcon, ArrowUpTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
+import {
+  DEFAULT_AL, DEFAULT_MC, DEFAULT_CCL, DEFAULT_HL, DEFAULT_CARRY_FORWARD_EXPIRY_MONTH,
+} from '../../utils/leaveDefaults';
 import { formatDateTime } from '../../utils/helpers';
+import { uploadToDropbox } from '../../utils/dropboxUpload';
 import styles from './HR.module.css';
 
 const LEAVE_TYPES = [
-  { value: 'AL',  label: 'Annual Leave',    color: 'blue'   },
-  { value: 'MC',  label: 'Medical Leave',   color: 'green'  },
-  { value: 'NPL', label: 'No-Pay Leave',    color: 'amber'  },
-  { value: 'OIL', label: 'Off-in-Lieu',     color: 'purple' },
+  { value: 'AL',  label: 'Annual Leave',        color: 'blue'   },
+  { value: 'MC',  label: 'Medical Leave',       color: 'green'  },
+  { value: 'CCL', label: 'Childcare Leave',     color: 'navy'   },
+  { value: 'HL',  label: 'Hospitalisation Leave', color: 'red'  },
+  { value: 'NPL', label: 'No-Pay Leave',         color: 'amber'  },
+  { value: 'OIL', label: 'Off-in-Lieu',          color: 'purple' },
 ];
+
+// Types that track an entitlement (balance shrinks as applications are
+// approved/pending). NPL and OIL remain no-entitlement types, as before.
+const ENTITLED_TYPES = ['AL', 'MC', 'CCL', 'HL'];
 
 const STATUS_COLORS = {
   pending:  'amber',
@@ -43,14 +52,18 @@ export default function MyLeave() {
   const userId  = userProfile?.userId;
   const year    = new Date().getFullYear();
 
-  const [entitlement, setEntitlement] = useState({ al: DEFAULT_AL, mc: DEFAULT_MC });
+  const [entitlement, setEntitlement] = useState({
+    al: DEFAULT_AL, mc: DEFAULT_MC, ccl: DEFAULT_CCL, hl: DEFAULT_HL,
+    carryForwardDays: 0, carryForwardExpiryMonth: DEFAULT_CARRY_FORWARD_EXPIRY_MONTH,
+  });
   const [apps,        setApps]        = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [showModal,   setShowModal]   = useState(false);
 
   // Apply form state
-  const [form, setForm] = useState({ type: 'AL', dateFrom: '', dateTo: '', halfDay: false, halfDayPeriod: 'AM', reason: '', mcUrl: '' });
+  const [form, setForm] = useState({ type: 'AL', dateFrom: '', dateTo: '', halfDay: false, halfDayPeriod: 'AM', reason: '', mcUrl: '', mcFileName: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [mcUploading, setMcUploading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!userId) return;
@@ -62,7 +75,12 @@ export default function MyLeave() {
       ]);
       if (!entSnap.empty) {
         const ent = entSnap.docs[0].data();
-        setEntitlement({ al: ent.al ?? DEFAULT_AL, mc: ent.mc ?? DEFAULT_MC });
+        setEntitlement({
+          al: ent.al ?? DEFAULT_AL, mc: ent.mc ?? DEFAULT_MC,
+          ccl: ent.ccl ?? DEFAULT_CCL, hl: ent.hl ?? DEFAULT_HL,
+          carryForwardDays: ent.carryForwardDays ?? 0,
+          carryForwardExpiryMonth: ent.carryForwardExpiryMonth ?? DEFAULT_CARRY_FORWARD_EXPIRY_MONTH,
+        });
       }
       const sorted = appSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -79,11 +97,32 @@ export default function MyLeave() {
     apps.filter(a => a.type === type && statuses.includes(a.status))
         .reduce((s, a) => s + (a.days ?? 0), 0);
 
+  // Carried-forward AL lapses after carryForwardExpiryMonth of the current year.
+  const currentMonth = new Date().getMonth() + 1;
+  const carryActive = (entitlement.carryForwardDays ?? 0) > 0
+    && currentMonth <= (entitlement.carryForwardExpiryMonth ?? DEFAULT_CARRY_FORWARD_EXPIRY_MONTH);
+  const carriedAl = carryActive ? entitlement.carryForwardDays : 0;
+
   const balance = {
-    al:  { entitled: entitlement.al ?? 0, used: used('AL'), pending: used('AL', ['pending']) },
+    al:  { entitled: (entitlement.al ?? 0) + carriedAl, used: used('AL'), pending: used('AL', ['pending']), carried: carriedAl },
     mc:  { entitled: entitlement.mc ?? 0, used: used('MC'), pending: used('MC', ['pending']) },
+    ccl: { entitled: entitlement.ccl ?? 0, used: used('CCL'), pending: used('CCL', ['pending']) },
+    hl:  { entitled: entitlement.hl ?? 0, used: used('HL'), pending: used('HL', ['pending']) },
     npl: { used: used('NPL') + used('NPL', ['pending']) },
     oil: { used: used('OIL'), pending: used('OIL', ['pending']) },
+  };
+
+  const handleMcUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setMcUploading(true);
+    try {
+      const url = await uploadToDropbox(file, `/WA! Network Asia CMS/Staff/Leave/${userId}`);
+      setForm(f => ({ ...f, mcUrl: url, mcFileName: file.name }));
+      toast.success('Certificate uploaded');
+    } catch { toast.error('Failed to upload certificate'); }
+    finally { setMcUploading(false); }
   };
 
   const handleApply = async (e) => {
@@ -94,14 +133,11 @@ export default function MyLeave() {
 
     const days = calcDays(form.dateFrom, form.dateTo || form.dateFrom, form.halfDay);
 
-    // Balance check for AL and MC
-    if (form.type === 'AL') {
-      const remaining = balance.al.entitled - balance.al.used - balance.al.pending;
-      if (days > remaining) { toast.error(`Insufficient AL balance. Remaining: ${remaining} days.`); return; }
-    }
-    if (form.type === 'MC') {
-      const remaining = balance.mc.entitled - balance.mc.used - balance.mc.pending;
-      if (days > remaining) { toast.error(`Insufficient MC balance. Remaining: ${remaining} days.`); return; }
+    // Balance check for entitled types (AL, MC, CCL, HL)
+    if (ENTITLED_TYPES.includes(form.type)) {
+      const b = balance[form.type.toLowerCase()];
+      const remaining = b.entitled - b.used - b.pending;
+      if (days > remaining) { toast.error(`Insufficient ${form.type} balance. Remaining: ${remaining} days.`); return; }
     }
 
     setSubmitting(true);
@@ -115,7 +151,7 @@ export default function MyLeave() {
         halfDay: form.halfDay,
         halfDayPeriod: form.halfDay ? form.halfDayPeriod : null,
         reason: form.reason.trim(),
-        mcUrl: form.type === 'MC' ? form.mcUrl.trim() : null,
+        mcUrl: (form.type === 'MC' || form.type === 'HL') ? (form.mcUrl.trim() || null) : null,
         status: 'pending',
         reviewedBy: null, reviewedAt: null, rejectionReason: null,
         year,
@@ -141,7 +177,7 @@ export default function MyLeave() {
 
       toast.success('Leave application submitted');
       setShowModal(false);
-      setForm({ type: 'AL', dateFrom: '', dateTo: '', halfDay: false, halfDayPeriod: 'AM', reason: '', mcUrl: '' });
+      setForm({ type: 'AL', dateFrom: '', dateTo: '', halfDay: false, halfDayPeriod: 'AM', reason: '', mcUrl: '', mcFileName: '' });
     } catch { toast.error('Failed to submit application'); }
     finally { setSubmitting(false); }
   };
@@ -162,9 +198,13 @@ export default function MyLeave() {
       {/* Balance cards */}
       <div className={styles.balanceGrid}>
         <BalanceCard label="Annual Leave" color="blue"
-          entitled={balance.al.entitled} used={balance.al.used} pending={balance.al.pending} />
+          entitled={balance.al.entitled} used={balance.al.used} pending={balance.al.pending} carried={balance.al.carried} />
         <BalanceCard label="Medical Leave" color="green"
           entitled={balance.mc.entitled} used={balance.mc.used} pending={balance.mc.pending} />
+        <BalanceCard label="Childcare Leave" color="navy"
+          entitled={balance.ccl.entitled} used={balance.ccl.used} pending={balance.ccl.pending} />
+        <BalanceCard label="Hospitalisation Leave" color="red"
+          entitled={balance.hl.entitled} used={balance.hl.used} pending={balance.hl.pending} />
         <div className={styles.balanceCard}>
           <p className={styles.balanceLbl}>No-Pay Leave</p>
           <p className={styles.balanceNum} style={{ color: 'var(--amber)' }}>{balance.npl.used}<span className={styles.balanceUnit}> days taken</span></p>
@@ -291,15 +331,29 @@ export default function MyLeave() {
                 <label className={styles.formLbl}>Reason</label>
                 <textarea className={styles.formTextarea} rows={2} value={form.reason}
                   onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-                  placeholder={form.type === 'MC' ? 'e.g. Fever and flu' : 'Brief reason'} />
+                  placeholder={form.type === 'MC' ? 'e.g. Fever and flu' : form.type === 'HL' ? 'e.g. Admitted for surgery' : 'Brief reason'} />
               </div>
 
-              {form.type === 'MC' && (
+              {(form.type === 'MC' || form.type === 'HL') && (
                 <div className={styles.formRow}>
-                  <label className={styles.formLbl}>MC Certificate link <span className={styles.optional}>(optional)</span></label>
+                  <label className={styles.formLbl}>
+                    {form.type === 'HL' ? 'Hospitalisation certificate' : 'MC certificate'} <span className={styles.optional}>(optional)</span>
+                  </label>
+                  <label className={styles.uploadCertBtn}>
+                    <ArrowUpTrayIcon width={14} />
+                    {mcUploading ? 'Uploading…' : form.mcFileName ? 'Replace file' : 'Upload photo / PDF'}
+                    <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+                      disabled={mcUploading} onChange={handleMcUpload} />
+                  </label>
+                  {form.mcUrl && !mcUploading && (
+                    <p className={styles.uploadCertDone}>
+                      <CheckCircleIcon width={14} /> {form.mcFileName || 'Certificate attached'}
+                    </p>
+                  )}
                   <input type="url" className={styles.formInput} value={form.mcUrl}
-                    onChange={e => setForm(f => ({ ...f, mcUrl: e.target.value }))}
-                    placeholder="Dropbox / Google Drive link to MC" />
+                    style={{ marginTop: 6 }}
+                    onChange={e => setForm(f => ({ ...f, mcUrl: e.target.value, mcFileName: '' }))}
+                    placeholder="…or paste a Dropbox / Google Drive link" />
                 </div>
               )}
 
@@ -317,7 +371,7 @@ export default function MyLeave() {
   );
 }
 
-function BalanceCard({ label, color, entitled, used, pending }) {
+function BalanceCard({ label, color, entitled, used, pending, carried = 0 }) {
   const remaining = entitled - used - pending;
   const pct = entitled > 0 ? Math.min(100, Math.round((used / entitled) * 100)) : 0;
   return (
@@ -332,7 +386,9 @@ function BalanceCard({ label, color, entitled, used, pending }) {
           <div className={styles.balanceBarPending} style={{ width: `${Math.min(100 - pct, Math.round((pending / entitled) * 100))}%` }} />
         )}
       </div>
-      <p className={styles.balanceMeta}>{used}d used{pending > 0 ? ` · ${pending}d pending` : ''}</p>
+      <p className={styles.balanceMeta}>
+        {used}d used{pending > 0 ? ` · ${pending}d pending` : ''}{carried > 0 ? ` · incl. ${carried}d carried` : ''}
+      </p>
     </div>
   );
 }

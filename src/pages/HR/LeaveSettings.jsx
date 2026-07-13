@@ -4,7 +4,9 @@ import { CheckIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { DEFAULT_AL, DEFAULT_MC } from '../../utils/leaveDefaults';
+import {
+  DEFAULT_AL, DEFAULT_MC, DEFAULT_CCL, DEFAULT_HL, DEFAULT_CARRY_FORWARD_EXPIRY_MONTH,
+} from '../../utils/leaveDefaults';
 import styles from './HR.module.css';
 
 export default function LeaveSettings() {
@@ -37,6 +39,10 @@ export default function LeaveSettings() {
             team:   u.team,
             al:     entMap[u.userId]?.al ?? DEFAULT_AL,
             mc:     entMap[u.userId]?.mc ?? DEFAULT_MC,
+            ccl:    entMap[u.userId]?.ccl ?? DEFAULT_CCL,
+            hl:     entMap[u.userId]?.hl ?? DEFAULT_HL,
+            carryForwardDays:        entMap[u.userId]?.carryForwardDays ?? 0,
+            carryForwardExpiryMonth: entMap[u.userId]?.carryForwardExpiryMonth ?? DEFAULT_CARRY_FORWARD_EXPIRY_MONTH,
             entId:  entMap[u.userId]?.id ?? null,
             // No saved document yet — mark dirty so admin sees Save is needed
             dirty:  !entMap[u.userId],
@@ -55,6 +61,11 @@ export default function LeaveSettings() {
     setStaff(s => s.map(r => r.userId === userId ? { ...r, [field]: num, dirty: true } : r));
   };
 
+  const handleMonthChange = (userId, value) => {
+    const num = Math.min(12, Math.max(1, parseInt(value) || DEFAULT_CARRY_FORWARD_EXPIRY_MONTH));
+    setStaff(s => s.map(r => r.userId === userId ? { ...r, carryForwardExpiryMonth: num, dirty: true } : r));
+  };
+
   const save = async (row) => {
     setSaving(s => ({ ...s, [row.userId]: true }));
     try {
@@ -63,6 +74,11 @@ export default function LeaveSettings() {
         name:   row.name,
         al:     row.al,
         mc:     row.mc,
+        ccl:    row.ccl,
+        hl:     row.hl,
+        // Carry-forward only applies to AL under company policy — see leaveDefaults.js.
+        carryForwardDays:        row.carryForwardDays,
+        carryForwardExpiryMonth: row.carryForwardExpiryMonth,
         updatedBy:  userProfile.userId,
         updatedAt:  Timestamp.now(),
       };
@@ -76,13 +92,15 @@ export default function LeaveSettings() {
 
   const ROLE_LABELS = { manager: 'Manager', supervisor: 'Supervisor', staff: 'Staff', 'subcon-admin': 'Sub-con Admin' };
   const TEAM_LABELS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur', alamin: 'Alamin', none: '—' };
+  const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
 
   return (
     <div className={styles.settingsWrap}>
       <p className={styles.settingsInfo}>
-        Set annual leave and medical leave entitlements per staff member. Changes take effect immediately for balance calculations.
+        Set leave entitlements per staff member — Annual, Medical, Childcare and Hospitalisation leave.
+        Unused Annual Leave can optionally be carried forward with an expiry month. Changes take effect immediately for balance calculations.
       </p>
 
       <div className={styles.settingsTableWrap}>
@@ -94,6 +112,10 @@ export default function LeaveSettings() {
               <th>Team</th>
               <th className={styles.thCenter}>AL Days</th>
               <th className={styles.thCenter}>MC Days</th>
+              <th className={styles.thCenter}>CCL Days</th>
+              <th className={styles.thCenter}>HL Days</th>
+              <th className={styles.thCenter}>AL Carried</th>
+              <th className={styles.thCenter}>Carry Expires</th>
               <th></th>
             </tr>
           </thead>
@@ -121,6 +143,41 @@ export default function LeaveSettings() {
                     value={row.mc}
                     onChange={e => handleChange(row.userId, 'mc', e.target.value)}
                   />
+                </td>
+                <td className={styles.tdCenter}>
+                  <input
+                    type="number" min="0" max="365"
+                    className={styles.entInput}
+                    value={row.ccl}
+                    onChange={e => handleChange(row.userId, 'ccl', e.target.value)}
+                  />
+                </td>
+                <td className={styles.tdCenter}>
+                  <input
+                    type="number" min="0" max="365"
+                    className={styles.entInput}
+                    value={row.hl}
+                    onChange={e => handleChange(row.userId, 'hl', e.target.value)}
+                  />
+                </td>
+                <td className={styles.tdCenter}>
+                  <input
+                    type="number" min="0" max="365"
+                    className={styles.entInput}
+                    value={row.carryForwardDays}
+                    title="Annual Leave days carried forward from the previous year"
+                    onChange={e => handleChange(row.userId, 'carryForwardDays', e.target.value)}
+                  />
+                </td>
+                <td className={styles.tdCenter}>
+                  <select
+                    className={styles.entInput}
+                    value={row.carryForwardExpiryMonth}
+                    title="Carried-forward AL days lapse after this month"
+                    onChange={e => handleMonthChange(row.userId, e.target.value)}
+                  >
+                    {MONTH_LABELS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
                 </td>
                 <td className={styles.tdAction}>
                   <button

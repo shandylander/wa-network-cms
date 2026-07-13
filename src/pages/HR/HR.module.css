@@ -56,6 +56,8 @@
 .typeMC      { background: var(--green-bg);  color: var(--green); }
 .typeNPL     { background: var(--amber-bg);  color: var(--amber); }
 .typeOIL     { background: var(--purple-bg); color: var(--purple); }
+.typeCCL     { background: var(--navy-bg);   color: var(--navy); }
+.typeHL      { background: var(--red-light); color: var(--red); }
 
 /* Status badges */
 .statusBadge    { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
@@ -93,11 +95,19 @@
 .applyModal    { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,.18); max-height: 90vh; overflow-y: auto; }
 .mcLink        { font-size: 12px; color: var(--blue); text-decoration: none; }
 
+/* MC/HL certificate upload (MyLeave apply modal) */
+.uploadCertBtn  { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 6px; cursor: pointer; width: fit-content; }
+.uploadCertBtn:hover { border-color: var(--navy); color: var(--navy); }
+.uploadCertDone { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--green); margin-top: 6px; }
+
 /* ── Approval Queue ─────────────────────────────────────────────── */
 .queueWrap       { }
-.queueFilterBar  { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.queueToolbar    { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.queueFilterBar  { display: flex; gap: 6px; flex-wrap: wrap; }
 .queueFilter     { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
 .queueFilterActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+.exportCsvBtn    { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+.exportCsvBtn:hover { border-color: var(--navy); color: var(--navy); }
 
 .queueList       { display: flex; flex-direction: column; gap: 8px; }
 .queueCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }

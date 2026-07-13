@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { formatDateTime } from '../../utils/helpers';
+import { downloadCsv } from '../../utils/exportUtils';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
 
@@ -14,7 +15,18 @@ const fmtDate = (iso) => {
   return `${d}/${m}/${y}`;
 };
 
-const TYPE_COLOR = { AL: 'blue', MC: 'green', NPL: 'amber', OIL: 'purple' };
+const TYPE_COLOR = { AL: 'blue', MC: 'green', CCL: 'navy', HL: 'red', NPL: 'amber', OIL: 'purple' };
+
+const CSV_COLUMNS = [
+  { key: 'name',       label: 'Name'         },
+  { key: 'team',       label: 'Team'         },
+  { key: 'type',       label: 'Type'         },
+  { key: 'dateFrom',   label: 'Date From'    },
+  { key: 'dateTo',     label: 'Date To'      },
+  { key: 'days',       label: 'Days'         },
+  { key: 'status',     label: 'Status'       },
+  { key: 'reviewedBy', label: 'Reviewed By'  },
+];
 
 export default function ApprovalQueue() {
   const { userProfile } = useAuth();
@@ -100,24 +112,34 @@ export default function ApprovalQueue() {
     rejected: apps.filter(a => a.status === 'rejected').length,
   };
 
+  const exportCsv = () => {
+    if (filtered.length === 0) { toast.error('No applications to export.'); return; }
+    downloadCsv(`leave-applications-${filter}-${year}`, CSV_COLUMNS, filtered);
+  };
+
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
 
   return (
     <div className={styles.queueWrap}>
       {/* Filter tabs */}
-      <div className={styles.queueFilterBar}>
-        {[
-          { key: 'pending',  label: `Pending${counts.pending ? ` (${counts.pending})` : ''}` },
-          { key: 'approved', label: `Approved${counts.approved ? ` (${counts.approved})` : ''}` },
-          { key: 'rejected', label: `Rejected` },
-          { key: 'all',      label: 'All' },
-        ].map(f => (
-          <button key={f.key}
-            className={[styles.queueFilter, filter === f.key ? styles.queueFilterActive : ''].join(' ')}
-            onClick={() => setFilter(f.key)}>
-            {f.label}
-          </button>
-        ))}
+      <div className={styles.queueToolbar}>
+        <div className={styles.queueFilterBar}>
+          {[
+            { key: 'pending',  label: `Pending${counts.pending ? ` (${counts.pending})` : ''}` },
+            { key: 'approved', label: `Approved${counts.approved ? ` (${counts.approved})` : ''}` },
+            { key: 'rejected', label: `Rejected` },
+            { key: 'all',      label: 'All' },
+          ].map(f => (
+            <button key={f.key}
+              className={[styles.queueFilter, filter === f.key ? styles.queueFilterActive : ''].join(' ')}
+              onClick={() => setFilter(f.key)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <button className={styles.exportCsvBtn} onClick={exportCsv} title="Export the currently-shown applications as CSV">
+          <ArrowDownTrayIcon width={13} /> Export CSV
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -147,11 +169,11 @@ export default function ApprovalQueue() {
                     {app.mcUrl && (
                       <a href={app.mcUrl} target="_blank" rel="noreferrer" className={styles.mcLink}
                         onClick={e => { if (isImageUrl(app.mcUrl)) { e.preventDefault(); setLightbox(app.mcUrl); } }}>
-                        View MC cert →
+                        View {app.type === 'HL' ? 'certificate' : 'MC'} →
                       </a>
                     )}
                     {lightbox === app.mcUrl && (
-                      <FileLightbox url={lightbox} caption={`${app.name} — MC`} onClose={() => setLightbox(null)} />
+                      <FileLightbox url={lightbox} caption={`${app.name} — ${app.type}`} onClose={() => setLightbox(null)} />
                     )}
                   </div>
                 </div>

@@ -4,12 +4,14 @@ import { usePermissions } from '../../hooks/usePermissions';
 import MyLeave       from './MyLeave';
 import ApprovalQueue from './ApprovalQueue';
 import LeaveSettings from './LeaveSettings';
+import LeaveCalendar from './LeaveCalendar';
 import WorkerLeave   from '../Worker/WorkerLeave';
 import styles from './HR.module.css';
 
 const TAB_LABELS = {
   my:       'My Leave',
   queue:    'Approvals',
+  calendar: 'Calendar',
   settings: 'Entitlements',
 };
 
@@ -21,8 +23,8 @@ export default function LeaveManagement() {
   // Owner approves leave but does not apply for it — no 'my' tab.
   const tabs = [
     ...(role !== 'owner' ? ['my'] : []),
-    ...(can('leave:approve')  ? ['queue']    : []),
-    ...(can('leave:settings') ? ['settings'] : []),
+    ...(can('leave:approve')  ? ['queue', 'calendar'] : []),
+    ...(can('leave:settings') ? ['settings']          : []),
   ];
 
   const [active, setActive] = useState(tabs[0] ?? 'my');
@@ -52,6 +54,7 @@ export default function LeaveManagement() {
       <div className={styles.content}>
         {active === 'my'       && <MyLeave />}
         {active === 'queue'    && <ApprovalQueue />}
+        {active === 'calendar' && <LeaveCalendar />}
         {active === 'settings' && <LeaveSettings />}
       </div>
     </div>
