@@ -35,9 +35,11 @@ test('Jobs board: List, Board and Calendar views all render the seeded jobs', as
   await expect(page.getByText(/Awaiting Vet|Drag a card/).first()).toBeVisible();
   await expect(page.getByText('QA Phase0 Customer').first()).toBeVisible();
 
-  // Calendar view: the technician row + week grid render.
+  // Calendar view: the technician row + week grid render. exact:true targets
+  // the calendar's "Technician" corner header only — "Technician" also appears
+  // in the page subtitle and the empty-tray message.
   await page.getByRole('button', { name: 'Calendar' }).click();
-  await expect(page.getByText('Technician')).toBeVisible();
+  await expect(page.getByText('Technician', { exact: true })).toBeVisible();
   await expect(page.getByText('QA Legacy (delete me)').first()).toBeVisible();
 
   await page.waitForTimeout(1000);
@@ -53,9 +55,13 @@ test('Leave calendar tab renders the month grid with a leave chip', async ({ pag
   await page.goto('/leave');
   // Owner sees Approvals + Entitlements + Calendar tabs.
   await page.getByRole('button', { name: 'Calendar' }).click();
+  await expect(page.getByText('July 2026')).toBeVisible({ timeout: 10000 });
 
-  // The seeded approved AL for QA Legacy should show as a chip somewhere in the grid.
-  await expect(page.getByText(/QA Legacy/).first()).toBeVisible({ timeout: 10000 });
+  // The seeded approved AL shows as a chip. The chip renders "<first name> ·
+  // <type>" with the full name in the title attribute — assert both: the
+  // visible chip text and the tooltip carrying the full seeded name.
+  await expect(page.getByText('QA · AL').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTitle(/QA Legacy \(delete me\) — AL/).first()).toBeVisible();
 
   await page.waitForTimeout(500);
   expect(errors, `page errors: ${errors.join(' | ')}`).toHaveLength(0);
