@@ -35,6 +35,77 @@
 .statPill_purple .statVal { color: var(--purple); }
 .statPill_red    .statVal { color: var(--red);    }
 
+/* KPI strip */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.kpiTile {
+  position: relative;
+  display: flex; flex-direction: column;
+  padding: 16px 18px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--card);
+  border-left: 3px solid var(--border);
+  overflow: hidden;
+}
+.kpiIcon { position: absolute; top: 14px; right: 14px; color: var(--border); }
+.kpiVal   { font-size: 27px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.kpiLabel { font-size: 12px; font-weight: 600; color: var(--text-sec); margin-top: 3px; }
+.kpiSub   { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+
+.kpi_blue   { border-left-color: var(--blue);   }
+.kpi_blue   .kpiVal { color: var(--blue);   }
+.kpi_amber  { border-left-color: var(--amber);  }
+.kpi_amber  .kpiVal { color: var(--amber);  }
+.kpi_green  { border-left-color: var(--green);  }
+.kpi_green  .kpiVal { color: var(--green);  }
+.kpi_purple { border-left-color: var(--purple); }
+.kpi_purple .kpiVal { color: var(--purple); }
+.kpi_red    { border-left-color: var(--red);    }
+.kpi_red    .kpiVal { color: var(--red);    }
+
+/* Needs Attention feed */
+.attnList { display: flex; flex-direction: column; gap: 8px; }
+.attnRow {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; text-align: left; cursor: pointer;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0; overflow: hidden;
+  font-family: inherit; transition: box-shadow 0.12s, transform 0.12s;
+}
+.attnRow:hover { box-shadow: var(--shadow-md); transform: translateX(2px); }
+.attnStripe { width: 4px; align-self: stretch; flex-shrink: 0; background: var(--border); }
+.attnBody { display: flex; flex-direction: column; gap: 2px; padding: 11px 0; flex: 1; min-width: 0; }
+.attnTitle  { font-size: 13px; font-weight: 700; color: var(--text); }
+.attnDetail { font-size: 12px; color: var(--text-sec); }
+.attnChevron { color: var(--text-muted); flex-shrink: 0; margin-right: 14px; }
+
+.attn_critical .attnStripe { background: var(--red);   }
+.attn_warning  .attnStripe { background: var(--amber); }
+.attn_info     .attnStripe { background: var(--blue);  }
+
+.allClear {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--green-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px;
+  font-size: 13px; font-weight: 600; color: var(--green);
+}
+
+/* Milestone progress ring (non-CCTV cards) */
+.msRingRow { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.ring { flex-shrink: 0; }
+.ringTrack { stroke: var(--border); }
+.ringFill  { stroke: var(--green); transition: stroke-dashoffset 0.9s ease; }
+.ringText  { font-size: 12px; font-weight: 700; fill: var(--text); }
+.msRingVal { font-size: 15px; font-weight: 700; color: var(--text); }
+.msRingLbl { font-size: 11px; color: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ringFill { transition: none; }
+  .attnRow  { transition: none; }
+}
+
 /* Command Center */
 .commandGrid {
   display: grid;

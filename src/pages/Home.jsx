@@ -1,34 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
   FolderOpenIcon, ClockIcon, CheckCircleIcon,
-  UserGroupIcon, ChevronDownIcon, ChevronUpIcon,
+  UserGroupIcon, ChevronDownIcon, ChevronUpIcon, ChevronRightIcon,
   ClipboardDocumentIcon, Squares2X2Icon, TrophyIcon,
+  WrenchScrewdriverIcon, InboxArrowDownIcon, BanknotesIcon, BellAlertIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { greet, formatDate, getOverallProgress } from '../utils/helpers';
+import { greet, formatDate, getOverallProgress, todayInputSG } from '../utils/helpers';
+import { buildAttentionFeed } from '../utils/attentionEngine';
+import { useCountUp } from '../hooks/useCountUp';
 import { TEAMS } from '../utils/permissions';
 import { buildReport } from './Projects/Reports';
 import Badge from '../components/UI/Badge';
 import BlockHeatmap from '../components/UI/BlockHeatmap';
 import WorkerHome from './Worker/WorkerHome';
 import styles from './Home.module.css';
-
-const CERT_WARN_DAYS = 30;
-
-function certsExpiringCount(workers) {
-  const now = Date.now();
-  let count = 0;
-  workers.forEach(w => (w.certs ?? []).forEach(c => {
-    if (!c.expiry) return;
-    const days = Math.floor((new Date(c.expiry) - now) / 86400000);
-    if (days <= CERT_WARN_DAYS) count += 1;
-  }));
-  return count;
-}
 
 const TYPE_LABEL  = { pcs: 'PCS', cctv: 'CCTV', maintenance: 'Maintenance', general: 'General' };
 const TYPE_COLOR  = { pcs: 'red', cctv: 'blue', maintenance: 'amber', general: 'default' };
@@ -39,6 +29,37 @@ function MiniBar({ pct, color = 'red' }) {
     <div className={styles.miniTrack}>
       <div className={styles.miniFill} style={{ width: `${pct}%`, background: `var(--${color})` }} />
     </div>
+  );
+}
+
+// Lightweight SVG progress ring for non-CCTV project cards (milestones done /
+// total). Animates from 0 on mount via a CSS stroke-dashoffset transition,
+// which is disabled under prefers-reduced-motion (see .ringFill in the CSS).
+function ProgressRing({ pct, size = 46 }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setShown(pct); return undefined; }
+    const id = requestAnimationFrame(() => setShown(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct]);
+
+  const r = (size - 6) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={styles.ring} aria-hidden="true">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="5" className={styles.ringTrack} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="5" strokeLinecap="round"
+        className={styles.ringFill}
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - Math.max(0, Math.min(1, shown)))}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className={styles.ringText}>
+        {Math.round(pct * 100)}%
+      </text>
+    </svg>
   );
 }
 
@@ -86,6 +107,13 @@ function ProjectCard({ project, blocks }) {
 
       {!isCctv && milestones.length > 0 && (
         <div className={styles.projMilestones}>
+          <div className={styles.msRingRow}>
+            <ProgressRing pct={milestones.length ? msDone / milestones.length : 0} />
+            <div>
+              <p className={styles.msRingVal}>{msDone}/{milestones.length}</p>
+              <p className={styles.msRingLbl}>milestones complete</p>
+            </div>
+          </div>
           {milestones.slice(0, 3).map(m => (
             <div key={m.id} className={[styles.msPill, m.done ? styles.msPillDone : ''].join(' ')}>
               <span className={styles.msCheck}>{m.done ? '✓' : '○'}</span>
@@ -95,7 +123,6 @@ function ProjectCard({ project, blocks }) {
           {milestones.length > 3 && (
             <p className={styles.msMore}>+{milestones.length - 3} more milestone{milestones.length - 3 > 1 ? 's' : ''}</p>
           )}
-          <p className={styles.msSummary}>{msDone}/{milestones.length} complete</p>
         </div>
       )}
 
@@ -128,6 +155,54 @@ function SectionHeader({ title, count, icon: Icon }) {
   );
 }
 
+// KPI tile with a count-up animated number. `display` optionally formats the
+// animated integer (e.g. money). Own component so useCountUp is called at the
+// top level of each tile, never inside a loop callback.
+function KpiTile({ label, value, sub, color = 'blue', display, icon: Icon }) {
+  const n = useCountUp(value);
+  return (
+    <div className={[styles.kpiTile, styles[`kpi_${color}`]].join(' ')}>
+      {Icon && <Icon className={styles.kpiIcon} width={18} />}
+      <span className={styles.kpiVal}>{display ? display(n) : n}</span>
+      <span className={styles.kpiLabel}>{label}</span>
+      {sub && <span className={styles.kpiSub}>{sub}</span>}
+    </div>
+  );
+}
+
+function AttentionFeed({ items }) {
+  const navigate = useNavigate();
+  return (
+    <section>
+      <SectionHeader title="Needs Attention" count={items.length || undefined} icon={BellAlertIcon} />
+      {items.length === 0 ? (
+        <div className={styles.allClear}>
+          <CheckCircleIcon width={18} />
+          <span>All clear — nothing needs attention.</span>
+        </div>
+      ) : (
+        <div className={styles.attnList}>
+          {items.map(it => (
+            <button
+              key={it.id}
+              type="button"
+              className={[styles.attnRow, styles[`attn_${it.severity}`]].join(' ')}
+              onClick={() => it.to && navigate(it.to)}
+            >
+              <span className={styles.attnStripe} />
+              <span className={styles.attnBody}>
+                <span className={styles.attnTitle}>{it.title}</span>
+                <span className={styles.attnDetail}>{it.detail}</span>
+              </span>
+              <ChevronRightIcon width={15} className={styles.attnChevron} />
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Home() {
   const { userProfile } = useAuth();
   const { can }          = usePermissions();
@@ -146,10 +221,23 @@ function HomeDashboard({ userProfile, can }) {
   const [projects,        setProjects]        = useState([]);
   const [blocksByProject, setBlocksByProject] = useState({});
   const [workers,         setWorkers]         = useState([]);
-  const [claimsOutstanding, setClaimsOutstanding] = useState(0);
+  // null = not fetched (no permission or the fetch failed) → the dependent
+  // tile/detector is skipped rather than showing a misleading zero.
+  const [serviceJobs,     setServiceJobs]     = useState(null);
+  const [leaveApps,       setLeaveApps]       = useState(null);
+  const [pettyPending,    setPettyPending]    = useState(null);
+  const [claims,          setClaims]          = useState(null);
   const [loading,         setLoading]         = useState(true);
   const [showCompleted,   setShowCompleted]   = useState(false);
   const [now,             setNow]             = useState(new Date());
+
+  // Permission flags — derived once; drive both which sources we fetch (so
+  // Firestore rules never reject) and which KPI tiles/detectors appear.
+  const canFinance = can('view:claims');
+  const canVet     = can('jobs:vet');
+  const canJobs    = can('manage:service-reports') || can('jobs:assign') || canVet;
+  const canLeave   = can('leave:approve');
+  const canPetty   = can('pettycash:approve');
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -181,20 +269,47 @@ function HomeDashboard({ userProfile, can }) {
           setBlocksByProject(Object.fromEntries(results));
         }
 
-        // Claims outstanding across active PCS projects
-        const activePcs = all.filter(p => p.status === 'active' && p.projectType === 'pcs');
-        if (activePcs.length > 0) {
-          const claimFetches = activePcs.map(p => getDocs(collection(db, 'projects', p.id, 'claims')).catch(() => null));
-          const claimResults = await Promise.all(claimFetches);
-          let outstanding = 0;
-          claimResults.forEach(snap => {
-            if (!snap) return;
-            snap.docs.forEach(d => {
-              const c = d.data();
-              if (c.status !== 'paid') outstanding += c.netAmount ?? 0;
-            });
-          });
-          setClaimsOutstanding(outstanding);
+        // Claims across active PCS projects (finance only). Keep the raw docs
+        // so we can derive both the outstanding total and the aging alert.
+        if (canFinance) {
+          try {
+            const activePcs = all.filter(p => p.status === 'active' && p.projectType === 'pcs');
+            const claimResults = await Promise.all(
+              activePcs.map(p => getDocs(collection(db, 'projects', p.id, 'claims')).catch(() => null))
+            );
+            const docs = [];
+            claimResults.forEach(snap => snap && snap.docs.forEach(d => docs.push({ id: d.id, ...d.data() })));
+            setClaims(docs);
+          } catch (e) { console.error('Claims load error', e); }
+        }
+
+        // Service jobs (whole collection) — for Jobs-today + vet detectors.
+        if (canJobs) {
+          try {
+            const snap = await getDocs(collection(db, 'serviceJobs'));
+            setServiceJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (e) { console.error('Service jobs load error', e); }
+        }
+
+        // Leave applications the viewer can approve — pending count + approved
+        // (for the leave/job clash detector).
+        if (canLeave) {
+          try {
+            const snap = await getDocs(
+              query(collection(db, 'leaveApplications'), where('status', 'in', ['pending', 'approved']))
+            );
+            setLeaveApps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (e) { console.error('Leave load error', e); }
+        }
+
+        // Pending petty cash claims (count only).
+        if (canPetty) {
+          try {
+            const snap = await getDocs(
+              query(collection(db, 'pettyCashClaims'), where('status', '==', 'pending'))
+            );
+            setPettyPending(snap.size);
+          } catch (e) { console.error('Petty cash load error', e); }
         }
       } catch (err) {
         console.error('Dashboard load error', err);
@@ -203,15 +318,63 @@ function HomeDashboard({ userProfile, can }) {
       }
     };
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
 
   const active    = projects.filter(p => p.status === 'active');
   const upcoming  = projects.filter(p => p.status === 'upcoming');
   const completed = projects.filter(p => p.status === 'completed');
-  const activeTeams = [...new Set(active.flatMap(p => p.assignedTeams ?? []))];
-  const canFinance = can('view:claims');
+
+  // ── KPI strip (role-aware, real data only) ──
+  const today          = todayInputSG();
+  const jobsToday      = (serviceJobs ?? []).filter(j => j.scheduledDate === today);
+  const jobsInProgress = jobsToday.filter(j => j.status === 'in-progress').length;
+
+  const leavePending = canLeave && leaveApps  ? leaveApps.filter(l => l.status === 'pending').length : null;
+  const vetPending   = canVet   && serviceJobs ? serviceJobs.filter(j => j.status === 'completed').length : null;
+  const pettyCount   = canPetty ? pettyPending : null; // null until fetched
+  const approvalParts = [
+    leavePending != null ? { n: leavePending, label: 'leave' } : null,
+    vetPending   != null ? { n: vetPending,   label: 'to vet' } : null,
+    pettyCount   != null ? { n: pettyCount,   label: 'petty cash' } : null,
+  ].filter(Boolean);
+  const approvalTotal = approvalParts.reduce((s, p) => s + p.n, 0);
+
+  const claimsOutstanding = (claims ?? [])
+    .filter(c => c.status !== 'paid')
+    .reduce((s, c) => s + (c.netAmount ?? 0), 0);
+
+  const kpis = [
+    canJobs && serviceJobs ? {
+      key: 'jobsToday', label: 'Jobs Today', value: jobsToday.length, color: 'blue',
+      icon: WrenchScrewdriverIcon,
+      sub: jobsInProgress > 0 ? `${jobsInProgress} in progress`
+        : jobsToday.length > 0 ? 'None started yet' : 'None scheduled',
+    } : null,
+    approvalParts.length > 0 ? {
+      key: 'approvals', label: 'Awaiting Your Approval', value: approvalTotal, color: 'amber',
+      icon: InboxArrowDownIcon,
+      sub: approvalParts.map(p => `${p.n} ${p.label}`).join(' · '),
+    } : null,
+    { key: 'active',  label: 'Active Projects', value: active.length,  color: 'green',  icon: FolderOpenIcon },
+    { key: 'workers', label: 'Workers',         value: workers.length, color: 'purple', icon: UserGroupIcon },
+    canFinance ? {
+      key: 'claims', label: 'Claims Outstanding', value: claimsOutstanding, color: 'red',
+      icon: BanknotesIcon,
+      display: n => `$${n.toLocaleString('en-SG', { maximumFractionDigits: 0 })}`,
+    } : null,
+  ].filter(Boolean);
+
+  // ── Needs Attention feed — only sources the viewer can actually see ──
+  const attentionFeed = buildAttentionFeed({
+    workers,
+    jobs: serviceJobs ?? [],
+    leaveApplications: leaveApps ?? [],
+    claims: claims ?? [],
+    now,
+    includeCpf: canFinance,
+  });
 
   // Primary heatmap project — first active CCTV/PCS project with blocks
   const heatmapProject = active.find(p => (blocksByProject[p.id]?.length ?? 0) > 0);
@@ -242,25 +405,13 @@ function HomeDashboard({ userProfile, can }) {
         </span>
       </div>
 
-      {/* Stats */}
-      <div className={styles.statsRow}>
-        {[
-          { label: 'Active',    value: active.length,    color: 'green'  },
-          { label: 'Upcoming',  value: upcoming.length,  color: 'amber'  },
-          { label: 'Completed', value: completed.length, color: 'default'},
-          { label: 'Workers',   value: workers.length,   color: 'blue'   },
-          { label: 'Teams',     value: activeTeams.length, color: 'purple'},
-          ...(canFinance ? [
-            { label: 'Certs Expiring', value: certsExpiringCount(workers), color: 'amber' },
-            { label: 'Claims Outstanding', value: `$${claimsOutstanding.toLocaleString('en-SG', { maximumFractionDigits: 0 })}`, color: 'red' },
-          ] : []),
-        ].map(s => (
-          <div key={s.label} className={[styles.statPill, styles[`statPill_${s.color}`]].join(' ')}>
-            <span className={styles.statVal}>{s.value}</span>
-            <span className={styles.statLabel}>{s.label}</span>
-          </div>
-        ))}
+      {/* KPI strip — today's ops first */}
+      <div className={styles.kpiRow}>
+        {kpis.map(k => <KpiTile key={k.key} {...k} />)}
       </div>
+
+      {/* Needs Attention */}
+      <AttentionFeed items={attentionFeed} />
 
       {/* Command Center */}
       {(heatmapProject || teamLeaderboard.length > 0) && (
