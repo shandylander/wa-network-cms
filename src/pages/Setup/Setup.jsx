@@ -60,6 +60,11 @@ function getSecondaryAuth() {
   return getAuth(app);
 }
 
+// NOTE: the Firestore bootstrap rule (open read/write while _metadata/setup
+// doesn't exist) has been retired now that production setup is complete.
+// Re-running this page against a fresh database requires temporarily
+// deploying relaxed rules on purpose — it can no longer rely on the
+// pre-setup open window.
 export default function Setup() {
   const navigate = useNavigate();
 

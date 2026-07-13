@@ -206,8 +206,10 @@ exports.checkReceiptDuplicate = onCall(
     const snap = await db.collection('pettyCashClaims').where(field, '==', value).get();
     // A rejected claim didn't consume the receipt — resubmission is fine.
     const match = snap.docs.find((d) => d.id !== excludeId && d.data().status !== 'rejected');
-    if (!match) return { duplicate: false };
-    return { duplicate: true, claimantName: match.data().name ?? 'another staff member' };
+    // Deliberately no claimant details in the response — any signed-in user
+    // can call this with an arbitrary hash/URL, so returning the matching
+    // claimant's name would leak who claimed what to anyone who probes.
+    return { duplicate: Boolean(match) };
   }
 );
 
@@ -297,8 +299,27 @@ exports.uploadProjectDocument = onCall(
       throw new HttpsError('invalid-argument', 'Missing destination folder.');
     }
 
+    // The folder is client-assembled (project/customer names interpolated),
+    // so pin it to the app's own Dropbox tree. Without this, any signed-in
+    // user could write files — and mint public share links — anywhere in the
+    // company Dropbox account.
+    const cleanFolder = folder.trim();
+    const ALLOWED_UPLOAD_PREFIXES = [
+      '/WA! Network Asia CMS/Projects/',
+      '/WA! Network Asia CMS/Customers/',
+      '/WA! Network Asia CMS/Service Jobs/',
+      '/WA! Network Asia CMS/Announcements',
+    ];
+    if (
+      cleanFolder.includes('..') ||
+      cleanFolder.includes('\\') ||
+      !ALLOWED_UPLOAD_PREFIXES.some((p) => cleanFolder.startsWith(p))
+    ) {
+      throw new HttpsError('permission-denied', 'Destination folder not permitted.');
+    }
+
     const safeName = fileName.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_');
-    const destPath = `${folder}/${safeName}`;
+    const destPath = `${cleanFolder}/${safeName}`;
 
     let token;
     try {
