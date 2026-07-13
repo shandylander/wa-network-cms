@@ -7,7 +7,13 @@ import { useToast } from '../../context/ToastContext';
 import { fmtSGD } from '../../utils/salaryUtils';
 import styles from './HR.module.css';
 
-const DEFAULT_CONFIG = { basicPay: 0, standardDailyHours: 8, otMultiplier: 1.5, cpfApplicable: false, allowances: [], otherDeductions: [] };
+const DEFAULT_CONFIG = {
+  basicPay: 0, standardDailyHours: 8, otMultiplier: 1.5, cpfApplicable: false,
+  // CPF / employment details (used by the CPF rate engine + payslip)
+  dob: '', residency: 'citizen', prStartDate: '', hireDate: '',
+  bankName: '', bankAccount: '',
+  allowances: [], otherDeductions: [],
+};
 
 export default function SalaryConfig() {
   const { userProfile } = useAuth();
@@ -119,8 +125,56 @@ export default function SalaryConfig() {
             <label className={styles.cfgCheck}>
               <input type="checkbox" checked={form.cpfApplicable}
                 onChange={e => setForm(f => ({ ...f, cpfApplicable: e.target.checked }))} />
-              CPF applicable (citizen / PR)
+              CPF applicable (Citizen / PR — turn off for work-permit foreigners)
             </label>
+
+            {/* CPF & employment details */}
+            <div className={styles.cfgSection}>
+              <div className={styles.cfgSectionHead}>
+                <p className={styles.cfgSectionTitle}>CPF &amp; Employment Details</p>
+              </div>
+              <div className={styles.cfgRowGroup}>
+                <div className={styles.cfgRow}>
+                  <label className={styles.cfgLbl}>Date of birth</label>
+                  <input type="date" className={styles.cfgInput}
+                    value={form.dob ?? ''} onChange={e => setForm(f => ({ ...f, dob: e.target.value }))} />
+                </div>
+                <div className={styles.cfgRow}>
+                  <label className={styles.cfgLbl}>Residency</label>
+                  <select className={styles.cfgInput}
+                    value={form.residency ?? 'citizen'} onChange={e => setForm(f => ({ ...f, residency: e.target.value }))}>
+                    <option value="citizen">Singapore Citizen</option>
+                    <option value="spr">SPR (PR)</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.cfgRowGroup}>
+                {form.residency === 'spr' && (
+                  <div className={styles.cfgRow}>
+                    <label className={styles.cfgLbl}>PR start date</label>
+                    <input type="date" className={styles.cfgInput}
+                      value={form.prStartDate ?? ''} onChange={e => setForm(f => ({ ...f, prStartDate: e.target.value }))} />
+                  </div>
+                )}
+                <div className={styles.cfgRow}>
+                  <label className={styles.cfgLbl}>Hire date</label>
+                  <input type="date" className={styles.cfgInput}
+                    value={form.hireDate ?? ''} onChange={e => setForm(f => ({ ...f, hireDate: e.target.value }))} />
+                </div>
+              </div>
+              <div className={styles.cfgRowGroup}>
+                <div className={styles.cfgRow}>
+                  <label className={styles.cfgLbl}>Bank name</label>
+                  <input type="text" className={styles.cfgInput} placeholder="e.g. DBS"
+                    value={form.bankName ?? ''} onChange={e => setForm(f => ({ ...f, bankName: e.target.value }))} />
+                </div>
+                <div className={styles.cfgRow}>
+                  <label className={styles.cfgLbl}>Bank account no.</label>
+                  <input type="text" className={styles.cfgInput} placeholder="Account number"
+                    value={form.bankAccount ?? ''} onChange={e => setForm(f => ({ ...f, bankAccount: e.target.value }))} />
+                </div>
+              </div>
+            </div>
 
             {/* Allowances */}
             <div className={styles.cfgSection}>

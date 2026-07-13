@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { PrinterIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { PrinterIcon, CheckCircleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { calcPayslip, monthRange, fmtSGD, printPayslip } from '../../utils/salaryUtils';
+import { downloadCsv } from '../../utils/exportUtils';
 import { todayInputSG } from '../../utils/helpers';
 import styles from './HR.module.css';
 
 const THIS_MONTH = todayInputSG().slice(0, 7);
+
+// Minimal inline style for the Export ▾ dropdown items (no dedicated CSS class
+// exists in HR.module.css; kept inline to avoid touching shared stylesheet).
+const exportItemStyle = {
+  background: 'none', border: 'none', textAlign: 'left', padding: '7px 10px',
+  fontSize: 13, color: 'var(--text, #1a2233)', cursor: 'pointer', borderRadius: 6, width: '100%',
+};
 
 export default function PayslipGenerator() {
   const { userProfile } = useAuth();
@@ -22,6 +30,7 @@ export default function PayslipGenerator() {
   const [loading,   setLoading]   = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [viewOwn,   setViewOwn]   = useState(null);  // payslip object for own view
+  const [showExport, setShowExport] = useState(false);
 
   /* ── Load own payslip (staff view) ── */
   const loadOwnPayslip = async () => {
@@ -109,6 +118,75 @@ export default function PayslipGenerator() {
     finally { setSaving(false); }
   };
 
+  /* ── CSV exports (admin) — shared exporter in utils/exportUtils.js ── */
+  // (a) Payroll-month summary: one row per employee with the full breakdown.
+  const exportPayrollSummary = () => {
+    if (!rows?.length) return;
+    const columns = [
+      { key: 'name',           label: 'Employee' },
+      { key: 'daysPresent',    label: 'Days Present' },
+      { key: 'workingDays',    label: 'Working Days' },
+      { key: 'nplDays',        label: 'NPL Days' },
+      { key: 'otHours',        label: 'OT Hours' },
+      { key: 'basicPay',       label: 'Basic Pay' },
+      { key: 'allowanceTotal', label: 'Allowances' },
+      { key: 'grossPay',       label: 'Gross Pay' },
+      { key: 'cpfEmployee',    label: 'Employee CPF' },
+      { key: 'cpfEmployer',    label: 'Employer CPF' },
+      { key: 'sdl',            label: 'SDL' },
+      { key: 'netPay',         label: 'Net Pay' },
+    ];
+    downloadCsv(`payroll-summary-${month}`, columns, rows);
+    setShowExport(false);
+  };
+
+  // (b) CPF submission summary — simple CPF EZPay-style layout.
+  // NRIC/CPF account is not yet captured in salaryConfig → placeholder column.
+  const exportCpfSubmission = () => {
+    if (!rows?.length) return;
+    const columns = [
+      { key: 'name',        label: 'Employee' },
+      { key: 'nric',        label: 'CPF Account / NRIC' },
+      { key: 'ow',          label: 'Ordinary Wages' },
+      { key: 'cpfEmployee', label: 'Employee CPF' },
+      { key: 'cpfEmployer', label: 'Employer CPF' },
+      { key: 'total',       label: 'Total CPF' },
+    ];
+    const data = rows.map(r => ({
+      name: r.name,
+      nric: r.config?.nric ?? '', // placeholder — NRIC not captured yet
+      ow: r.cpfWage ?? 0,
+      cpfEmployee: r.cpfEmployee ?? 0,
+      cpfEmployer: r.cpfEmployer ?? 0,
+      total: (r.cpfEmployee ?? 0) + (r.cpfEmployer ?? 0),
+    }));
+    downloadCsv(`cpf-submission-${month}`, columns, data);
+    setShowExport(false);
+  };
+
+  // (c) IR8A-style annual stub — STARTING STUB ONLY. Reflects the selected
+  // month; a real IR8A must aggregate all 12 months (TODO in Phase 3b).
+  const exportIR8AStub = () => {
+    if (!rows?.length) return;
+    const year = month.slice(0, 4);
+    const columns = [
+      { key: 'name',        label: 'Employee' },
+      { key: 'year',        label: 'Year' },
+      { key: 'gross',       label: 'Total Gross (STUB — month only)' },
+      { key: 'cpfEmployee', label: 'Total Employee CPF (STUB)' },
+      { key: 'note',        label: 'Note' },
+    ];
+    const data = rows.map(r => ({
+      name: r.name,
+      year,
+      gross: r.grossPay ?? 0,
+      cpfEmployee: r.cpfEmployee ?? 0,
+      note: 'IR8A STUB — selected month only; aggregate 12 months before filing',
+    }));
+    downloadCsv(`ir8a-stub-${year}`, columns, data);
+    setShowExport(false);
+  };
+
   /* ── Staff own view ── */
   if (!isAdmin) {
     return (
@@ -132,6 +210,20 @@ export default function PayslipGenerator() {
         <input type="month" className={styles.filterInput} value={month} onChange={e => { setMonth(e.target.value); setRows(null); }} />
         <button className={styles.filterBtn} onClick={generate} disabled={loading}>{loading ? 'Generating…' : 'Generate Preview'}</button>
         {rows && <button className={styles.saveBtn} onClick={saveAll} disabled={saving}><CheckCircleIcon width={14} /> {saving ? 'Saving…' : 'Finalise All'}</button>}
+        {rows?.length > 0 && (
+          <div className={styles.exportWrap} style={{ position: 'relative', display: 'inline-block' }}>
+            <button className={styles.filterBtn} onClick={() => setShowExport(s => !s)}>
+              <ArrowDownTrayIcon width={14} /> Export ▾
+            </button>
+            {showExport && (
+              <div className={styles.exportMenu} style={{ position: 'absolute', zIndex: 20, top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid var(--border, #e2e6ed)', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', padding: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
+                <button className={styles.exportItem} style={exportItemStyle} onClick={exportPayrollSummary}>Payroll summary (CSV)</button>
+                <button className={styles.exportItem} style={exportItemStyle} onClick={exportCpfSubmission}>CPF submission summary (CSV)</button>
+                <button className={styles.exportItem} style={exportItemStyle} onClick={exportIR8AStub}>IR8A annual stub (CSV)</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {rows && (
