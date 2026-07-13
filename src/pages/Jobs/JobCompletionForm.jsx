@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, doc, getDoc, addDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -67,6 +67,7 @@ export default function JobCompletionForm({ customerId, customerName, projectId,
   const [loading,    setLoading]    = useState(true);
   const [saving,     setSaving]     = useState(false);
   const [progress,   setProgress]   = useState('');
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (existingJob) {
@@ -94,10 +95,15 @@ export default function JobCompletionForm({ customerId, customerName, projectId,
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
   const submit = async () => {
+    // Ref latch, not just state: setSaving(true) only disables the button
+    // after the next render, so a double-click in the same frame used to
+    // fire this twice and create two identical job documents.
+    if (savingRef.current) return;
     if (!form.jobDescription.trim()) { toast.error('Please describe the job.'); return; }
     if (!form.actionTaken.trim())    { toast.error('Please describe the action taken.'); return; }
     if (!signature)                  { toast.error('Customer signature is required.'); return; }
     if (!signerName.trim())          { toast.error("Please enter the signer's name."); return; }
+    savingRef.current = true;
     setSaving(true);
     try {
       setProgress('Uploading signature…');
@@ -153,6 +159,7 @@ export default function JobCompletionForm({ customerId, customerName, projectId,
       console.error(err);
       toast.error('Failed to save — check your connection and try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
       setProgress('');
     }

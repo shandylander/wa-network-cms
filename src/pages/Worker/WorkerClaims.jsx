@@ -82,7 +82,7 @@ export default function WorkerClaims() {
       const dup = await checkReceiptDuplicate({ hash, excludeId: editingId }).catch(() => null);
       if (dup?.duplicate) {
         setOcrState('none');
-        toast.error(t('receiptClaimedBy').replace('{name}', dup.claimantName));
+        toast.error(t('receiptAlreadyClaimed'));
         return;
       }
       const file = await compressImage(raw);

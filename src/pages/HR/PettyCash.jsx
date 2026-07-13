@@ -79,7 +79,7 @@ export default function PettyCash() {
       if (form.receiptUrl.trim()) {
         const dup = await checkReceiptDuplicate({ url: form.receiptUrl.trim() }).catch(() => null);
         if (dup?.duplicate) {
-          toast.error(`This receipt has already been claimed by ${dup.claimantName}.`);
+          toast.error('This receipt has already been claimed.');
           setSaving(false);
           return;
         }
