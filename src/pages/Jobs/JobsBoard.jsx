@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
-import { WrenchScrewdriverIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
+import {
+  WrenchScrewdriverIcon, CalendarDaysIcon,
+  ListBulletIcon, ViewColumnsIcon,
+} from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { STATUS_CONFIG } from './jobStatus';
 import AssignJobModal from './AssignJobModal';
 import JobSummary from './JobSummary';
+import JobBoardKanban from './JobBoardKanban';
+import JobDispatchCalendar from './JobDispatchCalendar';
 import styles from './Jobs.module.css';
 
 const GROUPS = [
@@ -29,6 +34,21 @@ export default function JobsBoard() {
   const [loading,  setLoading]  = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [selected,  setSelected]  = useState(null);
+
+  // View toggle (List | Board | Calendar). Drag-and-drop (Board, Calendar) is
+  // deliberately NOT offered on touch — on <768px viewports the toggle is
+  // hidden and the scannable List is always shown.
+  const [view, setView] = useState('list'); // 'list' | 'board' | 'calendar'
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  const effectiveView = isMobile ? 'list' : view;
 
   // Live listener (not a one-time fetch) so this board always reflects jobs
   // scheduled/updated from elsewhere (Customer/Project's own Service Jobs
@@ -80,7 +100,31 @@ export default function JobsBoard() {
         </div>
       </div>
 
-      {loading ? (
+      {/* Board & Calendar are drag-and-drop and desktop-only; on touch the
+          toggle is hidden and the List is always shown (see effectiveView). */}
+      {!isMobile && (
+        <div className={styles.viewToggle}>
+          <button className={[styles.viewBtn, view === 'list' ? styles.viewBtnActive : ''].join(' ')} onClick={() => setView('list')}>
+            <ListBulletIcon width={15} /> List
+          </button>
+          <button className={[styles.viewBtn, view === 'board' ? styles.viewBtnActive : ''].join(' ')} onClick={() => setView('board')}>
+            <ViewColumnsIcon width={15} /> Board
+          </button>
+          <button className={[styles.viewBtn, view === 'calendar' ? styles.viewBtnActive : ''].join(' ')} onClick={() => setView('calendar')}>
+            <CalendarDaysIcon width={15} /> Calendar
+          </button>
+        </div>
+      )}
+
+      {effectiveView === 'board' && (
+        <JobBoardKanban canVet={canVet} onOpen={setSelected} />
+      )}
+
+      {effectiveView === 'calendar' && (
+        <JobDispatchCalendar canAssign={canAssign} onOpen={setSelected} />
+      )}
+
+      {effectiveView === 'list' && (loading ? (
         <div className={styles.loadingBox}><div className={styles.spinner} /></div>
       ) : jobs.length === 0 ? (
         <div className={styles.emptyList}>
@@ -118,7 +162,7 @@ export default function JobsBoard() {
             </div>
           );
         })
-      )}
+      ))}
 
       {/* No local append in onSaved — the board's onSnapshot listener already
           delivers the new doc; appending here rendered it twice. */}

@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@heroicons/react": "^2.2.0",
     "@testing-library/dom": "^10.4.1",
@@ -31,7 +32,9 @@
     ],
     "overrides": [
       {
-        "files": ["e2e/**/*.js"],
+        "files": [
+          "e2e/**/*.js"
+        ],
         "rules": {
           "testing-library/prefer-screen-queries": "off",
           "jest/valid-title": "off"

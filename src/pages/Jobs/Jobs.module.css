@@ -256,3 +256,94 @@
 .quickBlue   { background: var(--blue-bg);   color: var(--blue);   }
 .quickPurple { background: var(--purple-bg); color: var(--purple); }
 .quickLabel { font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* ── Service Jobs board — view toggle (List | Board | Calendar) ───────────
+   Mirrors ProjectDetail's Table/Kanban viewToggle so the two boards feel
+   like one system. Additive only — nothing above references these. */
+.viewToggle {
+  display: flex; gap: 4px; margin: 16px 0;
+  background: var(--surface); padding: 4px; border-radius: 8px; width: max-content;
+}
+.viewBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px; font-size: 13px; font-weight: 500;
+  border: none; border-radius: 6px; cursor: pointer;
+  background: transparent; color: var(--text-sec); font-family: inherit;
+}
+.viewBtn:hover { color: var(--text); background: var(--card); }
+.viewBtnActive { background: var(--card) !important; color: var(--red) !important; box-shadow: var(--shadow-sm); }
+
+/* ── BOARD view (JobBoardKanban) — dnd-kit status columns ─────────────────── */
+.jbHint { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+.jbBoard {
+  display: grid; grid-template-columns: repeat(5, minmax(180px, 1fr));
+  gap: 12px; align-items: start; overflow-x: auto; padding-bottom: 6px;
+}
+.jbCol {
+  border-radius: var(--radius); border: 2px solid var(--border); background: var(--surface);
+  display: flex; flex-direction: column; min-height: 200px;
+  transition: border-color .15s, background .15s;
+}
+.jbColOver { border-color: var(--green); background: var(--green-bg); }
+.jbColHead { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 2px solid var(--border); }
+.jbColTitle { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-sec); }
+.jbColCount { font-size: 11px; font-weight: 700; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; color: var(--text-sec); }
+.jbColBody { padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 600px; }
+.jbColEmpty { font-size: 11px; color: var(--text-muted); text-align: center; padding: 18px 0; border: 2px dashed var(--border); border-radius: var(--radius-sm); }
+
+.jbCard {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; box-shadow: var(--shadow-sm); text-align: left; width: 100%;
+  font-family: inherit; cursor: pointer;
+}
+.jbCard:hover { border-color: var(--navy); }
+.jbCardDrag { cursor: grab; touch-action: none; user-select: none; }
+.jbCardDrag:active { cursor: grabbing; }
+.jbCardLocked { opacity: .9; }
+.jbCardDragging { opacity: .35; box-shadow: none; }
+.jbCardOverlay { box-shadow: 0 8px 24px rgba(0,0,0,.18); transform: rotate(2deg); cursor: grabbing; }
+.jbCust { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+.jbLock { color: var(--text-muted); flex-shrink: 0; }
+.jbDate { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+.jbTechs { display: flex; flex-direction: column; gap: 1px; }
+.jbTech { font-size: 11.5px; color: var(--text-sec); }
+
+/* ── CALENDAR view (JobDispatchCalendar) — technician × week dispatch grid ── */
+.calWrap { display: flex; flex-direction: column; gap: 14px; }
+.calHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.calNav { display: flex; align-items: center; gap: 8px; }
+.calNavBtn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--border); background: var(--card); border-radius: 8px; cursor: pointer; color: var(--text-sec); }
+.calNavBtn:hover { border-color: var(--navy); color: var(--text); }
+.calRange { font-size: 13px; font-weight: 700; color: var(--text); }
+.calTodayBtn { font-size: 12px; font-weight: 600; padding: 6px 12px; border: 1px solid var(--border); background: var(--card); border-radius: 8px; cursor: pointer; color: var(--text-sec); font-family: inherit; }
+.calTodayBtn:hover { border-color: var(--navy); color: var(--text); }
+
+.calGridWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.calGrid { display: grid; grid-template-columns: 140px repeat(7, minmax(120px, 1fr)); min-width: 820px; }
+.calCorner { background: var(--surface); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 10px; font-size: 11px; font-weight: 700; color: var(--text-sec); }
+.calDayHead { background: var(--surface); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 10px; text-align: center; }
+.calDayName { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); }
+.calDayNum { font-size: 14px; font-weight: 700; color: var(--text); }
+.calDayToday .calDayNum, .calDayToday .calDayName { color: var(--red); }
+.calRowLbl { background: var(--surface); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 10px; font-size: 12px; font-weight: 600; color: var(--text); display: flex; align-items: center; }
+.calCell { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 6px; min-height: 64px; display: flex; flex-direction: column; gap: 5px; transition: background .12s; }
+.calCellOver { background: var(--green-bg); }
+
+.calChip {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 7px; font-size: 11px; text-align: left; width: 100%; font-family: inherit;
+  cursor: pointer; line-height: 1.3;
+}
+.calChip:hover { border-color: var(--navy); }
+.calChipDrag { cursor: grab; touch-action: none; user-select: none; }
+.calChipDrag:active { cursor: grabbing; }
+.calChipDragging { opacity: .35; }
+.calChipOverlay { box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: grabbing; }
+.calChipName { font-weight: 700; color: var(--text); display: block; }
+.calChipMeta { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+
+.calTray { border: 1px dashed var(--border); border-radius: var(--radius); padding: 10px 12px; background: var(--surface); }
+.calTrayHead { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--text-sec); margin: 0 0 8px; }
+.calTrayChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.calTrayChip { width: auto; max-width: 240px; }
+.calTrayEmpty { font-size: 12px; color: var(--text-muted); margin: 0; }
