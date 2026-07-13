@@ -6,6 +6,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import ToastContainer from './components/UI/Toast';
 import LoginForm      from './components/Auth/LoginForm';
 import ForcePinChange from './components/Auth/ForcePinChange';
+import ForcePinUpgrade from './components/Auth/ForcePinUpgrade';
 import Layout         from './components/Layout/Layout';
 import Home           from './pages/Home';
 import Profile        from './pages/Profile';
@@ -54,6 +55,10 @@ function ProtectedRoutes() {
   if (loading)       return <LoadingScreen />;
   if (!currentUser)  return <Navigate to="/login" replace />;
   if (userProfile?.firstLogin) return <ForcePinChange />;
+  // One-time 4→6 digit PIN upgrade for existing accounts. firstLogin runs
+  // first — ForcePinChange already sets a 6-digit PIN + pinLength, so new
+  // users never see both screens.
+  if (userProfile && userProfile.pinLength !== 6) return <ForcePinUpgrade />;
 
   return (
     <Routes>

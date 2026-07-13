@@ -79,11 +79,13 @@ export function AuthProvider({ children }) {
 
   // Used on forced first-login PIN change (session is fresh, no reauth needed).
   // No manual profile refetch needed — the live listener above picks up the
-  // firstLogin:false change automatically.
+  // firstLogin:false change automatically. New PINs are always 6 digits, so
+  // this also stamps pinLength — first-login users never see the separate
+  // 4→6 upgrade screen.
   const forcePinChange = async (newPin) => {
     await updatePassword(auth.currentUser, pinToPassword(newPin));
     const userId = userIdFromEmail(auth.currentUser.email);
-    await updateDoc(doc(db, 'users', userId), { firstLogin: false });
+    await updateDoc(doc(db, 'users', userId), { firstLogin: false, pinLength: 6 });
   };
 
   // Used from Profile page — requires current PIN to reauthenticate
@@ -91,6 +93,19 @@ export function AuthProvider({ children }) {
     const cred = EmailAuthProvider.credential(auth.currentUser.email, pinToPassword(currentPin));
     await reauthenticateWithCredential(auth.currentUser, cred);
     await updatePassword(auth.currentUser, pinToPassword(newPin));
+  };
+
+  // One-time 4→6 digit security upgrade, forced after login for accounts
+  // still on a legacy 4-digit PIN. Reauthenticates with the current PIN
+  // (the session may be old — updatePassword alone can throw
+  // auth/requires-recent-login, and asking for the current PIN also stops a
+  // walk-up on an unlocked device from silently taking over the account).
+  const upgradePin = async (currentPin, newPin) => {
+    const cred = EmailAuthProvider.credential(auth.currentUser.email, pinToPassword(currentPin));
+    await reauthenticateWithCredential(auth.currentUser, cred);
+    await updatePassword(auth.currentUser, pinToPassword(newPin));
+    const userId = userIdFromEmail(auth.currentUser.email);
+    await updateDoc(doc(db, 'users', userId), { pinLength: 6 });
   };
 
   // Manual one-off refresh — kept for API compatibility; the live listener
@@ -102,7 +117,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       currentUser, userProfile, loading,
-      login, logout, forcePinChange, changePin, refreshProfile,
+      login, logout, forcePinChange, changePin, upgradePin, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

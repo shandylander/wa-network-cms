@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../UI/Button';
+import PinBoxes from '../UI/PinBoxes';
 import logo   from '../../assets/logo.png';
 import banner from '../../assets/banner.png';
 import styles from './LoginForm.module.css';
@@ -9,47 +10,27 @@ import styles from './LoginForm.module.css';
 export default function LoginForm() {
   const { login } = useAuth();
   const [userId,  setUserId]  = useState('');
-  const [pin,     setPin]     = useState(['', '', '', '']);
+  const [pin,     setPin]     = useState('');
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
-  const pinRefs = [useRef(), useRef(), useRef(), useRef()];
-
-  const handlePinChange = (index, value) => {
-    if (!/^\d?$/.test(value)) return;
-    const next = [...pin];
-    next[index] = value;
-    setPin(next);
-    if (value && index < 3) pinRefs[index + 1].current?.focus();
-  };
-
-  const handlePinKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !pin[index] && index > 0) {
-      pinRefs[index - 1].current?.focus();
-    }
-  };
-
-  const handlePinPaste = (e) => {
-    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
-    if (!text) return;
-    e.preventDefault();
-    const next = [...pin];
-    text.split('').forEach((ch, i) => { if (i < 4) next[i] = ch; });
-    setPin(next);
-    pinRefs[Math.min(text.length, 3)].current?.focus();
-  };
+  const pinBoxesRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const pinValue = pin.join('');
-    if (!userId.trim())       { setError('Please enter your User ID.'); return; }
-    if (pinValue.length < 4)  { setError('Please enter your 4-digit PIN.'); return; }
+    if (!userId.trim()) { setError('Please enter your User ID.'); return; }
+    // 6 digits is the current PIN standard; 4 digits is still accepted for
+    // accounts that haven't been through the one-time upgrade prompt yet.
+    if (pin.length !== 4 && pin.length !== 6) {
+      setError('Please enter your PIN (6 digits, or your previous 4-digit PIN).');
+      return;
+    }
     setLoading(true);
     try {
-      await login(userId.trim(), pinValue);
+      await login(userId.trim(), pin);
     } catch (err) {
-      setPin(['', '', '', '']);
-      pinRefs[0].current?.focus();
+      setPin('');
+      pinBoxesRef.current?.clear();
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
         setError('Invalid User ID or PIN. Please try again.');
       } else if (err.code === 'auth/too-many-requests') {
@@ -92,7 +73,7 @@ export default function LoginForm() {
             </div>
 
             <h1 className={styles.heading}>Sign in</h1>
-            <p className={styles.subheading}>Enter your User ID and 4-digit PIN</p>
+            <p className={styles.subheading}>Enter your User ID and PIN</p>
 
             <form onSubmit={handleSubmit} noValidate>
               <div className={styles.field}>
@@ -113,24 +94,15 @@ export default function LoginForm() {
 
               <div className={styles.field}>
                 <label className={styles.label}>PIN</label>
-                <div className={styles.pinRow} onPaste={handlePinPaste}>
-                  {pin.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={pinRefs[i]}
-                      className={styles.pinBox}
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handlePinChange(i, e.target.value)}
-                      onKeyDown={(e) => handlePinKeyDown(i, e)}
-                      autoComplete={i === 0 ? 'current-password' : 'off'}
-                      disabled={loading}
-                      aria-label={`PIN digit ${i + 1}`}
-                    />
-                  ))}
-                </div>
+                <PinBoxes
+                  ref={pinBoxesRef}
+                  length={6}
+                  onChange={setPin}
+                  disabled={loading}
+                  autoComplete="current-password"
+                  classes={styles}
+                  ariaLabel="PIN"
+                />
               </div>
 
               {error && <p className={styles.error}>{error}</p>}

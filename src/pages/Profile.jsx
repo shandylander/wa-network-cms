@@ -5,73 +5,39 @@ import { ROLES, TEAMS } from '../utils/permissions';
 import Card, { CardHeader } from '../components/UI/Card';
 import Badge from '../components/UI/Badge';
 import Button from '../components/UI/Button';
+import PinBoxes from '../components/UI/PinBoxes';
 import styles from './Profile.module.css';
-
-function PinRow({ label, value, onChange, onKeyDown, refs }) {
-  return (
-    <div className={styles.field}>
-      <label className={styles.label}>{label}</label>
-      <div className={styles.pinRow}>
-        {value.map((d, i) => (
-          <input
-            key={i} ref={refs[i]}
-            className={styles.pinBox}
-            type="password" inputMode="numeric" maxLength={1}
-            value={d}
-            onChange={e => onChange(i, e.target.value)}
-            onKeyDown={e => onKeyDown(i, e)}
-            aria-label={`${label} digit ${i + 1}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function Profile() {
   const { userProfile, changePin } = useAuth();
   const { toast } = useToast();
 
-  const [current, setCurrent] = useState(['', '', '', '']);
-  const [next,    setNext]    = useState(['', '', '', '']);
-  const [confirm, setConfirm] = useState(['', '', '', '']);
+  // All PINs are 6 digits here — any account that reaches this page has
+  // already passed the forced 4→6 upgrade gate in App.js.
+  const [current, setCurrent] = useState('');
+  const [next,    setNext]    = useState('');
+  const [confirm, setConfirm] = useState('');
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
-  const curRefs  = [useRef(), useRef(), useRef(), useRef()];
-  const nextRefs = [useRef(), useRef(), useRef(), useRef()];
-  const conRefs  = [useRef(), useRef(), useRef(), useRef()];
-
-  const makeHandlers = (setter, refs, nextGroup) => ({
-    onChange: (i, val) => {
-      if (!/^\d?$/.test(val)) return;
-      setter(p => { const n = [...p]; n[i] = val; return n; });
-      if (val && i < 3) refs[i + 1].current?.focus();
-      if (val && i === 3 && nextGroup) nextGroup[0].current?.focus();
-    },
-    onKeyDown: (i, e) => {
-      if (e.key === 'Backspace' && !current[i] && i > 0) refs[i - 1].current?.focus();
-    },
-  });
-
-  const curH  = makeHandlers(setCurrent, curRefs,  nextRefs);
-  const nextH = makeHandlers(setNext,    nextRefs,  conRefs);
-  const conH  = makeHandlers(setConfirm, conRefs,   null);
+  const curRef  = useRef(null);
+  const nextRef = useRef(null);
+  const conRef  = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const c = current.join(''), n = next.join(''), co = confirm.join('');
-    if (c.length < 4)  { setError('Enter your current PIN.');         return; }
-    if (n.length < 4)  { setError('Enter a 4-digit new PIN.');        return; }
-    if (n !== co)      { setError('New PINs do not match.');           return; }
-    if (n === c)       { setError('New PIN must differ from current.'); return; }
+    if (current.length < 6)   { setError('Enter your current 6-digit PIN.');   return; }
+    if (next.length < 6)      { setError('Enter a 6-digit new PIN.');          return; }
+    if (next !== confirm)     { setError('New PINs do not match.');            return; }
+    if (next === current)     { setError('New PIN must differ from current.'); return; }
     setLoading(true);
     try {
-      await changePin(c, n);
+      await changePin(current, next);
       toast.success('PIN changed successfully.');
-      setCurrent(['','','','']); setNext(['','','','']); setConfirm(['','','','']);
-      curRefs[0].current?.focus();
+      setCurrent(''); setNext(''); setConfirm('');
+      curRef.current?.clear(); nextRef.current?.clear(); conRef.current?.clear();
+      curRef.current?.focus();
     } catch (err) {
       if (err.code === 'auth/invalid-credential') {
         setError('Current PIN is incorrect.');
@@ -116,9 +82,23 @@ export default function Profile() {
         <Card>
           <CardHeader title="Change PIN" subtitle="Requires your current PIN for verification" />
           <form onSubmit={handleSubmit} noValidate>
-            <PinRow label="Current PIN" value={current} onChange={curH.onChange}  onKeyDown={curH.onKeyDown}  refs={curRefs}  />
-            <PinRow label="New PIN"     value={next}    onChange={nextH.onChange} onKeyDown={nextH.onKeyDown} refs={nextRefs} />
-            <PinRow label="Confirm PIN" value={confirm} onChange={conH.onChange}  onKeyDown={conH.onKeyDown}  refs={conRefs}  />
+            <div className={styles.field}>
+              <label className={styles.label}>Current PIN</label>
+              <PinBoxes ref={curRef} length={6} onChange={setCurrent}
+                onComplete={() => nextRef.current?.focus()}
+                autoComplete="current-password" classes={styles} ariaLabel="Current PIN" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>New PIN</label>
+              <PinBoxes ref={nextRef} length={6} onChange={setNext}
+                onComplete={() => conRef.current?.focus()}
+                autoComplete="new-password" classes={styles} ariaLabel="New PIN" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Confirm PIN</label>
+              <PinBoxes ref={conRef} length={6} onChange={setConfirm}
+                autoComplete="new-password" classes={styles} ariaLabel="Confirm PIN" />
+            </div>
             {error && <p className={styles.error}>{error}</p>}
             <Button type="submit" variant="primary" loading={loading} style={{ marginTop: 8 }}>
               Update PIN

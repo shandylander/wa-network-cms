@@ -146,14 +146,17 @@
 .input::placeholder { color: var(--text-muted); font-weight: 400; }
 
 /* ── PIN boxes ─────────────────────────────────────────────── */
-.pinRow { display: flex; gap: 10px; }
+.pinRow { display: flex; gap: 8px; }
 
+/* Flexible width so 6 boxes fit a 375px viewport; capped so desktop keeps
+   the chunky tap-target look. */
 .pinBox {
-  width: 64px;
-  height: 64px;
-  flex: none;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 56px;
+  height: 60px;
   text-align: center;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);

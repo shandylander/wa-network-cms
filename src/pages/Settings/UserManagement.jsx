@@ -8,7 +8,7 @@ import {
   MagnifyingGlassIcon, PlusIcon, ExclamationTriangleIcon,
   BuildingOfficeIcon, PhoneIcon, EnvelopeIcon, PencilIcon,
 } from '@heroicons/react/24/outline';
-import { db, firebaseConfig } from '../../firebase';
+import { db, firebaseConfig, pinToPassword } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -469,20 +469,20 @@ function AddUserModal({ onClose, onCreated, myRole, myUserId, myTeam, allTeams, 
     e.preventDefault();
     if (!form.userId.trim()) { toast.error('User ID is required'); return; }
     if (!form.name.trim())   { toast.error('Name is required'); return; }
-    if (!/^\d{4}$/.test(form.pin)) { toast.error('PIN must be exactly 4 digits'); return; }
+    if (!/^\d{6}$/.test(form.pin)) { toast.error('PIN must be exactly 6 digits'); return; }
     setSaving(true);
     try {
       const uid   = form.userId.trim().toUpperCase();
       const email = `${uid}@wanetwork.cms`;
       const secAuth = getSecondaryAuth();
-      await createUserWithEmailAndPassword(secAuth, email, form.pin + 'WAN!cms');
+      await createUserWithEmailAndPassword(secAuth, email, pinToPassword(form.pin));
       await fbSignOut(secAuth);
       const userData = {
         userId: uid, name: form.name.trim(),
         role: form.role, team: form.team,
         parentId: form.parentId.trim() || null,
         company: form.company.trim(), contact: form.contact.trim(), email: form.email.trim(),
-        firstLogin: true, status: 'active', createdAt: new Date(),
+        firstLogin: true, status: 'active', createdAt: new Date(), pinLength: 6,
         // Default to the seeded level matching their role, so a brand-new
         // user isn't locked out of everything until an admin remembers to
         // assign one — access is otherwise purely opt-in via Access Levels.
@@ -508,8 +508,8 @@ function AddUserModal({ onClose, onCreated, myRole, myUserId, myTeam, allTeams, 
             <span className={styles.hint}>Cannot be changed after creation</span>
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>Initial PIN * <span className={styles.hintInline}>(4 digits)</span></label>
-            <input className={styles.input} type="password" inputMode="numeric" maxLength={4} value={form.pin} onChange={setF('pin')} placeholder="••••" />
+            <label className={styles.label}>Initial PIN * <span className={styles.hintInline}>(6 digits)</span></label>
+            <input className={styles.input} type="password" inputMode="numeric" maxLength={6} value={form.pin} onChange={setF('pin')} placeholder="••••••" />
           </div>
           <div className={[styles.field, styles.fieldFull].join(' ')}>
             <label className={styles.label}>Full Name *</label>
