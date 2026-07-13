@@ -40,7 +40,7 @@ export const PERMISSION_CATALOG = [
   { key: 'manage:workers',            label: 'Manage Workers',              area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'subcon-admin'] },
   { key: 'workers:assign-any-team',   label: 'Assign Worker To Any Team',   area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'workers:manage-cert-types', label: 'Manage Certificate Types',    area: 'Workers & HSE', seedRoles: ['owner', 'manager'] },
-  { key: 'view:hse',                  label: 'View HSE Documents',          area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'supervisor', 'staff', 'subcon-admin', 'subcon'] },
+  { key: 'view:hse',                  label: 'View Resources',              area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'supervisor', 'staff', 'subcon-admin', 'subcon'] },
   { key: 'sitephotos:approve',        label: 'Approve Site Photos',         area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'snags:manage-status',       label: 'Manage Snag Status',          area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'supervisor'] },
   { key: 'toolbox:manage',            label: 'Log Toolbox Meetings',        area: 'Workers & HSE', seedRoles: ['owner', 'manager', 'supervisor'] },

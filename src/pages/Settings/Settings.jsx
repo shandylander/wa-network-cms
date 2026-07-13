@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UsersIcon, ShieldCheckIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, ShieldCheckIcon, KeyIcon, DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { usePermissions } from '../../hooks/usePermissions';
 import styles from './Settings.module.css';
 
 const SETTING_CARDS = [
@@ -24,11 +25,21 @@ const SETTING_CARDS = [
   },
 ];
 
+const UPLOADS_AUDIT_CARD = {
+  to: '/audit',
+  Icon: DocumentMagnifyingGlassIcon,
+  title: 'Uploads Audit',
+  desc: 'Review recent file uploads across the CMS.',
+};
+
 export default function Settings() {
+  const { can } = usePermissions();
+  const cards = can('view:uploads-audit') ? [...SETTING_CARDS, UPLOADS_AUDIT_CARD] : SETTING_CARDS;
+
   return (
     <div className={styles.page}>
       <div className={styles.grid}>
-        {SETTING_CARDS.map(({ to, Icon, title, desc }) => (
+        {cards.map(({ to, Icon, title, desc }) => (
           <Link key={to} to={to} className={styles.card}>
             <Icon className={styles.cardIcon} />
             <h3 className={styles.cardTitle}>{title}</h3>

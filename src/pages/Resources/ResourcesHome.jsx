@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc, writeBatch, query, where, limit } from 'firebase/firestore';
-import { ArrowDownTrayIcon, ShieldCheckIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, ShieldCheckIcon, LockClosedIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -8,17 +8,31 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { TEAMS } from '../../utils/permissions';
 import Card, { CardHeader } from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
-import styles from './HSEHome.module.css';
+import styles from './ResourcesHome.module.css';
 
 const TEAM_KEYS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
 
-export default function HSEHome() {
+// Document category taxonomy for the company-wide Resources library. Existing
+// documents in Firestore predate this field, so a missing category is
+// treated as 'hse' at read time only — no backfill write.
+const CATEGORIES = [
+  { value: 'hse',       label: 'HSE & Safety' },
+  { value: 'training',  label: 'Training Manuals' },
+  { value: 'standards', label: 'Company Standards' },
+  { value: 'templates', label: 'Templates' },
+  { value: 'policies',  label: 'Policies' },
+];
+const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.value, c.label]));
+
+export default function ResourcesHome() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
   const [projectId, setProjectId] = useState(null);
   const [docs,      setDocs]      = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [search,         setSearch]         = useState('');
 
   const role    = userProfile?.role;
   const myTeam  = userProfile?.team;
@@ -47,9 +61,14 @@ export default function HSEHome() {
         const dSnap = await getDocs(isWorker
           ? query(collection(db, 'projects', pid, 'documents'), where(`access.${accessTeam}`, '==', true))
           : collection(db, 'projects', pid, 'documents'));
-        setDocs(dSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        // Missing category defaults to 'hse' at read time — legacy docs
+        // predate this field and are never backfilled in Firestore.
+        setDocs(dSnap.docs.map(d => {
+          const data = d.data();
+          return { id: d.id, ...data, category: data.category ?? 'hse' };
+        }));
       } catch {
-        toast.error('Failed to load HSE documents');
+        toast.error('Failed to load Resources documents');
       } finally {
         setLoading(false);
       }
@@ -96,16 +115,22 @@ export default function HSEHome() {
   // Worker queries are already access-filtered server-side
   const visibleDocs = docs;
 
+  const counts = Object.fromEntries(CATEGORIES.map(c => [c.value, visibleDocs.filter(d => d.category === c.value).length]));
+  const filteredDocs = visibleDocs.filter(d =>
+    (categoryFilter === 'all' || d.category === categoryFilter) &&
+    d.name?.toLowerCase().includes(search.trim().toLowerCase())
+  );
+
   if (loading) return <div className={styles.loadingWrap}><div className={styles.spinner} /></div>;
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>HSE Documents</h1>
-          <p className={styles.sub}>Safety forms and site documents for PCS Batch 3</p>
+          <h1 className={styles.title}>Resources</h1>
+          <p className={styles.sub}>Safety forms, training manuals, standards and templates</p>
         </div>
-        {canAdmin && !allOwnEnabled && (
+        {canAdmin && !allOwnEnabled && visibleDocs.length > 0 && (
           <button className={styles.grantBtn} onClick={grantOwnAccess} disabled={grantingOwn}>
             {grantingOwn ? 'Enabling…' : 'Enable for WA! Staff'}
           </button>
@@ -122,50 +147,89 @@ export default function HSEHome() {
           }</p>
         </div>
       ) : (
-        <Card>
-          <CardHeader
-            title="Project Documents"
-            subtitle={canAdmin ? 'Toggle team access using the buttons below' : 'Download permitted forms'}
-          />
-          <div className={styles.docList}>
-            {visibleDocs.map(d => (
-              <div key={d.id} className={styles.docRow}>
-                <div className={styles.docInfo}>
-                  <ShieldCheckIcon className={styles.docIcon} width={18} />
-                  <div>
-                    <p className={styles.docName}>{d.name}</p>
-                    <Badge color="blue">{d.category?.toUpperCase() ?? 'DOC'}</Badge>
-                  </div>
-                </div>
-
-                {canAdmin && (
-                  <div className={styles.accessToggles}>
-                    {TEAM_KEYS.map(t => (
-                      <button
-                        key={t}
-                        className={[styles.toggleBtn, d.access?.[t] ? styles.toggleOn : ''].join(' ')}
-                        onClick={() => toggleAccess(d.id, t, d.access?.[t])}
-                        title={`${d.access?.[t] ? 'Revoke' : 'Grant'} access to ${TEAMS[t]}`}
-                      >
-                        {t === 'own' ? 'WA!' : TEAMS[t]?.split(' ')[0] ?? t}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <a
-                  href={d.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={styles.downloadBtn}
-                  onClick={e => e.stopPropagation()}
+        <>
+          <div className={styles.toolsRow}>
+            <div className={styles.filterRow}>
+              <button
+                className={[styles.filterBtn, categoryFilter === 'all' ? styles.active : ''].join(' ')}
+                onClick={() => setCategoryFilter('all')}
+              >
+                All ({visibleDocs.length})
+              </button>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  className={[styles.filterBtn, categoryFilter === c.value ? styles.active : ''].join(' ')}
+                  onClick={() => setCategoryFilter(c.value)}
                 >
-                  <ArrowDownTrayIcon width={15} /> Download
-                </a>
-              </div>
-            ))}
+                  {c.label} ({counts[c.value] ?? 0})
+                </button>
+              ))}
+            </div>
+            <div className={styles.searchWrap}>
+              <MagnifyingGlassIcon className={styles.searchIcon} width={15} />
+              <input
+                className={styles.searchInput}
+                placeholder="Search documents…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-        </Card>
+
+          {filteredDocs.length === 0 ? (
+            <div className={styles.empty}>
+              <h3>No matching documents</h3>
+              <p>Try a different category or search term.</p>
+            </div>
+          ) : (
+            <Card>
+              <CardHeader
+                title="Project Documents"
+                subtitle={canAdmin ? 'Toggle team access using the buttons below' : 'Download permitted forms'}
+              />
+              <div className={styles.docList}>
+                {filteredDocs.map(d => (
+                  <div key={d.id} className={styles.docRow}>
+                    <div className={styles.docInfo}>
+                      <ShieldCheckIcon className={styles.docIcon} width={18} />
+                      <div>
+                        <p className={styles.docName}>{d.name}</p>
+                        <Badge color="blue">{CATEGORY_LABEL[d.category] ?? d.category?.toUpperCase() ?? 'DOC'}</Badge>
+                        {d.revNote && <p className={styles.revNote}>{d.revNote}</p>}
+                      </div>
+                    </div>
+
+                    {canAdmin && (
+                      <div className={styles.accessToggles}>
+                        {TEAM_KEYS.map(t => (
+                          <button
+                            key={t}
+                            className={[styles.toggleBtn, d.access?.[t] ? styles.toggleOn : ''].join(' ')}
+                            onClick={() => toggleAccess(d.id, t, d.access?.[t])}
+                            title={`${d.access?.[t] ? 'Revoke' : 'Grant'} access to ${TEAMS[t]}`}
+                          >
+                            {t === 'own' ? 'WA!' : TEAMS[t]?.split(' ')[0] ?? t}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.downloadBtn}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <ArrowDownTrayIcon width={15} /> Download
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </>
       )}
 
       <Card style={{ marginTop: 16 }}>

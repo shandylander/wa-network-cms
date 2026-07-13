@@ -12,10 +12,10 @@ import { usePermissions } from '../../hooks/usePermissions';
 import styles from './MobileNav.module.css';
 
 const MAIN_TABS = [
-  { to: '/',         label: 'Home',     Icon: HomeIcon,        perm: 'view:dashboard' },
-  { to: '/projects', label: 'Projects', Icon: FolderIcon,      perm: 'view:projects'  },
-  { to: '/hse',      label: 'HSE',      Icon: ShieldCheckIcon, perm: 'view:hse'       },
-  { to: '/workers',  label: 'Workers',  Icon: UsersIcon,       perm: 'manage:workers' },
+  { to: '/',          label: 'Home',      Icon: HomeIcon,        perm: 'view:dashboard' },
+  { to: '/projects',  label: 'Projects',  Icon: FolderIcon,      perm: 'view:projects'  },
+  { to: '/resources', label: 'Resources', Icon: ShieldCheckIcon, perm: 'view:hse'       },
+  { to: '/workers',   label: 'Workers',   Icon: UsersIcon,       perm: 'manage:workers' },
 ];
 
 const EMP_CHILDREN = [
@@ -110,10 +110,10 @@ export default function MobileNav() {
                 <XMarkIcon width={20} />
               </button>
             </div>
-            {/* Workers in More if not in main tabs */}
+            {/* Site Workforce (was "Workers") in More if not in main tabs */}
             {can('manage:workers') && visibleTabs.length >= 4 && (
               <NavLink to="/workers" className={styles.drawerItem} onClick={() => setDrawer(false)}>
-                <UsersIcon width={20} /> Workers
+                <UsersIcon width={20} /> Site Workforce
               </NavLink>
             )}
             {can('view:claims') && (
@@ -128,7 +128,7 @@ export default function MobileNav() {
             )}
             {(can('jobs:assign') || can('jobs:vet')) && (
               <NavLink to="/jobs" className={styles.drawerItem} onClick={() => setDrawer(false)}>
-                <WrenchScrewdriverIcon width={20} /> Jobs
+                <WrenchScrewdriverIcon width={20} /> Service Jobs
               </NavLink>
             )}
             {can('view:uploads-audit') && (

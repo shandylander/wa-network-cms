@@ -19,7 +19,7 @@ import ProjectDetail  from './pages/Projects/ProjectDetail';
 import CustomerList   from './pages/Customers/CustomerList';
 import CustomerDetail from './pages/Customers/CustomerDetail';
 import WorkerRegistry from './pages/Workers/WorkerRegistry';
-import HSEHome        from './pages/HSE/HSEHome';
+import ResourcesHome  from './pages/Resources/ResourcesHome';
 import Attendance      from './pages/Attendance/Attendance';
 import LeaveManagement from './pages/HR/LeaveManagement';
 import SalaryCalculator from './pages/HR/SalaryCalculator';
@@ -69,7 +69,8 @@ function ProtectedRoutes() {
         <Route path="customers"         element={<CustomerList />} />
         <Route path="customers/:id"     element={<CustomerDetail />} />
         <Route path="workers"           element={<WorkerRegistry />} />
-        <Route path="hse"               element={<HSEHome />} />
+        <Route path="resources"         element={<ResourcesHome />} />
+        <Route path="hse"               element={<Navigate to="/resources" replace />} />
         <Route path="attendance"        element={<Attendance />} />
         <Route path="leave"             element={<LeaveManagement />} />
         <Route path="salary"            element={<SalaryCalculator />} />

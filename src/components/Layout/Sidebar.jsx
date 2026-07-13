@@ -15,7 +15,6 @@ import {
   BanknotesIcon,
   ReceiptPercentIcon,
   CurrencyDollarIcon,
-  DocumentMagnifyingGlassIcon,
   WrenchScrewdriverIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -37,14 +36,23 @@ const EMP_CHILDREN = [
   { to: '/petty-cash', label: 'Petty Cash', Icon: ReceiptPercentIcon, roles: ['owner','manager','supervisor','staff'] },
 ];
 
-const NAV = [
-  { to: '/',        label: 'Dashboard', Icon: HomeIcon,           perm: 'view:dashboard' },
-  { to: '/projects',label: 'Projects',  Icon: FolderIcon,         perm: 'view:projects'  },
-  { to: '/customers',label: 'Customers',Icon: BuildingOffice2Icon,perm: 'manage:customers' },
-  { to: '/workers', label: 'Workers',   Icon: UsersIcon,          perm: 'manage:workers' },
-  { to: '/hse',     label: 'HSE',       Icon: ShieldCheckIcon,    perm: 'view:hse'       },
-  { to: '/finance', label: 'Finance',   Icon: CurrencyDollarIcon, perm: 'view:claims'    },
+// Overview zone — dashboard + company-wide announcements
+const OVERVIEW = [
+  { to: '/',              label: 'Dashboard',     Icon: HomeIcon,      perm: 'view:dashboard' },
   { to: '/announcements', label: 'Announcements', Icon: MegaphoneIcon }, // no perm — every signed-in user can read
+];
+
+// Operations zone — Service Jobs is rendered separately below (its perm is
+// an OR of two keys, not a single one, so it doesn't fit this flat list).
+const OPERATIONS = [
+  { to: '/projects',  label: 'Projects',  Icon: FolderIcon,          perm: 'view:projects'    },
+  { to: '/customers', label: 'Customers', Icon: BuildingOffice2Icon, perm: 'manage:customers' },
+];
+
+// Company zone — Resources was formerly "HSE"; route/perm unchanged, label only.
+const COMPANY = [
+  { to: '/resources', label: 'Resources', Icon: ShieldCheckIcon,    perm: 'view:hse'    },
+  { to: '/finance',   label: 'Finance',   Icon: CurrencyDollarIcon, perm: 'view:claims' },
 ];
 
 const ACCOUNT = [
@@ -87,10 +95,8 @@ export default function Sidebar() {
 
       {/* Main nav */}
       <nav className={styles.nav}>
-        <p className={styles.navLabel}>Main</p>
-
-        {/* Dashboard + Projects */}
-        {NAV.slice(0, 2).map(({ to, label, Icon, perm }) => {
+        <p className={styles.navLabel}>Overview</p>
+        {OVERVIEW.map(({ to, label, Icon, perm }) => {
           // Dashboard's route itself isn't permission-gated (staff land on
           // WorkerHome there instead of the admin dashboard) — don't hide
           // the link for them just because they lack view:dashboard.
@@ -104,6 +110,43 @@ export default function Sidebar() {
           );
         })}
 
+        <p className={styles.navLabel} style={{ marginTop: 8 }}>Operations</p>
+        {/* Projects */}
+        {(() => {
+          const { to, label, Icon, perm } = OPERATIONS[0];
+          if (perm && !can(perm)) return null;
+          return (
+            <NavLink key={to} to={to}
+              className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
+              <Icon className={styles.navIcon} />
+              <span>{label}</span>
+            </NavLink>
+          );
+        })()}
+
+        {/* Service Jobs — whoever can schedule or vet jobs */}
+        {(can('jobs:assign') || can('jobs:vet')) && (
+          <NavLink to="/jobs"
+            className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
+            <WrenchScrewdriverIcon className={styles.navIcon} />
+            <span>Service Jobs</span>
+          </NavLink>
+        )}
+
+        {/* Customers */}
+        {(() => {
+          const { to, label, Icon, perm } = OPERATIONS[1];
+          if (perm && !can(perm)) return null;
+          return (
+            <NavLink key={to} to={to}
+              className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
+              <Icon className={styles.navIcon} />
+              <span>{label}</span>
+            </NavLink>
+          );
+        })()}
+
+        <p className={styles.navLabel} style={{ marginTop: 8 }}>People</p>
         {/* Employees expandable group */}
         {showEmpGroup && (
           <div className={styles.navGroup}>
@@ -133,8 +176,17 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Workers + HSE */}
-        {NAV.slice(2).map(({ to, label, Icon, perm }) => {
+        {/* Site Workforce (was "Workers") — same /workers route + perm */}
+        {can('manage:workers') && (
+          <NavLink to="/workers"
+            className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
+            <UsersIcon className={styles.navIcon} />
+            <span>Site Workforce</span>
+          </NavLink>
+        )}
+
+        <p className={styles.navLabel} style={{ marginTop: 8 }}>Company</p>
+        {COMPANY.map(({ to, label, Icon, perm }) => {
           if (perm && !can(perm)) return null;
           return (
             <NavLink key={to} to={to}
@@ -144,24 +196,6 @@ export default function Sidebar() {
             </NavLink>
           );
         })}
-
-        {/* Jobs board — whoever can schedule or vet jobs */}
-        {(can('jobs:assign') || can('jobs:vet')) && (
-          <NavLink to="/jobs"
-            className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
-            <WrenchScrewdriverIcon className={styles.navIcon} />
-            <span>Jobs</span>
-          </NavLink>
-        )}
-
-        {/* Uploads audit — management only */}
-        {can('view:uploads-audit') && (
-          <NavLink to="/audit"
-            className={({ isActive }) => [styles.navItem, isActive ? styles.active : ''].join(' ')}>
-            <DocumentMagnifyingGlassIcon className={styles.navIcon} />
-            <span>Uploads Audit</span>
-          </NavLink>
-        )}
 
         <p className={styles.navLabel} style={{ marginTop: 8 }}>Account</p>
         {ACCOUNT.map(({ to, label, Icon, perm }) => {

@@ -12,11 +12,24 @@ import { formatDate } from '../../utils/helpers';
 import { uploadToDropbox } from '../../utils/dropboxUpload';
 import styles from './ProjectDocuments.module.css';
 
+// Superset of two overlapping needs: the project-specific document types a
+// construction job actually files (drawings, claims, general project docs)
+// PLUS the company-wide Resources library taxonomy (src/pages/Resources/
+// ResourcesHome.jsx). Both surfaces read/write the same
+// projects/{id}/documents collection, so the shared values (hse, training,
+// standards, templates, policies) line up with the Resources filter chips;
+// the project-only values (drawing, claim, general) still render there under
+// "All". Keeping drawing/claim here is deliberate — as-built drawings and
+// claim documents are core to the contractor's workflow.
 const CATEGORIES = [
-  { value: 'hse',     label: 'HSE' },
-  { value: 'drawing', label: 'Drawing' },
-  { value: 'claim',   label: 'Claim' },
-  { value: 'general', label: 'General' },
+  { value: 'general',   label: 'General' },
+  { value: 'drawing',   label: 'Drawing' },
+  { value: 'claim',     label: 'Claim' },
+  { value: 'hse',       label: 'HSE & Safety' },
+  { value: 'training',  label: 'Training Manuals' },
+  { value: 'standards', label: 'Company Standards' },
+  { value: 'templates', label: 'Templates' },
+  { value: 'policies',  label: 'Policies' },
 ];
 
 const TEAM_KEYS   = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
@@ -45,7 +58,7 @@ export default function ProjectDocuments({ project }) {
   const [deleting,  setDeleting]  = useState(false);
   const fileRef = useRef();
 
-  const [form, setForm] = useState({ name: '', category: 'general', file: null, access: emptyAccess() });
+  const [form, setForm] = useState({ name: '', category: 'general', revNote: '', file: null, access: emptyAccess() });
 
   useEffect(() => {
     const documentsRef = collection(db, 'projects', project.id, 'documents');
@@ -94,6 +107,7 @@ export default function ProjectDocuments({ project }) {
       setProgress(90);
       const payload = {
         name: form.name.trim(), category: form.category, url,
+        ...(form.revNote.trim() ? { revNote: form.revNote.trim() } : {}),
         fileName: form.file.name, fileSize: form.file.size,
         access: form.access,
         uploadedAt: Timestamp.now(), uploadedBy: userProfile.userId,
@@ -102,7 +116,7 @@ export default function ProjectDocuments({ project }) {
       setDocsList(d => [{ id: ref.id, ...payload }, ...d]);
       toast.success('Document uploaded to Dropbox');
       setShowForm(false);
-      setForm({ name: '', category: 'general', file: null, access: emptyAccess() });
+      setForm({ name: '', category: 'general', revNote: '', file: null, access: emptyAccess() });
       if (fileRef.current) fileRef.current.value = '';
     } catch (err) {
       console.error(err);
@@ -127,7 +141,7 @@ export default function ProjectDocuments({ project }) {
   const closeForm = () => {
     if (saving) return;
     setShowForm(false);
-    setForm({ name: '', category: 'general', file: null, access: emptyAccess() });
+    setForm({ name: '', category: 'general', revNote: '', file: null, access: emptyAccess() });
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -167,6 +181,7 @@ export default function ProjectDocuments({ project }) {
                     <span className={styles.catBadge}>{CATEGORIES.find(c => c.value === d.category)?.label ?? d.category}</span>
                     <span className={styles.docDate}>Added {formatDate(d.uploadedAt)}</span>
                   </div>
+                  {d.revNote && <p className={styles.revNote}>{d.revNote}</p>}
                 </div>
               </div>
 
@@ -247,6 +262,9 @@ export default function ProjectDocuments({ project }) {
                 <select className={styles.formInput} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} disabled={saving}>
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select></div>
+
+              <div className={styles.formRow}><label className={styles.formLbl}>Revision Note <span className={styles.opt}>(optional)</span></label>
+                <input className={styles.formInput} placeholder="e.g. Rev 04 — updated scope of works" value={form.revNote} onChange={e => setForm(f => ({ ...f, revNote: e.target.value }))} disabled={saving} /></div>
 
               <div className={styles.formRow}>
                 <label className={styles.formLbl}>Team Access <span className={styles.opt}>(defaults to no access)</span></label>
