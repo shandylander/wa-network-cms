@@ -120,8 +120,10 @@ export default function JobsBoard() {
         })
       )}
 
+      {/* No local append in onSaved — the board's onSnapshot listener already
+          delivers the new doc; appending here rendered it twice. */}
       {assigning && (
-        <AssignJobModalNoCustomer onClose={() => setAssigning(false)} onSaved={(j) => setJobs(prev => [j, ...prev])} />
+        <AssignJobModalNoCustomer onClose={() => setAssigning(false)} onSaved={() => {}} />
       )}
 
       {selected && (

@@ -103,6 +103,9 @@ export default function JobList({ customerId, customerName, projectId, projectNa
         </div>
       )}
 
+      {/* No local append in onSaved — the onSnapshot listener above already
+          delivers the new doc (Firestore fires the local snapshot before
+          onSaved runs), so appending here rendered the same job twice. */}
       {creating && (
         <JobCompletionForm
           customerId={customerId}
@@ -110,7 +113,7 @@ export default function JobList({ customerId, customerName, projectId, projectNa
           projectId={projectId}
           projectName={projectName}
           onClose={() => setCreating(false)}
-          onSaved={(j) => setJobs(prev => [j, ...prev])}
+          onSaved={() => {}}
         />
       )}
 
@@ -121,7 +124,7 @@ export default function JobList({ customerId, customerName, projectId, projectNa
           projectId={projectId}
           projectName={projectName}
           onClose={() => setAssigning(false)}
-          onSaved={(j) => setJobs(prev => [j, ...prev])}
+          onSaved={() => {}}
         />
       )}
 
