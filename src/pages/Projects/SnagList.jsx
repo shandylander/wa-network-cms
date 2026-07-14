@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, query, where } from 'firebase/firestore';
-import { PlusIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { db } from '../../firebase';
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, doc, setDoc, updateDoc, getDocs, Timestamp, query, where, arrayUnion } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { PlusIcon, XMarkIcon, ChevronDownIcon, CameraIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { db, storage } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/helpers';
+import { fileToJpegBlob } from '../../utils/imageUtils';
 import styles from './SnagList.module.css';
 
 const SEVERITIES = [
@@ -41,6 +43,19 @@ export default function SnagList({ project }) {
   const [resolveId, setResolveId] = useState(null);
   const [resolveNote, setResolveNote] = useState('');
 
+  // Photos attached while logging a new snag — held as local blobs until the
+  // snag is actually submitted (uploaded then, once the doc's own ID exists
+  // to key the storage path). { blob, preview } — preview is an object URL,
+  // revoked on unmount/reset below.
+  const [stagedPhotos, setStagedPhotos] = useState([]);
+  const [addingPhotoTo, setAddingPhotoTo] = useState(null); // snag id currently uploading an extra photo
+  const [addPhotoTarget, setAddPhotoTarget] = useState(null); // which snag the shared "add photo" inputs below target
+  const [lightbox, setLightbox] = useState(null); // photo url
+  const cameraInputRef  = useRef(null); // capture="environment" — opens the device camera directly (Log Snag form)
+  const galleryInputRef = useRef(null); // Log Snag form
+  const addPhotoCameraRef  = useRef(null); // shared across all logged snags' "Take Photo"
+  const addPhotoGalleryRef = useRef(null); // shared across all logged snags' "Upload"
+
   const [form, setForm] = useState({
     blockNo: '', location: '', type: '', description: '', severity: 'medium',
     assignedTeam: userProfile?.team ?? 'own',
@@ -61,26 +76,102 @@ export default function SnagList({ project }) {
       .finally(() => setLoading(false));
   }, [project.id, isSubconRole, myTeam, toast]);
 
+  // Belt-and-braces cleanup for staged-photo object URLs if the component
+  // unmounts (e.g. navigating away) while the Log Snag form is still open —
+  // resetStagedPhotos() already handles the normal cancel/submit paths. A
+  // ref (not stagedPhotos directly) so the mount-only cleanup below always
+  // sees the latest array instead of the stale one captured at mount.
+  const stagedPhotosRef = useRef(stagedPhotos);
+  stagedPhotosRef.current = stagedPhotos;
+  useEffect(() => () => stagedPhotosRef.current.forEach(p => URL.revokeObjectURL(p.preview)), []);
+
+  // Shared by "Take Photo" (capture=environment, opens the device camera
+  // directly) and "Add from Gallery" — both are plain file inputs, so
+  // neither depends on getUserMedia (the SitePhotos live-preview approach
+  // hit a real video-ref race bug; a file input sidesteps that whole class
+  // of issue and is simpler for a quick evidence shot).
+  const stagePickedFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file.'); return; }
+    try {
+      const blob = await fileToJpegBlob(file);
+      if (!blob) throw new Error('encode failed');
+      setStagedPhotos(p => [...p, { blob, preview: URL.createObjectURL(blob) }]);
+    } catch {
+      toast.error('Could not read that image. Please try another photo.');
+    }
+  };
+
+  const removeStagedPhoto = (i) => {
+    setStagedPhotos(p => {
+      URL.revokeObjectURL(p[i].preview);
+      return p.filter((_, idx) => idx !== i);
+    });
+  };
+
+  const resetStagedPhotos = () => {
+    stagedPhotos.forEach(p => URL.revokeObjectURL(p.preview));
+    setStagedPhotos([]);
+  };
+
   const submitSnag = async (e) => {
     e.preventDefault();
     if (!form.description.trim()) { toast.error('Please enter a description.'); return; }
     setSaving(true);
     try {
+      // Pre-allocate the doc ID so photos can upload to a path keyed by it,
+      // in the same write as the snag itself (no second update round-trip).
+      const newRef = doc(collection(db, 'projects', project.id, 'snags'));
+      const photos = await Promise.all(stagedPhotos.map(async (p, i) => {
+        const path = `snagPhotos/${project.id}/${newRef.id}/${Date.now()}-${i}.jpg`;
+        const fileRef = ref(storage, path);
+        await uploadBytes(fileRef, p.blob, { contentType: 'image/jpeg' });
+        const url = await getDownloadURL(fileRef);
+        return { url, uploadedBy: userProfile.userId, uploadedAt: Timestamp.now() };
+      }));
       const payload = {
         ...form, blockNo: form.blockNo.trim(), location: form.location.trim(),
         type: form.type.trim(), description: form.description.trim(),
-        status: 'open',
+        status: 'open', photos,
         reportedBy: userProfile.userId, reportedByName: userProfile.name,
         reportedAt: Timestamp.now(),
         resolvedBy: null, resolvedAt: null, resolutionNote: null,
       };
-      const ref = await addDoc(collection(db, 'projects', project.id, 'snags'), payload);
-      setSnags(s => [{ id: ref.id, ...payload }, ...s]);
+      await setDoc(newRef, payload);
+      setSnags(s => [{ id: newRef.id, ...payload }, ...s]);
       toast.success('Snag logged');
       setShowForm(false);
       setForm({ blockNo: '', location: '', type: '', description: '', severity: 'medium', assignedTeam: userProfile?.team ?? 'own' });
+      resetStagedPhotos();
     } catch { toast.error('Failed to log snag'); }
     finally { setSaving(false); }
+  };
+
+  // Attach an extra photo to an already-logged snag (e.g. resolution
+  // evidence) — uploads immediately rather than staging, since the snag's ID
+  // already exists.
+  const addPhotoToSnag = async (snagId, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file.'); return; }
+    setAddingPhotoTo(snagId);
+    try {
+      const blob = await fileToJpegBlob(file);
+      if (!blob) throw new Error('encode failed');
+      const path = `snagPhotos/${project.id}/${snagId}/${Date.now()}.jpg`;
+      const fileRef = ref(storage, path);
+      await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
+      const url = await getDownloadURL(fileRef);
+      const photo = { url, uploadedBy: userProfile.userId, uploadedAt: Timestamp.now() };
+      await updateDoc(doc(db, 'projects', project.id, 'snags', snagId), { photos: arrayUnion(photo) });
+      setSnags(s => s.map(x => x.id === snagId ? { ...x, photos: [...(x.photos ?? []), photo] } : x));
+      toast.success('Photo added');
+    } catch {
+      toast.error('Failed to add photo.');
+    } finally {
+      setAddingPhotoTo(null);
+    }
   };
 
   const updateStatus = async (snag, status) => {
@@ -151,6 +242,36 @@ export default function SnagList({ project }) {
                       <p><strong>Reported by:</strong> {snag.reportedByName} · {formatDate(snag.reportedAt)}</p>
                       {snag.resolvedAt  && <p><strong>Resolved:</strong> {formatDate(snag.resolvedAt)}{snag.resolutionNote ? ` — ${snag.resolutionNote}` : ''}</p>}
                     </div>
+
+                    <div className={styles.photoSection}>
+                      {snag.photos?.length > 0 && (
+                        <div className={styles.photoThumbGrid}>
+                          {snag.photos.map((p, i) => (
+                            <img
+                              key={i} src={p.url} alt="" className={styles.photoThumb}
+                              onClick={() => setLightbox(p.url)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <div className={styles.addPhotoRow}>
+                        <button
+                          className={styles.addPhotoBtn}
+                          disabled={addingPhotoTo === snag.id}
+                          onClick={() => { setAddPhotoTarget(snag.id); addPhotoCameraRef.current?.click(); }}
+                        >
+                          <CameraIcon width={14} /> {addingPhotoTo === snag.id ? 'Adding…' : 'Take Photo'}
+                        </button>
+                        <button
+                          className={styles.addPhotoBtn}
+                          disabled={addingPhotoTo === snag.id}
+                          onClick={() => { setAddPhotoTarget(snag.id); addPhotoGalleryRef.current?.click(); }}
+                        >
+                          <ArrowUpTrayIcon width={14} /> Upload
+                        </button>
+                      </div>
+                    </div>
+
                     {isAdmin && snag.status === 'open' && (
                       <div className={styles.snagActions}>
                         <button className={styles.progressBtn} onClick={() => updateStatus(snag, 'in-progress')}>Mark In Progress</button>
@@ -177,11 +298,11 @@ export default function SnagList({ project }) {
 
       {/* Log snag modal */}
       {showForm && (
-        <div className={styles.modalOverlay} onClick={() => setShowForm(false)}>
+        <div className={styles.modalOverlay} onClick={() => { setShowForm(false); resetStagedPhotos(); }}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHead}>
               <h3 className={styles.modalTitle}>Log New Snag</h3>
-              <button className={styles.modalClose} onClick={() => setShowForm(false)}><XMarkIcon width={18} /></button>
+              <button className={styles.modalClose} onClick={() => { setShowForm(false); resetStagedPhotos(); }}><XMarkIcon width={18} /></button>
             </div>
             <form onSubmit={submitSnag}>
               <div className={styles.formRowGroup}>
@@ -204,8 +325,33 @@ export default function SnagList({ project }) {
                     {Object.entries(TEAMS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                   </select></div>
               </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Photos <span className={styles.opt}>(optional)</span></label>
+                {stagedPhotos.length > 0 && (
+                  <div className={styles.photoThumbGrid}>
+                    {stagedPhotos.map((p, i) => (
+                      <div key={i} className={styles.stagedThumbWrap}>
+                        <img src={p.preview} alt="" className={styles.photoThumb} />
+                        <button type="button" className={styles.stagedThumbRemove} onClick={() => removeStagedPhoto(i)} aria-label="Remove photo">
+                          <XMarkIcon width={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.addPhotoRow}>
+                  <button type="button" className={styles.addPhotoBtn} onClick={() => cameraInputRef.current?.click()}>
+                    <CameraIcon width={14} /> Take Photo
+                  </button>
+                  <button type="button" className={styles.addPhotoBtn} onClick={() => galleryInputRef.current?.click()}>
+                    <ArrowUpTrayIcon width={14} /> Upload
+                  </button>
+                </div>
+              </div>
+
               <div className={styles.modalActions}>
-                <button type="button" className={styles.cancelBtn} onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="button" className={styles.cancelBtn} onClick={() => { setShowForm(false); resetStagedPhotos(); }}>Cancel</button>
                 <button type="submit" className={styles.submitBtn} disabled={saving}>{saving ? 'Saving…' : 'Log Snag'}</button>
               </div>
             </form>
@@ -225,6 +371,29 @@ export default function SnagList({ project }) {
               <button className={styles.resolveBtn} onClick={() => updateStatus(snags.find(s => s.id === resolveId), 'resolved')}>Confirm Resolved</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Hidden file inputs — Log New Snag form */}
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={stagePickedFile} />
+      <input ref={galleryInputRef} type="file" accept="image/*" hidden onChange={stagePickedFile} />
+
+      {/* Hidden file inputs — "Add Photo" on an already-logged snag, shared
+          across all snag rows; addPhotoTarget tracks which one to attach to. */}
+      <input
+        ref={addPhotoCameraRef} type="file" accept="image/*" capture="environment" hidden
+        onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; addPhotoToSnag(addPhotoTarget, f); }}
+      />
+      <input
+        ref={addPhotoGalleryRef} type="file" accept="image/*" hidden
+        onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; addPhotoToSnag(addPhotoTarget, f); }}
+      />
+
+      {/* Photo lightbox */}
+      {lightbox && (
+        <div className={styles.lightboxOverlay} onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="" className={styles.lightboxImg} onClick={e => e.stopPropagation()} />
+          <button className={styles.lightboxClose} onClick={() => setLightbox(null)}><XMarkIcon width={20} /></button>
         </div>
       )}
     </div>
