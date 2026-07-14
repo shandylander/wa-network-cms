@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { fmtDate, fmtTime, calcHours, mapsLink, todaySG, timeInputSG } from '../../utils/attendanceUtils';
+import DateRangePicker from '../../components/UI/DateRangePicker';
 import styles from './Attendance.module.css';
 
 const TEAM_LABELS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur', alamin: 'Alamin' };
@@ -124,11 +125,9 @@ export default function TeamView() {
   return (
     <div className={styles.teamWrap}>
       {/* Date filter */}
-      <div className={styles.filterBar}>
-        <label className={styles.filterLbl}>From</label>
-        <input type="date" className={styles.filterInput} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-        <label className={styles.filterLbl}>To</label>
-        <input type="date" className={styles.filterInput} value={dateTo}   onChange={e => setDateTo(e.target.value)} />
+      <div className={styles.filterBar} style={{ alignItems: 'flex-start' }}>
+        <DateRangePicker dateFrom={dateFrom} dateTo={dateTo}
+          onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         <button className={styles.filterBtn} onClick={load}>Search</button>
       </div>
 

@@ -1,0 +1,32 @@
+.wrap { display: flex; flex-direction: column; gap: 8px; }
+
+.quickRow { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.quickBtn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-sec);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.quickBtn:hover { border-color: var(--red); color: var(--red); }
+.quickBtnActive { background: var(--red); border-color: var(--red); color: #fff; }
+
+.customRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.lbl { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+
+.input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--card);
+  color: var(--text);
+  min-height: 38px;
+  font-family: inherit;
+}

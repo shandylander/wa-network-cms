@@ -2,11 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import {
   MagnifyingGlassIcon, DocumentIcon, CameraIcon, HeartIcon, ReceiptPercentIcon,
-  AcademicCapIcon, ArrowTopRightOnSquareIcon, XMarkIcon,
+  AcademicCapIcon, ArrowTopRightOnSquareIcon, XMarkIcon, Squares2X2Icon,
+  TableCellsIcon, ChevronUpIcon, ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
 import { todaySG } from '../../utils/attendanceUtils';
+import { formatDateTime } from '../../utils/helpers';
+import DateRangePicker from '../../components/UI/DateRangePicker';
 import styles from './UploadsAudit.module.css';
 
 const TYPE_TABS = [
@@ -39,6 +42,8 @@ export default function UploadsAudit() {
   const [loading,  setLoading]  = useState(false);
   const [searched, setSearched] = useState(false);
   const [lightbox, setLightbox] = useState(null);
+  const [view,     setView]     = useState('cards');       // 'cards' | 'table'
+  const [sort,     setSort]     = useState({ col: 'date', dir: 'desc' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +84,8 @@ export default function UploadsAudit() {
           name: r.name, team: r.team, date: r.dateFrom,
           detail: `${r.days} day${r.days !== 1 ? 's' : ''}${r.mcClinic ? ` · ${r.mcClinic}` : ''}`,
           status: r.status,
+          submittedAt: r.createdAt ?? null,
+          reviewedByName: r.reviewedByName ?? null, reviewedAt: r.reviewedAt ?? null,
         });
       });
 
@@ -89,6 +96,8 @@ export default function UploadsAudit() {
           name: r.name, team: r.team, date: r.date,
           detail: `$${Number(r.amount ?? 0).toFixed(2)} · ${r.description ?? ''}`,
           status: r.status,
+          submittedAt: r.createdAt ?? null,
+          reviewedByName: r.reviewedByName ?? null, reviewedAt: r.reviewedAt ?? null,
         });
       });
 
@@ -123,6 +132,19 @@ export default function UploadsAudit() {
     (!nameQ.trim() || it.name?.toLowerCase().includes(nameQ.trim().toLowerCase()))
   );
 
+  const sortVal = (it, col) => {
+    if (col === 'submitted') return it.submittedAt?.toMillis?.() ?? 0;
+    if (col === 'reviewedAt') return it.reviewedAt?.toMillis?.() ?? 0;
+    if (col === 'date') return it.date ?? '';
+    return (it[col] ?? '').toString().toLowerCase();
+  };
+  const sorted = [...visible].sort((a, b) => {
+    const av = sortVal(a, sort.col), bv = sortVal(b, sort.col);
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+    return sort.dir === 'asc' ? cmp : -cmp;
+  });
+  const toggleSort = (col) => setSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }));
+
   return (
     <div className={styles.wrap}>
       <p className={styles.info}>
@@ -131,11 +153,9 @@ export default function UploadsAudit() {
 
       {/* Filters */}
       <div className={styles.filters}>
-        <div className={styles.filterRow}>
-          <label className={styles.lbl}>From</label>
-          <input type="date" className={styles.input} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-          <label className={styles.lbl}>To</label>
-          <input type="date" className={styles.input} value={dateTo} min={dateFrom} onChange={e => setDateTo(e.target.value)} />
+        <div className={styles.filterRow} style={{ alignItems: 'flex-start' }}>
+          <DateRangePicker dateFrom={dateFrom} dateTo={dateTo}
+            onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
           <button className={styles.loadBtn} onClick={load} disabled={loading}>
             <MagnifyingGlassIcon width={16} /> {loading ? 'Loading…' : 'Load'}
           </button>
@@ -158,6 +178,18 @@ export default function UploadsAudit() {
         </div>
       </div>
 
+      {/* View toggle */}
+      {searched && visible.length > 0 && (
+        <div className={styles.viewToggle}>
+          <button className={[styles.viewBtn, view === 'cards' ? styles.viewBtnActive : ''].join(' ')} onClick={() => setView('cards')}>
+            <Squares2X2Icon width={14} /> Cards
+          </button>
+          <button className={[styles.viewBtn, view === 'table' ? styles.viewBtnActive : ''].join(' ')} onClick={() => setView('table')}>
+            <TableCellsIcon width={14} /> Table
+          </button>
+        </div>
+      )}
+
       {/* Results */}
       {!searched ? (
         <p className={styles.empty}>Choose a date range and press Load.</p>
@@ -165,9 +197,60 @@ export default function UploadsAudit() {
         <div className={styles.loading}><div className={styles.spinner} /></div>
       ) : visible.length === 0 ? (
         <p className={styles.empty}>No uploads found for these filters.</p>
+      ) : view === 'table' ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                {[
+                  ['type', 'Type'], ['name', 'Name'], ['team', 'Team'], ['date', 'Date'],
+                  ['submitted', 'Submitted'], ['detail', 'Detail'], ['status', 'Status'],
+                  ['reviewedByName', 'Reviewed By'], ['reviewedAt', 'Reviewed At'],
+                ].map(([col, label]) => (
+                  <th key={col} className={styles.th} onClick={() => toggleSort(col)}>
+                    <span className={styles.thInner}>
+                      {label}
+                      {sort.col === col && (sort.dir === 'asc' ? <ChevronUpIcon width={12} /> : <ChevronDownIcon width={12} />)}
+                    </span>
+                  </th>
+                ))}
+                <th className={styles.th} />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(it => {
+                const meta = TYPE_META[it.type];
+                return (
+                  <tr key={it.id}>
+                    <td className={styles.td}>
+                      <span className={[styles.badge, styles[meta.cls]].join(' ')}>
+                        <meta.Icon width={13} /> {meta.label}
+                      </span>
+                    </td>
+                    <td className={styles.td}>{it.name}</td>
+                    <td className={styles.td}>{it.team || '—'}</td>
+                    <td className={styles.td}>{fmtDate(it.date)}</td>
+                    <td className={styles.td}>{it.submittedAt ? formatDateTime(it.submittedAt) : '—'}</td>
+                    <td className={[styles.td, styles.tdDetail].join(' ')}>{it.detail}</td>
+                    <td className={styles.td}>
+                      {it.status ? <span className={[styles.status, styles[`st_${it.status}`]].join(' ')}>{it.status}</span> : '—'}
+                    </td>
+                    <td className={styles.td}>{it.reviewedByName || '—'}</td>
+                    <td className={styles.td}>{it.reviewedAt ? formatDateTime(it.reviewedAt) : '—'}</td>
+                    <td className={styles.td}>
+                      <a href={it.url} target="_blank" rel="noreferrer" className={styles.openLink}>
+                        <ArrowTopRightOnSquareIcon width={13} /> Open
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className={styles.grid}>
-          {visible.map(it => {
+          {sorted.map(it => {
             const meta = TYPE_META[it.type];
             return (
               <div key={it.id} className={styles.card}>

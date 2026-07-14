@@ -4,6 +4,7 @@ import { FlagIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
 import { fmtDate, fmtTime, mapsLink, todaySG } from '../../utils/attendanceUtils';
+import DateRangePicker from '../../components/UI/DateRangePicker';
 import styles from './Attendance.module.css';
 
 export default function PhotoReview() {
@@ -98,11 +99,9 @@ export default function PhotoReview() {
       </div>
 
       {/* Date + search */}
-      <div className={styles.filterBar}>
-        <label className={styles.filterLbl}>From</label>
-        <input type="date" className={styles.filterInput} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-        <label className={styles.filterLbl}>To</label>
-        <input type="date" className={styles.filterInput} value={dateTo}   onChange={e => setDateTo(e.target.value)} />
+      <div className={styles.filterBar} style={{ alignItems: 'flex-start' }}>
+        <DateRangePicker dateFrom={dateFrom} dateTo={dateTo}
+          onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} />
         <button className={styles.filterBtn} onClick={load} disabled={loading}>
           {loading ? 'Loading…' : `Load ${selected.length ? `(${selected.length})` : ''}`}
         </button>
