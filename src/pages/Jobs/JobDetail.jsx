@@ -103,16 +103,10 @@ export default function JobDetail() {
       console.error('Check-in failed', err);
       const code = err?.code;
       if (code === 'permission-denied') {
-        // TEMPORARY (remove once the root cause is confirmed): the
-        // permission-denied rule has three independent clauses; report which
-        // one the client-side data fails, right in the toast, since field
-        // workers are on phones with no DevTools console to read.
-        const hasBasePerm = (userProfile.effectivePermissions ?? []).includes('manage:service-reports');
-        const inAssignedTo = (job.assignedTo ?? []).includes(userProfile.userId);
-        toast.error(
-          `Check-in blocked — perm:${hasBasePerm ? 'Y' : 'N'} assigned:${inAssignedTo ? 'Y' : 'N'} status:${job.status}. Please screenshot this and send to the office.`,
-          15000,
-        );
+        // Most often means this account's Access Level doesn't have "Manage
+        // Service Jobs" checked (Settings → Access Levels) — not a network
+        // issue, so don't tell the worker to check their connection.
+        toast.error("Check-in failed — you're not authorised for this job. Contact your office.");
       } else if (code === 'unavailable' || code === 'deadline-exceeded') {
         toast.error('Check-in failed — no network connection. Try again when you have signal.');
       } else {
