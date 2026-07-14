@@ -309,6 +309,7 @@ exports.uploadProjectDocument = onCall(
       '/WA! Network Asia CMS/Customers/',
       '/WA! Network Asia CMS/Service Jobs/',
       '/WA! Network Asia CMS/Announcements',
+      '/WA! Network Asia CMS/Staff/', // leave MC/HL certs, staff certificates
     ];
     if (
       cleanFolder.includes('..') ||

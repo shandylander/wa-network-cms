@@ -16,6 +16,13 @@ const BOM = '﻿';
 export const escapeCsvField = (value) => {
   if (value === null || value === undefined) return '';
   let s = String(value);
+  // Formula-injection guard: a cell beginning with = + - @ (or a control char
+  // like tab/CR) can execute as a formula when the CSV is opened in Excel or
+  // Sheets. Neutralise it by prefixing a single quote so it's treated as text.
+  // Applied before RFC-4180 quoting below.
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
   if (/[",\r\n]/.test(s)) {
     s = '"' + s.replace(/"/g, '""') + '"';
   }

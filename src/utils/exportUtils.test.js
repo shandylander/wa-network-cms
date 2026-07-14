@@ -16,6 +16,16 @@ describe('escapeCsvField', () => {
     expect(escapeCsvField('a,b')).toBe('"a,b"');
     expect(escapeCsvField('line1\nline2')).toBe('"line1\nline2"');
   });
+  test('neutralises formula-injection leading characters', () => {
+    // Leading '=' is neutralised with a ' prefix; because this value also
+    // contains embedded quotes it is then RFC-4180 quote-wrapped (inner " doubled).
+    expect(escapeCsvField('=HYPERLINK("http://x")')).toBe('"\'=HYPERLINK(""http://x"")"');
+    expect(escapeCsvField('+1')).toBe("'+1");
+    expect(escapeCsvField('-cmd')).toBe("'-cmd");
+    expect(escapeCsvField('@x')).toBe("'@x");
+    // a normal negative number in a numeric cell is still guarded (safe: opens as text)
+    expect(escapeCsvField('Ali')).toBe('Ali'); // unaffected
+  });
 });
 
 describe('buildCsv', () => {

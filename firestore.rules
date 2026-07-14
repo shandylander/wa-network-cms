@@ -108,9 +108,16 @@ service cloud.firestore {
         || ('assignedTo' in resource.data && uid() in resource.data.assignedTo);
 
       // Manager scheduling a job ahead of time, or a technician self-
-      // creating an ad-hoc job (must list themselves in assignedTo).
+      // creating an ad-hoc job (must list themselves in assignedTo). A
+      // self-created job may start scheduled/in-progress/completed (the
+      // ad-hoc flow completes on the spot) but can't be born already vetted —
+      // vetting is a jobs:vet decision, never something the creator stamps on
+      // themselves.
       allow create: if hasPerm('jobs:assign')
-        || (hasPerm('manage:service-reports') && uid() in request.resource.data.assignedTo);
+        || (hasPerm('manage:service-reports')
+            && uid() in request.resource.data.assignedTo
+            && request.resource.data.status in ['scheduled', 'in-progress', 'completed']
+            && request.resource.data.vettedBy == null);
 
       // Any assigned technician can drive their own job through
       // scheduled → in-progress → completed (check in/out, add photos,

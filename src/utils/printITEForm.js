@@ -1,5 +1,12 @@
 import { ITE_FORMS } from './materialData';
 
+// Escape user-entered fields before interpolating into the print popup's HTML
+// (same-origin document.write) so a payload in an order ref / contact / address
+// can't execute. Mirrors salaryUtils.printPayslip's escaping.
+const escapeHtml = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
 const fmtDate = (iso) => {
   if (!iso) return '';
   const [y, m, d] = iso.split('-');
@@ -38,7 +45,7 @@ export function printITEOrderForm(order) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ITE Order Form — ${order.ref ?? ''}</title>
+  <title>ITE Order Form — ${escapeHtml(order.ref)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; color: #000; padding: 15mm 15mm 10mm; }
@@ -91,7 +98,7 @@ export function printITEOrderForm(order) {
     </div>
     <div class="certis-block">
       <h2>CERTIS TECHNOLOGY (SINGAPORE) PTE LTD</h2>
-      <p><span>REF :</span> ${order.ref ?? ''}</p>
+      <p><span>REF :</span> ${escapeHtml(order.ref)}</p>
       <p><span>DATE :</span> ${fmtDate(order.date)}</p>
     </div>
   </div>
@@ -114,11 +121,11 @@ export function printITEOrderForm(order) {
     </div>
     <div class="footer-field">
       <span class="footer-label">Site Contact Person :</span>
-      <span class="footer-value">${order.siteContact ?? ''}</span>
+      <span class="footer-value">${escapeHtml(order.siteContact)}</span>
     </div>
     <div class="footer-field">
       <span class="footer-label">Delivery Address :</span>
-      <span class="footer-value">${order.deliveryAddress ?? ''}</span>
+      <span class="footer-value">${escapeHtml(order.deliveryAddress)}</span>
     </div>
     <div class="sig-area">
       <div>
