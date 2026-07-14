@@ -26,6 +26,22 @@ const STATUSES = [
 
 const TEAMS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur', alamin: 'Alamin' };
 
+// Common CCTV-installation defect types — a starting menu, not an exhaustive
+// enum. "type" is still stored as free text, so picking "Other" just swaps
+// in a text input rather than restricting what can be logged.
+const DEFECT_TYPES = [
+  'Cable not secured / exposed',
+  'Conduit damaged or incomplete',
+  'Camera misaligned / poor coverage',
+  'Camera not powered / not functioning',
+  'NVR / recording not functioning',
+  'Network / connectivity issue',
+  'Missing or incorrect labelling',
+  'Housing / enclosure damage',
+  'Workmanship / finishing issue',
+  'Safety hazard',
+];
+
 export default function SnagList({ project }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
@@ -60,6 +76,9 @@ export default function SnagList({ project }) {
     blockNo: '', location: '', type: '', description: '', severity: 'medium',
     assignedTeam: userProfile?.team ?? 'own',
   });
+  // Drives the Defect Type <select>: '' (unselected), one of DEFECT_TYPES, or
+  // 'other' (reveals a free-text input, still saved into form.type).
+  const [typeMode, setTypeMode] = useState('');
 
   useEffect(() => {
     // Sub-cons may only read snags assigned to their team (see firestore.rules),
@@ -144,6 +163,7 @@ export default function SnagList({ project }) {
       toast.success('Snag logged');
       setShowForm(false);
       setForm({ blockNo: '', location: '', type: '', description: '', severity: 'medium', assignedTeam: userProfile?.team ?? 'own' });
+      setTypeMode('');
       resetStagedPhotos();
     } catch { toast.error('Failed to log snag'); }
     finally { setSaving(false); }
@@ -311,8 +331,29 @@ export default function SnagList({ project }) {
                 <div className={styles.formRow}><label className={styles.formLbl}>Location</label>
                   <input className={styles.formInput} placeholder="e.g. Level 3 corridor" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} /></div>
               </div>
-              <div className={styles.formRow}><label className={styles.formLbl}>Defect Type</label>
-                <input className={styles.formInput} placeholder="e.g. Cable not secured, Camera misaligned" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} /></div>
+              <div className={styles.formRow}><label className={styles.formLbl}>Defect Type <span className={styles.opt}>(optional)</span></label>
+                <select
+                  className={styles.formInput}
+                  value={typeMode}
+                  onChange={e => {
+                    const v = e.target.value;
+                    setTypeMode(v);
+                    setForm(f => ({ ...f, type: v === 'other' ? '' : v }));
+                  }}
+                >
+                  <option value="">Select a type…</option>
+                  {DEFECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="other">Other (please specify)</option>
+                </select>
+                {typeMode === 'other' && (
+                  <input
+                    className={styles.formInput} style={{ marginTop: 6 }}
+                    placeholder="Describe the defect type"
+                    value={form.type}
+                    onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+                  />
+                )}
+              </div>
               <div className={styles.formRow}><label className={styles.formLbl}>Description <span style={{color:'var(--red)'}}>*</span></label>
                 <textarea className={styles.formTextarea} rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe the defect in detail" /></div>
               <div className={styles.formRowGroup}>

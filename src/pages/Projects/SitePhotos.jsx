@@ -10,6 +10,14 @@ import { useCamera } from '../../hooks/useCamera';
 import { fileToJpegBlob } from '../../utils/imageUtils';
 import styles from './SitePhotos.module.css';
 
+// "DDMM" for today in Singapore time, e.g. 14 Jul -> "1407".
+const ddmmSG = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', day: '2-digit', month: '2-digit' }).formatToParts(date);
+  const day   = parts.find(p => p.type === 'day').value;
+  const month = parts.find(p => p.type === 'month').value;
+  return `${day}${month}`;
+};
+
 export default function SitePhotos({ project }) {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
@@ -70,6 +78,21 @@ export default function SitePhotos({ project }) {
 
   const handleRetake = async () => { setBlob(null); setPreview(null); await start(); setCamStep('camera'); };
 
+  // Fallback name when the worker leaves "Photo Name" blank — "{Project} -
+  // DDMM - 01", sequence resetting daily per project. Counts today's already-
+  // submitted photos in the already-loaded `photos` state; not a strict
+  // atomic counter (two workers submitting at the same instant could land on
+  // the same number), which is fine for a browsing label, not an ID.
+  const nextAutoName = () => {
+    const ddmm = ddmmSG();
+    const todayCount = photos.filter(p => {
+      const d = p.submittedAt?.toDate?.();
+      return d && ddmmSG(d) === ddmm;
+    }).length;
+    const seq = String(todayCount + 1).padStart(2, '0');
+    return `${project.name} - ${ddmm} - ${seq}`;
+  };
+
   const handleSubmit = async () => {
     if (!blob) { toast.error('Please take a photo first.'); return; }
     setCamStep('uploading');
@@ -79,7 +102,7 @@ export default function SitePhotos({ project }) {
       await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
       const photoUrl = await getDownloadURL(fileRef);
       const payload  = {
-        caption: caption.trim(),
+        caption: caption.trim() || nextAutoName(),
         photoUrl, submittedBy: userProfile.userId, submittedByName: userProfile.name,
         status: 'pending', reviewedBy: null, reviewComment: null,
         submittedAt: Timestamp.now(),
@@ -161,7 +184,8 @@ export default function SitePhotos({ project }) {
             {camStep === 'idle' && (
               <>
                 <div className={styles.formRow}><label className={styles.formLbl}>Photo Name <span className={styles.opt}>(optional)</span></label>
-                  <input className={styles.formInput} placeholder="e.g. Front entrance" value={caption} onChange={e => setCaption(e.target.value)} /></div>
+                  <input className={styles.formInput} placeholder="e.g. Front entrance" value={caption} onChange={e => setCaption(e.target.value)} />
+                  <p className={styles.nameHint}>Leave blank to auto-name it "{nextAutoName()}"</p></div>
                 <button className={styles.cameraBtn} onClick={openCamera}><CameraIcon width={18} /> Open Camera</button>
                 <div className={styles.orDivider}><span>or</span></div>
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFilePick} />
