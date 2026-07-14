@@ -55,6 +55,14 @@ Extract these fields. Use null when a value is not present or unreadable.
   - unit: unit of measure if printed (e.g. pcs, m, roll, box, set, lot), else null
   - unitPrice: unit price in SGD if printed, else null
 Only include rows that are actual delivered items, not headers or totals.`,
+  cert: `You are reading a photo of a worker's certificate, license, pass or permit card
+(e.g. a Singapore Workforce Skills Qualification certificate, a crane/lift operator license,
+a work permit card, a safety course certificate). It may be worn, glare-affected or at an angle.
+Extract these fields. Use null when a value is not present or unreadable.
+- certName: the certificate/course/license/pass title as printed (e.g. "Scissor Lift Operator", "Work Permit")
+- issueDate: the date the certificate/course was completed or issued, in YYYY-MM-DD
+- expiryDate: the expiry/valid-until date, in YYYY-MM-DD (null if the document states no expiry)
+Dates are usually DD/MM/YYYY or "12 Mar 2026" style on Singapore documents — convert carefully.`,
 };
 
 const SCHEMAS = {
@@ -99,6 +107,14 @@ const SCHEMAS = {
       },
     },
   },
+  cert: {
+    type: 'OBJECT',
+    properties: {
+      certName:   { type: 'STRING', nullable: true },
+      issueDate:  { type: 'STRING', nullable: true },
+      expiryDate: { type: 'STRING', nullable: true },
+    },
+  },
 };
 
 exports.extractDocument = onCall(
@@ -125,7 +141,7 @@ exports.extractDocument = onCall(
       throw new HttpsError('invalid-argument', `Unsupported file type: ${mimeType}`);
     }
     if (!PROMPTS[docType]) {
-      throw new HttpsError('invalid-argument', 'docType must be "mc", "receipt" or "do".');
+      throw new HttpsError('invalid-argument', 'docType must be "mc", "receipt", "do" or "cert".');
     }
 
     const body = {

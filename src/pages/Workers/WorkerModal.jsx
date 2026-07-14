@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
-import { PlusIcon, TrashIcon, PaperClipIcon, DocumentIcon } from '@heroicons/react/24/outline';
+import {
+  PlusIcon, TrashIcon, PaperClipIcon, DocumentIcon, CameraIcon,
+  CheckCircleIcon, ExclamationTriangleIcon, UserCircleIcon,
+} from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useTeams, useCertTypes } from '../../hooks/useAppConfig';
-import { compressImage, uploadWorkerDoc } from '../../utils/workerDocs';
+import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/workerDocs';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import styles from './WorkerModal.module.css';
 
-const EMPTY_CERT = { type: '', name: '', expiry: '', url: '', fileName: '' };
+const EMPTY_CERT = { type: '', name: '', issueDate: '', expiry: '', url: '', fileName: '' };
+const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? '') && !Number.isNaN(Date.parse(s));
 
 function certBadge(expiry) {
   if (!expiry) return { label: 'No expiry', color: 'default' };
@@ -29,7 +33,8 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
   const { teams: TEAMS, teamOptions } = useTeams();
   const { certTypes }   = useCertTypes();
   const isAdmin = can('workers:assign-any-team');
-  const certFileRef = useRef(null);
+  const certFileRef  = useRef(null);
+  const photoFileRef = useRef(null);
 
   const [form, setForm] = useState({
     name:        worker?.name        ?? '',
@@ -39,17 +44,23 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
     team:        worker?.team        ?? (isAdmin ? '' : userTeam ?? ''),
     status:      worker?.status      ?? 'active',
     linkedUserId: worker?.linkedUserId ?? '',
+    photoUrl:    worker?.photoUrl    ?? '',
   });
-  const [certs,     setCerts]     = useState(worker?.certs ?? []);
-  const [newCert,   setNewCert]   = useState(EMPTY_CERT);
-  const [showAdd,   setShowAdd]   = useState(false);
-  const [saving,    setSaving]    = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [certs,        setCerts]        = useState(worker?.certs ?? []);
+  const [newCert,       setNewCert]      = useState(EMPTY_CERT);
+  const [showAdd,       setShowAdd]      = useState(false);
+  const [saving,        setSaving]       = useState(false);
+  const [uploading,      setUploading]     = useState(false);
+  const [certOcrState,  setCertOcrState] = useState('none'); // none|working|done|failed
+  const [photoUploading, setPhotoUploading] = useState(false);
 
-  // Users available for import (add mode only)
+  // Users available to link (only fetched while this worker isn't linked to
+  // an account yet — new workers via "Add", or existing ones an admin is
+  // retroactively connecting so the worker can see their own certs/photo
+  // under Profile → My Documents).
   const [userList, setUserList] = useState([]);
   useEffect(() => {
-    if (mode !== 'add') return;
+    if (worker?.linkedUserId) return;
     getDocs(collection(db, 'users')).then(snap => {
       const list = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -57,7 +68,7 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
         .sort((a, b) => a.name?.localeCompare(b.name));
       setUserList(list);
     }).catch(() => {});
-  }, [mode]);
+  }, [worker?.linkedUserId]);
 
   const handleImportUser = (userId) => {
     if (!userId) {
@@ -66,28 +77,63 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
     }
     const u = userList.find(u => u.userId === userId);
     if (!u) return;
-    setForm(f => ({
-      ...f,
-      linkedUserId: u.userId,
-      name:    u.name    || f.name,
-      team:    u.team    || f.team,
-      contact: u.contact || f.contact,
-    }));
+    // Adding a brand-new worker from a user account pre-fills their details;
+    // linking an *existing* worker record just connects the account without
+    // overwriting whatever's already been entered for them.
+    setForm(f => mode === 'add'
+      ? { ...f, linkedUserId: u.userId, name: u.name || f.name, team: u.team || f.team, contact: u.contact || f.contact }
+      : { ...f, linkedUserId: u.userId });
   };
 
   const setF = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
+  const handlePhotoFile = async (e) => {
+    const raw = e.target.files?.[0];
+    e.target.value = '';
+    if (!raw) return;
+    if (!raw.type.startsWith('image/')) { toast.error('Please choose an image file.'); return; }
+    if (raw.size > 10 * 1024 * 1024) { toast.error('File too large (max 10 MB)'); return; }
+    setPhotoUploading(true);
+    try {
+      const file = await compressImage(raw);
+      const url  = await uploadWorkerDoc(file, 'avatars', userProfile.userId);
+      setForm(f => ({ ...f, photoUrl: url }));
+    } catch {
+      toast.error('Upload failed. Try again.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  // Photo → Firebase Storage (for OCR + storage) and, in parallel, Gemini
+  // OCR to prefill type/name/dates. OCR failure never blocks the upload —
+  // it just leaves the fields for manual entry, same fallback pattern as
+  // the MC/receipt wizards.
   const handleCertFile = async (e) => {
     const raw = e.target.files?.[0];
     e.target.value = '';
     if (!raw) return;
     if (raw.size > 10 * 1024 * 1024) { toast.error('File too large (max 10 MB)'); return; }
     setUploading(true);
+    setCertOcrState('working');
     try {
       const file = await compressImage(raw);
-      const url  = await uploadWorkerDoc(file, 'certs', userProfile.userId);
-      setNewCert(c => ({ ...c, url, fileName: raw.name }));
+      const [url, ocr] = await Promise.all([
+        uploadWorkerDoc(file, 'certs', userProfile.userId),
+        extractDocument(file, 'cert').catch(() => null),
+      ]);
+      setNewCert(c => ({
+        ...c,
+        url, fileName: raw.name,
+        type: c.type || (ocr?.certName ? 'other' : c.type),
+        name: c.name || ocr?.certName || '',
+        issueDate: isISO(ocr?.issueDate) ? ocr.issueDate : c.issueDate,
+        expiry: isISO(ocr?.expiryDate) ? ocr.expiryDate : c.expiry,
+      }));
+      setCertOcrState(ocr ? 'done' : 'failed');
+      if (!ocr) toast.error('Could not read the certificate. Please check the details below.');
     } catch {
+      setCertOcrState('none');
       toast.error('Upload failed. Try again.');
     } finally {
       setUploading(false);
@@ -101,6 +147,7 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
     setCerts(c => [...c, {
       type: newCert.type === 'other' ? '' : newCert.type,
       name,
+      issueDate: newCert.issueDate || null,
       expiry: newCert.expiry,
       url: newCert.url,
       fileName: newCert.fileName,
@@ -108,6 +155,7 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
       uploadedBy: newCert.url ? userProfile.userId : null,
     }]);
     setNewCert(EMPTY_CERT);
+    setCertOcrState('none');
     setShowAdd(false);
   };
 
@@ -141,10 +189,10 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
   return (
     <Modal isOpen onClose={onClose} title={mode === 'add' ? 'Add Worker' : 'Edit Worker'} size="md">
 
-      {/* Import from existing user account */}
-      {mode === 'add' && userList.length > 0 && (
+      {/* Import from / link to an existing user account */}
+      {!form.linkedUserId && userList.length > 0 && (
         <div className={styles.importBar}>
-          <label className={styles.importLabel}>Import from user account</label>
+          <label className={styles.importLabel}>{mode === 'add' ? 'Import from user account' : 'Link to user account'}</label>
           <select
             className={styles.importSelect}
             value={form.linkedUserId}
@@ -157,14 +205,35 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
               </option>
             ))}
           </select>
-          {form.linkedUserId && (
-            <p className={styles.importHint}>Name, team and contact pre-filled. Add NRIC, designation and certs below.</p>
-          )}
         </div>
+      )}
+      {form.linkedUserId && (
+        <p className={styles.importHint}>
+          {mode === 'add'
+            ? 'Name, team and contact pre-filled. Add NRIC, designation and certs below.'
+            : `Linked to ${form.linkedUserId} — they'll see their certs and photo under Profile → My Documents.`}
+        </p>
       )}
 
       <div className={styles.section}>
         <h4 className={styles.sectionTitle}>Basic Info</h4>
+
+        {/* Optional worker photo */}
+        <div className={styles.photoRow}>
+          <button type="button" className={styles.photoBtn} onClick={() => photoFileRef.current?.click()} disabled={photoUploading}>
+            {form.photoUrl
+              ? <img src={form.photoUrl} alt="" className={styles.photoImg} />
+              : <UserCircleIcon className={styles.photoPlaceholder} />}
+          </button>
+          <div>
+            <button type="button" className={styles.photoLinkBtn} onClick={() => photoFileRef.current?.click()} disabled={photoUploading}>
+              <CameraIcon width={14} /> {photoUploading ? 'Uploading…' : form.photoUrl ? 'Change photo' : 'Add photo'}
+            </button>
+            <p className={styles.photoHint}>Optional</p>
+          </div>
+          <input ref={photoFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
+        </div>
+
         <div className={styles.grid2}>
           <div className={styles.field}>
             <label className={styles.label}>Full Name *</label>
@@ -211,6 +280,35 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
 
         {showAdd && (
           <div className={styles.certForm}>
+            <button
+              type="button"
+              className={styles.certFileBtn}
+              onClick={() => certFileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading
+                ? 'Reading certificate…'
+                : newCert.fileName
+                  ? <><DocumentIcon width={14} /> {newCert.fileName}</>
+                  : <><PaperClipIcon width={14} /> Take photo / attach file</>}
+            </button>
+            <input
+              ref={certFileRef} type="file" accept="image/*,application/pdf" capture="environment"
+              style={{ display: 'none' }} onChange={handleCertFile}
+            />
+            {certOcrState === 'done' && (
+              <p className={styles.certOcrNote}>
+                <CheckCircleIcon width={14} style={{ color: 'var(--green)', flexShrink: 0 }} />
+                Read from photo — check the details below and fix if needed.
+              </p>
+            )}
+            {certOcrState === 'failed' && (
+              <p className={styles.certOcrNote}>
+                <ExclamationTriangleIcon width={14} style={{ color: 'var(--amber)', flexShrink: 0 }} />
+                Couldn't read the photo — please fill in the details manually.
+              </p>
+            )}
+
             <select
               className={styles.input}
               value={newCert.type}
@@ -228,31 +326,29 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
                 onChange={e => setNewCert(c => ({ ...c, name: e.target.value }))}
               />
             )}
-            <input
-              type="date"
-              className={styles.input}
-              value={newCert.expiry}
-              onChange={e => setNewCert(c => ({ ...c, expiry: e.target.value }))}
-            />
-            <button
-              type="button"
-              className={styles.certFileBtn}
-              onClick={() => certFileRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading
-                ? 'Uploading…'
-                : newCert.fileName
-                  ? <><DocumentIcon width={14} /> {newCert.fileName}</>
-                  : <><PaperClipIcon width={14} /> Attach photo / PDF</>}
-            </button>
-            <input
-              ref={certFileRef} type="file" accept="image/*,application/pdf"
-              style={{ display: 'none' }} onChange={handleCertFile}
-            />
+            <div className={styles.grid2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Course / issue date</label>
+                <input
+                  type="date"
+                  className={styles.input}
+                  value={newCert.issueDate}
+                  onChange={e => setNewCert(c => ({ ...c, issueDate: e.target.value }))}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Expiry date</label>
+                <input
+                  type="date"
+                  className={styles.input}
+                  value={newCert.expiry}
+                  onChange={e => setNewCert(c => ({ ...c, expiry: e.target.value }))}
+                />
+              </div>
+            </div>
             <div className={styles.certFormBtns}>
               <Button size="sm" onClick={addCert} disabled={uploading || !newCert.type || (newCert.type === 'other' && !newCert.name.trim())}>Add</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setShowAdd(false); setNewCert(EMPTY_CERT); }}>Cancel</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setShowAdd(false); setNewCert(EMPTY_CERT); setCertOcrState('none'); }}>Cancel</Button>
             </div>
           </div>
         )}
@@ -268,7 +364,7 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
                   <div className={styles.certInfo}>
                     <span className={styles.certName}>{c.name}</span>
                     <span className={styles.certExpiry}>
-                      {c.expiry ? `Exp: ${c.expiry}` : 'No expiry'}
+                      {c.issueDate ? `Issued: ${c.issueDate} · ` : ''}{c.expiry ? `Exp: ${c.expiry}` : 'No expiry'}
                       {c.url && <a href={c.url} target="_blank" rel="noreferrer" className={styles.certFileLink}> · View file</a>}
                     </span>
                   </div>

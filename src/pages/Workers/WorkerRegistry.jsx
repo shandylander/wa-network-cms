@@ -147,7 +147,14 @@ export default function WorkerRegistry() {
                   className={[styles.row, canAdd ? styles.rowClick : ''].join(' ')}
                   onClick={() => canAdd && setModal({ mode: 'edit', worker: w })}
                 >
-                  <td className={styles.tdName}>{w.name}</td>
+                  <td className={styles.tdName}>
+                    <span className={styles.nameCell}>
+                      {w.photoUrl
+                        ? <img src={w.photoUrl} alt="" className={styles.avatarImg} />
+                        : <span className={styles.avatarInitial}>{w.name?.charAt(0) ?? '?'}</span>}
+                      {w.name}
+                    </span>
+                  </td>
                   <td className={styles.hideS}>{w.nric || '—'}</td>
                   <td className={styles.hideS}>{w.designation || '—'}</td>
                   <td><span className={styles.teamTag}>{TEAMS[w.team] ?? w.team ?? '—'}</span></td>
