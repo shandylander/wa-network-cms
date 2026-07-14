@@ -74,6 +74,33 @@ export const getSurveyLabel = (survey) =>
 export const capitalize = (str) =>
   str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
+// Turns a free-text address into a Google Maps directions link. This is the
+// most broadly compatible option (works on desktop and mobile, and Android's
+// "open with" chooser still offers Waze/other installed nav apps against a
+// maps.google.com link) — there's no single URL scheme that reliably launches
+// an arbitrary nav app across iOS + Android + desktop.
+export const directionsUrl = (address) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+
+// "14:30" -> "2:30 PM" — for displaying a stored HH:mm time-of-day string.
+export const formatTime12 = (hhmm) => {
+  if (!hhmm) return '';
+  const [h, m] = hhmm.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+};
+
+// Whole days between two YYYY-MM-DD (or Date/Timestamp) values, inclusive of
+// both ends — e.g. Mon->Wed is a 3-day job.
+export const daySpan = (start, end) => {
+  if (!start || !end) return null;
+  const s = start?.toDate ? start.toDate() : new Date(start);
+  const e = end?.toDate ? end.toDate() : new Date(end);
+  const days = Math.round((e.setHours(0,0,0,0) - s.setHours(0,0,0,0)) / 86400000) + 1;
+  return days > 0 ? days : null;
+};
+
 export const greet = () => {
   const h = Number(new Intl.DateTimeFormat('en-GB', { ...SGT, hour: '2-digit', hour12: false }).format(new Date()));
   if (h < 12) return 'Good morning';

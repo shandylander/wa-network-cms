@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, getDocs, updateDoc, query, where, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import {
   ArrowLeftIcon, CubeIcon, CheckCircleIcon,
   BuildingOfficeIcon, TableCellsIcon, ViewColumnsIcon,
   PlusIcon, TrashIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, LockClosedIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useTeams, useWorkTypes } from '../../hooks/useAppConfig';
-import { formatDate, getOverallProgress, toDateInputSG } from '../../utils/helpers';
+import { formatDate, formatTimeAgo, getOverallProgress, toDateInputSG, daySpan, directionsUrl, formatTime12 } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
 import Card, { CardHeader } from '../../components/UI/Card';
@@ -37,7 +38,7 @@ import styles from './ProjectDetail.module.css';
 // id, '<sub>')` call in this folder).
 const PROJECT_SUBCOLLECTIONS = [
   'blocks', 'documents', 'permits', 'incidents', 'toolboxMeetings',
-  'snags', 'sitePhotos', 'claims', 'deliveryOrders', 'materialOrders',
+  'snags', 'sitePhotos', 'claims', 'deliveryOrders', 'materialOrders', 'notes',
 ];
 
 async function deleteProjectCascade(projectId) {
@@ -157,6 +158,98 @@ function MilestoneSection({ project, setProject, userProfile }) {
           </button>
         </div>
       )}
+    </Card>
+  );
+}
+
+// A timestamped, append-only discussion/change log — "who said/changed what,
+// when," separate from Milestones (structured checklist) and Description
+// (static scope-of-work). Deliberately no editing once posted: firestore.rules
+// denies update entirely, and only owner/manager can delete (moderation, not
+// general editing) — keeps the log trustworthy as a running record.
+function NotesSection({ project, userProfile }) {
+  const { toast } = useToast();
+  const { can }   = usePermissions();
+  const canDelete = can('manage:blocks');
+  const [notes,   setNotes]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [input,   setInput]   = useState('');
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'projects', project.id, 'notes'), orderBy('createdAt', 'desc')));
+        if (!cancelled) setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch {
+        if (!cancelled) toast.error('Failed to load notes');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
+  const post = async () => {
+    if (!input.trim()) return;
+    setPosting(true);
+    try {
+      const data = { text: input.trim(), authorId: userProfile.userId, authorName: userProfile.name, createdAt: serverTimestamp() };
+      const ref = await addDoc(collection(db, 'projects', project.id, 'notes'), data);
+      setNotes(n => [{ id: ref.id, ...data, createdAt: Timestamp.now() }, ...n]);
+      setInput('');
+    } catch {
+      toast.error('Failed to post note');
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const remove = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'projects', project.id, 'notes', id));
+      setNotes(n => n.filter(x => x.id !== id));
+    } catch {
+      toast.error('Failed to delete note');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader title="Notes" subtitle="Timestamped updates and discussion — visible to everyone on this project" />
+      <div className={styles.noteAdd}>
+        <textarea
+          className={styles.noteInput}
+          rows={2}
+          placeholder="Post an update…"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+        />
+        <button className={styles.noteAddBtn} onClick={post} disabled={posting || !input.trim()}>
+          <PlusIcon width={14} /> Post
+        </button>
+      </div>
+      <div className={styles.noteList}>
+        {loading && <p className={styles.msEmpty}>Loading…</p>}
+        {!loading && notes.length === 0 && <p className={styles.msEmpty}>No notes yet. Post the first update.</p>}
+        {notes.map(n => (
+          <div key={n.id} className={styles.noteRow}>
+            <div className={styles.noteMeta}>
+              <span className={styles.noteAuthor}>{n.authorName}</span>
+              <span className={styles.noteTime}>{formatTimeAgo(n.createdAt)}</span>
+              {canDelete && (
+                <button className={styles.noteRemove} onClick={() => remove(n.id)} title="Delete note">
+                  <TrashIcon width={12} />
+                </button>
+              )}
+            </div>
+            <p className={styles.noteText}>{n.text}</p>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -428,6 +521,7 @@ export default function ProjectDetail() {
       && (t !== 'incidents' || can('incidents:view'))
       && (t !== 'serviceReports' || can('manage:service-reports') || can('jobs:assign')));
   const isCctv  = ['pcs', 'cctv'].includes(workShape);
+  const isPcs   = workShape === 'pcs'; // gates the $/block stage-rate display
   const total   = blocks.length;
   const stage2  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3===100 && b.fix4===100).length;
   const stage1  = blocks.filter(b => b.fix1===100 && b.fix2===100 && b.fix3 < 100).length;
@@ -472,7 +566,14 @@ export default function ProjectDetail() {
           )}
         </div>
         <h1 className={styles.name}>{project.name}</h1>
-        <p className={styles.client}>{project.client}{project.location ? ` · ${project.location}` : ''}</p>
+        <p className={styles.client}>
+          {project.client}
+          {project.location && (
+            <> · <a href={directionsUrl(project.location)} target="_blank" rel="noreferrer" className={styles.locationLink} title="Open directions">
+              <MapPinIcon width={12} className={styles.locationIcon} /> {project.location}
+            </a></>
+          )}
+        </p>
       </div>
 
       {editingProject && (
@@ -552,19 +653,32 @@ export default function ProjectDetail() {
           )}
           <Card>
             <CardHeader title="Project Details" />
+            {project.description && <p className={styles.description}>{project.description}</p>}
             <div className={styles.detailList}>
-              {[
-                ['Client',     project.client],
-                ['Type',       project.type],
-                ['Location',   project.location],
-                ['Start Date', formatDate(project.startDate)],
-              ].filter(([, v]) => v).map(([k, v]) => (
-                <div key={k} className={styles.detailRow}>
-                  <span className={styles.detailKey}>{k}</span>
-                  <span className={styles.detailVal}>{v}</span>
+              <div className={styles.detailRow}><span className={styles.detailKey}>Client</span><span className={styles.detailVal}>{project.client}</span></div>
+              {project.type && <div className={styles.detailRow}><span className={styles.detailKey}>Type</span><span className={styles.detailVal}>{project.type}</span></div>}
+              {project.location && (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailKey}>Location</span>
+                  <a href={directionsUrl(project.location)} target="_blank" rel="noreferrer" className={styles.locationLink} title="Open directions">
+                    <MapPinIcon width={12} className={styles.locationIcon} /> {project.location}
+                  </a>
                 </div>
-              ))}
-              {canViewMoney && project.rates?.s1 > 0 && <>
+              )}
+              {project.startDate && (
+                <div className={styles.detailRow}>
+                  <span className={styles.detailKey}>Start Date</span>
+                  <span className={styles.detailVal}>{formatDate(project.startDate)}{project.startTime ? ` at ${formatTime12(project.startTime)}` : ''}</span>
+                </div>
+              )}
+              {daySpan(project.startDate, project.endDate) > 1 && <>
+                <div className={styles.detailRow}><span className={styles.detailKey}>End Date</span><span className={styles.detailVal}>{formatDate(project.endDate)}</span></div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailKey}>Duration</span>
+                  <span className={styles.detailVal}><span className={styles.multiDayBadge}>{daySpan(project.startDate, project.endDate)} days</span></span>
+                </div>
+              </>}
+              {canViewMoney && isPcs && project.rates?.s1 > 0 && <>
                 <div className={styles.detailRow}><span className={styles.detailKey}>Stage 1 Rate</span><span className={styles.detailVal}>${project.rates.s1?.toLocaleString()}/block</span></div>
                 <div className={styles.detailRow}><span className={styles.detailKey}>Stage 2 Rate</span><span className={styles.detailVal}>${project.rates.s2?.toLocaleString()}/block</span></div>
                 <div className={styles.detailRow}><span className={styles.detailKey}>Stage 3 Rate</span><span className={styles.detailVal}>${project.rates.s3?.toLocaleString()}/block</span></div>
@@ -574,6 +688,7 @@ export default function ProjectDetail() {
           <AssignedTeamsSection project={project} setProject={setProject} />
           <TeamStartDatesSection project={project} setProject={setProject} blocks={blocks} userProfile={userProfile} />
           <MilestoneSection project={project} setProject={setProject} userProfile={userProfile} />
+          <NotesSection project={project} userProfile={userProfile} />
         </div>
       )}
 

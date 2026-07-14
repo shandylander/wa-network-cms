@@ -44,6 +44,16 @@
 .cardClient { font-size: 13px; color: var(--text-sec); margin: 0 0 14px; }
 .cardMeta   { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
 .cardArrow  { font-size: 13px; font-weight: 600; color: var(--red); }
+.cardLocation {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: var(--text-muted); text-decoration: none; width: fit-content;
+}
+.cardLocation:hover { color: var(--red); text-decoration: underline; }
+.multiDayBadge {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  background: var(--blue-bg); color: var(--blue);
+  border-radius: 20px; font-size: 10px; font-weight: 700;
+}
 
 /* Empty state */
 .empty { text-align: center; padding: 80px 24px; color: var(--text-sec); }
@@ -66,7 +76,9 @@
 .form { display: flex; flex-direction: column; }
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 4px; }
 .field { display: flex; flex-direction: column; }
+.fieldFull { grid-column: 1 / -1; }
 .label { font-size: 12px; font-weight: 500; color: var(--text-sec); margin-bottom: 5px; }
+.hint  { font-weight: 400; color: var(--text-muted); }
 .input {
   height: 40px;
   padding: 0 12px;
@@ -80,6 +92,19 @@
   font-family: inherit;
 }
 .input:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
+.textarea {
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--card);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  resize: vertical;
+}
+.textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-light); }
 .formActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 @media (max-width: 600px) {

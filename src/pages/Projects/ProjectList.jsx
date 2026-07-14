@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, getDocs, addDoc, query, where, Timestamp } from 'firebase/firestore';
-import { PlusIcon, FolderOpenIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, FolderOpenIcon, Cog6ToothIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useWorkTypes } from '../../hooks/useAppConfig';
-import { formatDate } from '../../utils/helpers';
+import { formatDate, daySpan, directionsUrl } from '../../utils/helpers';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
 import Modal from '../../components/UI/Modal';
@@ -15,14 +15,18 @@ import WorkTypeManager from './WorkTypeManager';
 import styles from './ProjectList.module.css';
 
 const STATUS_COLOR = { active: 'green', upcoming: 'amber', completed: 'default' };
-const EMPTY_FORM = { name: '', customerName: '', type: 'CCTV Installation', projectType: 'cctv', location: '', status: 'upcoming', startDate: '' };
+const EMPTY_FORM = {
+  name: '', customerName: '', type: 'CCTV Installation', projectType: 'cctv',
+  location: '', status: 'upcoming', description: '',
+  startDate: '', startTime: '', endDate: '',
+};
 
 export default function ProjectList() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const { can }   = usePermissions();
-  const { workTypes, saveWorkTypes } = useWorkTypes();
+  const { workTypes, saveWorkTypes, getShape } = useWorkTypes();
   const [projects, setProjects] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -95,7 +99,11 @@ export default function ProjectList() {
         client: customerName,
         customerId,
         startDate: form.startDate ? new Date(form.startDate) : null,
-        rates: { s1: 0, s2: 0, s3: 0 },
+        endDate: form.endDate ? new Date(form.endDate) : null,
+        // Stage rates ($/block) only mean anything for PCS-shape (block +
+        // Certis-claim) projects — no point carrying a zeroed rates object on
+        // every other project type.
+        ...(getShape(form.projectType) === 'pcs' ? { rates: { s1: 0, s2: 0, s3: 0 } } : {}),
         assignedTeams: [],
         createdAt: new Date(),
         createdBy: userProfile.userId,
@@ -146,8 +154,23 @@ export default function ProjectList() {
               <h2 className={styles.cardName}>{p.name}</h2>
               <p className={styles.cardClient}>{p.client}</p>
               <div className={styles.cardMeta}>
-                {p.location && <span>{p.location}</span>}
-                {p.startDate && <span>Started {formatDate(p.startDate)}</span>}
+                {p.location && (
+                  <a
+                    href={directionsUrl(p.location)}
+                    target="_blank" rel="noreferrer"
+                    className={styles.cardLocation}
+                    onClick={e => e.stopPropagation()}
+                    title="Open directions"
+                  >
+                    <MapPinIcon width={12} /> {p.location}
+                  </a>
+                )}
+                <span>
+                  {p.startDate && `Started ${formatDate(p.startDate)}`}
+                  {daySpan(p.startDate, p.endDate) > 1 && (
+                    <span className={styles.multiDayBadge}>{daySpan(p.startDate, p.endDate)} days</span>
+                  )}
+                </span>
               </div>
               <div className={styles.cardArrow}>View Project →</div>
             </div>
@@ -187,8 +210,8 @@ export default function ProjectList() {
               <input className={styles.input} value={form.type} onChange={set('type')} placeholder="e.g. CCTV Installation" />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Location</label>
-              <input className={styles.input} value={form.location} onChange={set('location')} placeholder="e.g. Woodlands" />
+              <label className={styles.label}>Location <span className={styles.hint}>(address — workers can tap it for directions)</span></label>
+              <input className={styles.input} value={form.location} onChange={set('location')} placeholder="e.g. 21 Woodlands Close, Singapore 737854" />
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Status</label>
@@ -201,6 +224,19 @@ export default function ProjectList() {
             <div className={styles.field}>
               <label className={styles.label}>Start Date</label>
               <input type="date" className={styles.input} value={form.startDate} onChange={set('startDate')} />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Start Time <span className={styles.hint}>(optional)</span></label>
+              <input type="time" className={styles.input} value={form.startTime} onChange={set('startTime')} />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>End Date <span className={styles.hint}>(optional — for multi-day jobs)</span></label>
+              <input type="date" className={styles.input} min={form.startDate || undefined} value={form.endDate} onChange={set('endDate')} />
+            </div>
+            <div className={[styles.field, styles.fieldFull].join(' ')}>
+              <label className={styles.label}>Description <span className={styles.hint}>(optional — scope of work)</span></label>
+              <textarea className={styles.textarea} rows={3} value={form.description} onChange={set('description')}
+                placeholder="What's the job? e.g. Install CCTV cameras across 8 floors, replace NVR, cable management in server room" />
             </div>
           </div>
           <div className={styles.formActions}>
