@@ -229,13 +229,29 @@ service cloud.firestore {
         allow read:  if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
         allow write: if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
       }
+
+      // Notes — a timestamped discussion/change log, same audience as
+      // sitePhotos (internal + assigned subcons). Append-only: no edits
+      // once posted, and only owner/manager can remove a note (moderation,
+      // not general editing) — keeps the log trustworthy as a running record.
+      match /notes/{id} {
+        allow read:   if anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId));
+        allow create: if (anyStaff() || ((isSubconAdmin() || isSubcon()) && assignedToProject(projectId)))
+          && request.resource.data.authorId == uid();
+        allow update: if false;
+        allow delete: if ownerOrManager();
+      }
     }
 
     // ── WORKERS ────────────────────────────────────────────────────────────
     match /workers/{workerId} {
+      // linkedUserId lets the worker's own login see their own record (certs,
+      // photo) from Profile's "My Documents" — set when an admin links an
+      // existing worker to a user account (see WorkerModal.jsx).
       allow read: if signedIn() && (
         ownerOrManager() || isSupervisor() ||
-        (isSubconAdmin() && resource.data.team == myTeam())
+        (isSubconAdmin() && resource.data.team == myTeam()) ||
+        resource.data.linkedUserId == uid()
       );
       allow create: if ownerOrManager()
         || (isSubconAdmin() && request.resource.data.team == myTeam());
@@ -362,12 +378,13 @@ service cloud.firestore {
       allow read: if hasPerm('pettycash:approve')
         || resource.data.userId == uid();
       allow create: if signedIn() && (request.resource.data.userId == uid() || ownerOrManager());
-      // Submitters may correct their own claim while it is still pending,
-      // but cannot change its owner or self-approve it.
+      // Submitters may correct their own claim, or withdraw it, while it is
+      // still pending — same shape as leaveApplications above — but cannot
+      // change its owner, self-approve it, or touch it once reviewed.
       allow update: if ownerOrManager()
         || (resource.data.userId == uid()
             && resource.data.status == 'pending'
-            && request.resource.data.status == 'pending'
+            && request.resource.data.status in ['pending', 'cancelled']
             && request.resource.data.userId == resource.data.userId);
       allow delete: if ownerOrManager();
     }
