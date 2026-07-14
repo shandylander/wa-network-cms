@@ -95,8 +95,20 @@ export default function JobDetail() {
       await updateDoc(doc(db, 'serviceJobs', job.id), patch);
       setJob(j => ({ ...j, ...patch }));
       toast.success('Checked in');
-    } catch {
-      toast.error('Check-in failed — check your connection and try again.');
+    } catch (err) {
+      // Surface the real Firebase error code instead of a generic message —
+      // "permission-denied" (rules/assignment issue) and "unavailable"/
+      // "deadline-exceeded" (actual connectivity) need very different fixes,
+      // and the old catch-all made them indistinguishable from the field.
+      console.error('Check-in failed', err);
+      const code = err?.code;
+      if (code === 'permission-denied') {
+        toast.error("Check-in failed — you're not authorised for this job. Contact your office.");
+      } else if (code === 'unavailable' || code === 'deadline-exceeded') {
+        toast.error('Check-in failed — no network connection. Try again when you have signal.');
+      } else {
+        toast.error(`Check-in failed${code ? ` (${code})` : ''} — please try again.`);
+      }
     } finally {
       setCheckingIn(false);
     }
