@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from './NotificationBell';
+import ThemeToggle from '../UI/ThemeToggle';
 import styles from './Header.module.css';
 
 const TITLES = {
@@ -33,6 +34,7 @@ export default function Header() {
         <h1 className={styles.title}>{title}</h1>
       </div>
       <div className={styles.right}>
+        <ThemeToggle className={styles.themeToggle} />
         <NotificationBell />
         <div className={styles.user}>
           <div className={styles.avatar}>{userProfile?.name?.charAt(0) ?? '?'}</div>

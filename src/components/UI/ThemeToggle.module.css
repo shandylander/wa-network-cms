@@ -1,0 +1,35 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.btn:hover { color: var(--text-sec); }
+
+.btnActive {
+  background: var(--card);
+  color: var(--red);
+  box-shadow: var(--shadow-sm);
+}
+.btnActive:hover { color: var(--red); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+}

@@ -6,6 +6,7 @@ import Card, { CardHeader } from '../components/UI/Card';
 import Badge from '../components/UI/Badge';
 import Button from '../components/UI/Button';
 import PinBoxes from '../components/UI/PinBoxes';
+import ThemeToggle from '../components/UI/ThemeToggle';
 import styles from './Profile.module.css';
 
 export default function Profile() {
@@ -104,6 +105,12 @@ export default function Profile() {
               Update PIN
             </Button>
           </form>
+        </Card>
+
+        {/* Appearance */}
+        <Card style={{ gridColumn: '1 / -1' }}>
+          <CardHeader title="Appearance" subtitle="Choose how CentralOps looks on this device" />
+          <ThemeToggle />
         </Card>
       </div>
     </div>

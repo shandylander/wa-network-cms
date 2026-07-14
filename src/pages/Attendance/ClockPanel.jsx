@@ -220,7 +220,7 @@ export default function ClockPanel() {
 
       {isClockedIn && (
         <div className={styles.statusBox}>
-          <div className={[styles.statusDot, styles.dotGreen].join(' ')} />
+          <div className={[styles.statusDot, styles.dotGreen, 'pulseDot'].join(' ')} />
           <p className={styles.statusLabel}>Clocked in at <strong>{fmtTime(record.clockIn.time)}</strong></p>
           {record.clockIn.address && (
             <a href={mapsLink(record.clockIn.lat, record.clockIn.lng)} target="_blank" rel="noreferrer" className={styles.locLink}>

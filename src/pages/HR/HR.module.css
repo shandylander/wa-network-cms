@@ -37,7 +37,7 @@
 .formRow       { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .formRowGroup  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .formLbl       { font-size: 12px; font-weight: 600; color: var(--text-sec); }
-.formInput     { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.formInput     { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--card); }
 .formTextarea  { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); resize: vertical; font-family: inherit; width: 100%; box-sizing: border-box; }
 .optional      { font-weight: 400; color: var(--text-sec); }
 .formCheck     { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
@@ -47,8 +47,8 @@
 /* Type selector */
 .typeSelector { display: flex; flex-wrap: wrap; gap: 6px; }
 .typeBtn      { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all .15s; }
-.typeBtn:hover { border-color: var(--navy); color: var(--navy); }
-.typeBtnActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+.typeBtn:hover { border-color: var(--text); color: var(--text); }
+.typeBtnActive { background: var(--navy); border-color: var(--text); color: #fff; }
 
 /* Leave type badges */
 .typeBadge   { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .04em; flex-shrink: 0; }
@@ -56,7 +56,7 @@
 .typeMC      { background: var(--green-bg);  color: var(--green); }
 .typeNPL     { background: var(--amber-bg);  color: var(--amber); }
 .typeOIL     { background: var(--purple-bg); color: var(--purple); }
-.typeCCL     { background: var(--navy-bg);   color: var(--navy); }
+.typeCCL     { background: var(--cyan-bg);   color: var(--cyan); }
 .typeHL      { background: var(--red-light); color: var(--red); }
 
 /* Status badges */
@@ -92,12 +92,12 @@
 .cancelAppBtn  { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 4px 7px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; }
 
 /* Apply modal */
-.applyModal    { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,.18); max-height: 90vh; overflow-y: auto; }
+.applyModal    { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; }
 .mcLink        { font-size: 12px; color: var(--blue); text-decoration: none; }
 
 /* MC/HL certificate upload (MyLeave apply modal) */
 .uploadCertBtn  { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 6px; cursor: pointer; width: fit-content; }
-.uploadCertBtn:hover { border-color: var(--navy); color: var(--navy); }
+.uploadCertBtn:hover { border-color: var(--text); color: var(--text); }
 .uploadCertDone { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--green); margin-top: 6px; }
 
 /* ── Approval Queue ─────────────────────────────────────────────── */
@@ -105,9 +105,9 @@
 .queueToolbar    { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .queueFilterBar  { display: flex; gap: 6px; flex-wrap: wrap; }
 .queueFilter     { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
-.queueFilterActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+.queueFilterActive { background: var(--navy); border-color: var(--text); color: #fff; }
 .exportCsvBtn    { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
-.exportCsvBtn:hover { border-color: var(--navy); color: var(--navy); }
+.exportCsvBtn:hover { border-color: var(--text); color: var(--text); }
 
 .queueList       { display: flex; flex-direction: column; gap: 8px; }
 .queueCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
@@ -124,7 +124,7 @@
 .rejectBtn   { background: none; border: 1px solid var(--red); color: var(--red); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 .approveBtn:disabled, .rejectBtn:disabled { opacity: .6; cursor: default; }
 
-.rejectModal       { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+.rejectModal       { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); }
 .rejectSubtitle    { font-size: 13px; color: var(--text-sec); margin-bottom: 12px; }
 .rejectConfirmBtn  { background: var(--red); color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
@@ -138,15 +138,15 @@
 .settingsTable td  { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .tdCenter          { text-align: center; }
 .tdAction          { text-align: right; }
-.dirtyRow td       { background: #fffbf0; }
+.dirtyRow td       { background: var(--amber-bg); }
 .staffName         { font-weight: 600; color: var(--text); }
 .staffId           { font-size: 11px; color: var(--text-sec); margin-top: 1px; }
 .rolePill          { font-size: 11px; background: var(--surface); color: var(--text-sec); padding: 2px 8px; border-radius: 4px; }
 .teamCell          { font-size: 12px; color: var(--text-sec); }
 .entInput          { width: 64px; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 14px; font-weight: 700; text-align: center; color: var(--text); background: var(--card); }
-.entInput:focus    { border-color: var(--navy); outline: none; }
+.entInput:focus    { border-color: var(--text); outline: none; }
 .saveEntBtn        { background: var(--surface); border: 1px solid var(--border); color: var(--text-sec); padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
-.saveEntBtnDirty   { background: var(--navy); border-color: var(--navy); color: #fff; }
+.saveEntBtnDirty   { background: var(--navy); border-color: var(--text); color: #fff; }
 .saveEntBtn:disabled { opacity: .6; cursor: default; }
 
 /* ── Salary Config ──────────────────────────────────────────────── */
@@ -166,11 +166,11 @@
 .cfgListLabel      { font-size: 12px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
 .cfgListRow        { display: flex; gap: 8px; align-items: center; }
 .cfgListLabel2     { font-size: 12px; color: var(--text-sec); flex: 1; }
-.cfgListInput      { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 13px; color: var(--text); background: #fff; width: 120px; }
+.cfgListInput      { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 13px; color: var(--text); background: var(--card); width: 120px; }
 .cfgRemoveBtn      { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; padding: 4px; }
 .cfgRemoveBtn:hover { color: var(--red); }
 .cfgAddRowBtn      { background: none; border: 1px dashed var(--border); color: var(--text-sec); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.cfgAddRowBtn:hover { border-color: var(--navy); color: var(--navy); }
+.cfgAddRowBtn:hover { border-color: var(--text); color: var(--text); }
 .cfgToggle         { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
 .cfgSaveBtn        { background: var(--red); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 16px; }
 .cfgSaveBtn:disabled { opacity: .6; cursor: default; }
@@ -179,7 +179,7 @@
 /* ── Payslip Generator ──────────────────────────────────────────── */
 .payslipWrap       { }
 .payslipToolbar    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-.monthPicker       { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.monthPicker       { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--card); }
 .genBtn            { background: var(--navy); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
 .finaliseBtn       { background: var(--green); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .printBtn          { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
@@ -190,7 +190,7 @@
 .payslipTable td   { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .payslipTable tr:last-child td { border-bottom: none; }
 .tdRight           { text-align: right; font-variant-numeric: tabular-nums; }
-.netPayCell        { font-weight: 700; color: var(--navy); }
+.netPayCell        { font-weight: 700; color: var(--text); }
 
 .payslipCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; max-width: 560px; }
 .payslipCardTitle  { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
@@ -198,7 +198,7 @@
 .payslipSection    { margin-bottom: 12px; }
 .payslipSectionHd  { font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .payslipLine       { display: flex; justify-content: space-between; font-size: 13px; color: var(--text); padding: 3px 0; }
-.payslipLineBold   { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--navy); padding: 8px 0; border-top: 2px solid var(--border); margin-top: 4px; }
+.payslipLineBold   { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--text); padding: 8px 0; border-top: 2px solid var(--border); margin-top: 4px; }
 .payslipAmtGreen   { color: var(--green); font-weight: 600; }
 .payslipAmtRed     { color: var(--red); font-weight: 600; }
 

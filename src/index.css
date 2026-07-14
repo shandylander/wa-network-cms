@@ -1,4 +1,16 @@
 /* ─── Design Tokens ─────────────────────────────────────────────────────── */
+/* Three-layer theme strategy:
+   1. `:root` — light values (default) + `@media (prefers-color-scheme: dark)`
+      redefines them for users whose OS is set to dark ("system" mode).
+   2. `:root[data-theme="dark"]` — in-app toggle forcing dark, overrides #1.
+   3. `:root[data-theme="light"]` — in-app toggle forcing light, must beat
+      the media query, so it's declared after it and uses the same selector
+      specificity as #2 (attribute selector on :root). See ThemeContext.jsx —
+      it stamps/removes `data-theme` on <html> based on the saved preference.
+   PRINT NOTE: none of these tokens may be redefined inside `@media print`.
+   The payslip HTML (src/utils/salaryUtils.js) and the Service Report print
+   area (Jobs.module.css) render on white paper regardless of theme and are
+   deliberately excluded from this system — see those files. */
 :root {
   /* Brand */
   --red: #CC0000;
@@ -31,6 +43,8 @@
   --blue-bg: #e8f0fb;
   --purple: #6d3fa8;
   --purple-bg: #f0ebfc;
+  --cyan: #0e8aa8;
+  --cyan-bg: #e0f5fa;
 
   /* Geometry */
   --radius-sm: 6px;
@@ -43,11 +57,145 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
 
+  /* Brand-tinted hover glow — used by .hoverLift (see Motion utilities) */
+  --glow-hover: 0 8px 24px -12px rgba(204, 0, 0, 0.22);
+
   /* Layout */
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --sidebar-width: 220px;
   --header-height: 56px;
   --mobile-nav-height: 56px;
+
+  color-scheme: light;
+}
+
+/* ── Layer 1: OS preference ("system" mode) ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --red: #ff5252;
+    --red-dark: #ff7a7a;
+    --red-hover: #ff6b6b;
+    --red-light: #3a1420;
+    --navy: #1e1e30;
+    --navy-mid: #26263e;
+    --navy-light: rgba(255, 255, 255, 0.07);
+    --navy-hover: rgba(255, 255, 255, 0.12);
+    --navy-bg: #24243a;
+
+    --surface: #101019;
+    --card: #1a1a2a;
+    --border: #2c2b3e;
+    --border-light: #232338;
+
+    --text: #ecebf3;
+    --text-sec: #a6a2b6;
+    --text-muted: #6f6b80;
+
+    --green: #3ecf8e;
+    --green-bg: #10301f;
+    --amber: #f0a943;
+    --amber-bg: #33260e;
+    --blue: #6aa9e8;
+    --blue-bg: #14263c;
+    --purple: #b48ae8;
+    --purple-bg: #291b3d;
+    --cyan: #38d0ee;
+    --cyan-bg: #0c2e38;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+
+    --glow-hover: 0 8px 24px -12px rgba(255, 82, 82, 0.28);
+
+    color-scheme: dark;
+  }
+}
+
+/* ── Layer 2: in-app toggle → dark (overrides OS preference either way) ── */
+:root[data-theme="dark"] {
+  --red: #ff5252;
+  --red-dark: #ff7a7a;
+  --red-hover: #ff6b6b;
+  --red-light: #3a1420;
+  --navy: #1e1e30;
+  --navy-mid: #26263e;
+  --navy-light: rgba(255, 255, 255, 0.07);
+  --navy-hover: rgba(255, 255, 255, 0.12);
+  --navy-bg: #24243a;
+
+  --surface: #101019;
+  --card: #1a1a2a;
+  --border: #2c2b3e;
+  --border-light: #232338;
+
+  --text: #ecebf3;
+  --text-sec: #a6a2b6;
+  --text-muted: #6f6b80;
+
+  --green: #3ecf8e;
+  --green-bg: #10301f;
+  --amber: #f0a943;
+  --amber-bg: #33260e;
+  --blue: #6aa9e8;
+  --blue-bg: #14263c;
+  --purple: #b48ae8;
+  --purple-bg: #291b3d;
+  --cyan: #38d0ee;
+  --cyan-bg: #0c2e38;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+
+  --glow-hover: 0 8px 24px -12px rgba(255, 82, 82, 0.28);
+
+  color-scheme: dark;
+}
+
+/* ── Layer 3: in-app toggle → light (must beat the OS media query in both
+   directions, so it fully restores the original light values). ── */
+:root[data-theme="light"] {
+  --red: #CC0000;
+  --red-dark: #a00000;
+  --red-hover: #b30000;
+  --red-light: #fff0f0;
+  --navy: #1a1a2e;
+  --navy-mid: #16213e;
+  --navy-light: rgba(255, 255, 255, 0.07);
+  --navy-hover: rgba(255, 255, 255, 0.12);
+  --navy-bg: #eaebf1;
+
+  --surface: #f5f6f8;
+  --card: #ffffff;
+  --border: #e2e6ed;
+  --border-light: #f0f2f5;
+
+  --text: #1a2233;
+  --text-sec: #5a6577;
+  --text-muted: #8a96a3;
+
+  --green: #1a8a5a;
+  --green-bg: #e8f7f1;
+  --amber: #d97b00;
+  --amber-bg: #fff7e6;
+  --blue: #1a5fa8;
+  --blue-bg: #e8f0fb;
+  --purple: #6d3fa8;
+  --purple-bg: #f0ebfc;
+  --cyan: #0e8aa8;
+  --cyan-bg: #e0f5fa;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
+
+  --glow-hover: 0 8px 24px -12px rgba(204, 0, 0, 0.22);
+
+  color-scheme: light;
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
@@ -98,6 +246,16 @@ input, select, textarea {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+/* ─── Typography scale ───────────────────────────────────────────────────── */
+/* Consistent step scale + a touch of negative tracking on the larger sizes so
+   headings feel deliberate rather than just "bold body text". Component-level
+   CSS modules still own their own font-size per element — this just gives
+   headings a shared baseline when they don't override letter-spacing. */
+h1, h2, h3 { letter-spacing: -0.01em; }
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 20px; font-weight: 700; }
+h3 { font-size: 16px; font-weight: 600; }
+
 /* ─── Utility ────────────────────────────────────────────────────────────── */
 .sr-only {
   position: absolute;
@@ -107,4 +265,62 @@ input, select, textarea {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ─── Motion utilities ───────────────────────────────────────────────────── */
+/* Shared, sparingly-applied motion primitives. Everything here is disabled
+   under prefers-reduced-motion — see the block at the bottom of this
+   section. Pairs with src/hooks/useReveal.js (scroll-reveal) and the
+   existing src/hooks/useCountUp.js (KPI count-up). */
+
+/* Skeleton loading block — shimmer sweep over a flat surface tint. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-light);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Hover-lift — subtle rise + brand-tinted glow for interactive cards/tiles.
+   Apply alongside a card's own background/border classes. */
+.hoverLift { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.hoverLift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md), var(--glow-hover);
+}
+
+/* Pulse dot — breathing status indicator (e.g. "clocked in", live/active). */
+.pulseDot {
+  position: relative;
+  display: inline-block;
+}
+.pulseDot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse-dot-ring 1.8s ease-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes pulse-dot-ring {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+  .pulseDot::after { animation: none; display: none; }
+  .hoverLift, .hoverLift:hover { transition: none; transform: none; }
 }

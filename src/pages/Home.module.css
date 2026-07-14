@@ -11,7 +11,7 @@
 /* Greeting */
 .greeting {
   display: flex; align-items: center; justify-content: space-between;
-  background: linear-gradient(135deg, var(--navy) 0%, #1e2a4a 100%);
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
   border-radius: var(--radius); padding: 22px 28px; gap: 16px;
 }
 .greetText { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 3px; }
@@ -48,7 +48,9 @@
   border: 1px solid var(--border); background: var(--card);
   border-left: 3px solid var(--border);
   overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.kpiTile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md), var(--glow-hover); }
 .kpiIcon { position: absolute; top: 14px; right: 14px; color: var(--border); }
 .kpiVal   { font-size: 27px; font-weight: 700; color: var(--text); line-height: 1.1; }
 .kpiLabel { font-size: 12px; font-weight: 600; color: var(--text-sec); margin-top: 3px; }
@@ -104,6 +106,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ringFill { transition: none; }
   .attnRow  { transition: none; }
+  .kpiTile, .kpiTile:hover, .projCard, .projCard:hover { transition: none; transform: none; }
 }
 
 /* Command Center */
@@ -157,7 +160,7 @@
   cursor: pointer; transition: box-shadow 0.15s, transform 0.12s;
   display: flex; flex-direction: column; gap: 4px;
 }
-.projCard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.projCard:hover { box-shadow: var(--shadow-md), var(--glow-hover); transform: translateY(-2px); }
 
 .projCardTop { margin-bottom: 8px; }
 .projCardBadges { display: flex; gap: 6px; }

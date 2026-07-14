@@ -83,7 +83,7 @@
   object-fit: contain;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
 }
 
 .pdfBox {

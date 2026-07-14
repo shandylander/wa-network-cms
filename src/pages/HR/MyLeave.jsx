@@ -16,7 +16,7 @@ import styles from './HR.module.css';
 const LEAVE_TYPES = [
   { value: 'AL',  label: 'Annual Leave',        color: 'blue'   },
   { value: 'MC',  label: 'Medical Leave',       color: 'green'  },
-  { value: 'CCL', label: 'Childcare Leave',     color: 'navy'   },
+  { value: 'CCL', label: 'Childcare Leave',     color: 'cyan'   },
   { value: 'HL',  label: 'Hospitalisation Leave', color: 'red'  },
   { value: 'NPL', label: 'No-Pay Leave',         color: 'amber'  },
   { value: 'OIL', label: 'Off-in-Lieu',          color: 'purple' },
@@ -201,7 +201,7 @@ export default function MyLeave() {
           entitled={balance.al.entitled} used={balance.al.used} pending={balance.al.pending} carried={balance.al.carried} />
         <BalanceCard label="Medical Leave" color="green"
           entitled={balance.mc.entitled} used={balance.mc.used} pending={balance.mc.pending} />
-        <BalanceCard label="Childcare Leave" color="navy"
+        <BalanceCard label="Childcare Leave" color="cyan"
           entitled={balance.ccl.entitled} used={balance.ccl.used} pending={balance.ccl.pending} />
         <BalanceCard label="Hospitalisation Leave" color="red"
           entitled={balance.hl.entitled} used={balance.hl.used} pending={balance.hl.pending} />

@@ -73,7 +73,7 @@
 .input { flex: 1; min-width: 160px; }
 .select { flex: 1; min-width: 160px; }
 
-.input:focus, .select:focus { outline: none; border-color: var(--navy); }
+.input:focus, .select:focus { outline: none; border-color: var(--text); }
 
 .addBtn {
   width: 38px;

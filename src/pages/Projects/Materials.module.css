@@ -143,7 +143,7 @@
 .formTab:hover   { border-color: var(--text-sec); }
 .formTabITE      { }
 .formTabOther    { border-style: dashed; }
-.formTabActive   { background: var(--navy) !important; color: #fff !important; border-color: var(--navy) !important; }
+.formTabActive   { background: var(--navy) !important; color: #fff !important; border-color: var(--text) !important; }
 
 .formBody { display: flex; flex-direction: column; gap: 14px; max-height: 68vh; overflow-y: auto; padding-right: 2px; }
 
@@ -178,7 +178,7 @@
   grid-template-columns: 36px 1fr 70px;
 }
 .itemGridRow:last-child { border-bottom: none; }
-.itemActive { background: #fffbf0; }
+.itemActive { background: var(--amber-bg); }
 .itemSno    { text-align: center; color: var(--text-muted); font-size: 11px; }
 .itemDesc   { flex: 1; }
 .itemPrice  { text-align: right; color: var(--text-sec); font-size: 12px; }
@@ -229,7 +229,7 @@
   cursor: pointer; font-family: inherit; transition: all 0.12s;
   margin-right: auto;
 }
-.printBtn:hover:not(:disabled) { background: var(--navy); color: #fff; border-color: var(--navy); }
+.printBtn:hover:not(:disabled) { background: var(--navy); color: #fff; border-color: var(--text); }
 .printBtn:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Order form footer ── */

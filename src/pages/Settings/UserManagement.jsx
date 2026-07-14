@@ -66,7 +66,7 @@ function UserCard({ user, groupColor, onClick }) {
       className={[styles.card, user.status !== 'active' ? styles.cardInactive : ''].join(' ')}
       onClick={onClick}
     >
-      <div className={styles.avatar} style={{ background: groupColor ?? '#5a6577' }}>
+      <div className={styles.avatar} style={{ background: groupColor ?? 'var(--text-sec)' }}>
         {initials(user.name)}
       </div>
       <div className={styles.cardBody}>
@@ -303,7 +303,7 @@ function EditUserModal({ user, groupColor, allTeams, onClose, onSaved, onStatusC
   return (
     <Modal isOpen onClose={onClose} title="Edit User" size="md">
       <div className={styles.modalHeader}>
-        <div className={styles.modalAvatar} style={{ background: groupColor ?? '#5a6577' }}>
+        <div className={styles.modalAvatar} style={{ background: groupColor ?? 'var(--text-sec)' }}>
           {initials(form.name || user.name)}
         </div>
         <div>

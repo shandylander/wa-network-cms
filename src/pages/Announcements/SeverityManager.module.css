@@ -70,7 +70,7 @@
   min-width: 160px;
 }
 
-.input:focus { outline: none; border-color: var(--navy); }
+.input:focus { outline: none; border-color: var(--text); }
 
 .colorInput {
   width: 38px;

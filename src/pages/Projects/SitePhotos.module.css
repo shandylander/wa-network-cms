@@ -7,7 +7,7 @@
 .toolbar    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
 .filterRow  { display: flex; gap: 6px; flex-wrap: wrap; }
 .filterBtn  { border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
-.filterBtnActive { background: var(--navy); border-color: var(--navy); color: #fff; }
+.filterBtnActive { background: var(--navy); border-color: var(--text); color: #fff; }
 .addBtn     { background: var(--red); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
 
 .grid       { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
@@ -30,13 +30,13 @@
 
 /* Modal */
 .modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
 .modalHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modalTitle   { font-size: 15px; font-weight: 700; color: var(--text); }
 .modalClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
 .formRow      { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .formLbl      { font-size: 12px; font-weight: 600; color: var(--text-sec); }
-.formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--card); }
 .opt          { font-weight: 400; color: var(--text-sec); }
 .cameraBtn    { background: var(--navy); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-top: 4px; }
 .cameraWrap   { display: flex; flex-direction: column; align-items: center; gap: 12px; }

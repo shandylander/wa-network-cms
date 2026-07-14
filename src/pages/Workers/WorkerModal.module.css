@@ -17,7 +17,7 @@
 .importSelect {
   height: 38px; padding: 0 10px;
   border: 1.5px solid rgba(26,95,168,0.25); border-radius: var(--radius-sm);
-  font-size: 13px; color: var(--text); background: #fff;
+  font-size: 13px; color: var(--text); background: var(--card);
   outline: none; font-family: inherit;
   cursor: pointer;
 }
@@ -67,7 +67,7 @@
   cursor: pointer; font-family: inherit;
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
-.certFileBtn:hover { border-color: var(--navy); color: var(--navy); }
+.certFileBtn:hover { border-color: var(--text); color: var(--text); }
 .certFileBtn:disabled { opacity: 0.6; }
 
 .certFileLink { color: var(--blue); text-decoration: none; font-weight: 600; }

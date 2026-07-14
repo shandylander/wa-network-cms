@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ToastContainer from './components/UI/Toast';
 import LoginForm      from './components/Auth/LoginForm';
 import ForcePinChange from './components/Auth/ForcePinChange';
@@ -93,20 +94,22 @@ function ProtectedRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <LanguageProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/setup" element={<Setup />} />
-            <Route path="/login" element={<PublicRoute />} />
-            <Route path="/*"    element={<ProtectedRoutes />} />
-          </Routes>
-          <ToastContainer />
-        </BrowserRouter>
-        </LanguageProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <LanguageProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/setup" element={<Setup />} />
+              <Route path="/login" element={<PublicRoute />} />
+              <Route path="/*"    element={<ProtectedRoutes />} />
+            </Routes>
+            <ToastContainer />
+          </BrowserRouter>
+          </LanguageProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

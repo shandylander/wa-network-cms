@@ -216,7 +216,7 @@ export default function PayslipGenerator() {
               <ArrowDownTrayIcon width={14} /> Export ▾
             </button>
             {showExport && (
-              <div className={styles.exportMenu} style={{ position: 'absolute', zIndex: 20, top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid var(--border, #e2e6ed)', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', padding: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
+              <div className={styles.exportMenu} style={{ position: 'absolute', zIndex: 20, top: 'calc(100% + 4px)', right: 0, background: 'var(--card)', border: '1px solid var(--border, #e2e6ed)', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', padding: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
                 <button className={styles.exportItem} style={exportItemStyle} onClick={exportPayrollSummary}>Payroll summary (CSV)</button>
                 <button className={styles.exportItem} style={exportItemStyle} onClick={exportCpfSubmission}>CPF submission summary (CSV)</button>
                 <button className={styles.exportItem} style={exportItemStyle} onClick={exportIR8AStub}>IR8A annual stub (CSV)</button>

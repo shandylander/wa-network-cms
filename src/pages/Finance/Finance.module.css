@@ -51,7 +51,7 @@
 
 /* Claims */
 .claimsGrid   { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
-.claimRow     { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); background: #fff; }
+.claimRow     { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--card); }
 .claimRow:last-child { border-bottom: none; }
 .claimTotal   { background: var(--navy); }
 .claimLabel   { font-size: 13px; color: var(--text); }
@@ -63,7 +63,7 @@
 /* Payroll */
 .payrollCard  { text-align: center; padding: 28px; }
 .payrollMonth { font-size: 13px; color: var(--text-sec); margin-bottom: 4px; }
-.payrollAmt   { font-size: 36px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+.payrollAmt   { font-size: 36px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
 .payrollSub   { font-size: 12px; color: var(--text-sec); }
 
 /* Petty Cash summary in finance */

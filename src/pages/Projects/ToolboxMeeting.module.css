@@ -31,7 +31,7 @@
 
 /* Modal */
 .modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+.modal        { background: var(--card); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
 .modalHead    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modalTitle   { font-size: 15px; font-weight: 700; color: var(--text); }
 .modalClose   { background: none; border: none; color: var(--text-sec); cursor: pointer; display: flex; }
@@ -42,7 +42,7 @@
 .formRow      { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .formRowGroup { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .formLbl      { font-size: 12px; font-weight: 600; color: var(--text-sec); }
-.formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; width: 100%; box-sizing: border-box; }
+.formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--card); width: 100%; box-sizing: border-box; }
 .formInput:disabled { background: var(--surface); color: var(--text-muted); }
 .formTextarea { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); resize: vertical; font-family: inherit; width: 100%; box-sizing: border-box; }
 .opt          { font-weight: 400; color: var(--text-sec); }

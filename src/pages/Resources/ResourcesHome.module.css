@@ -44,7 +44,7 @@
   cursor: pointer; font-family: inherit; white-space: nowrap;
 }
 .filterBtn.active,
-.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+.active { background: var(--navy); border-color: var(--text); color: #fff; }
 
 .searchWrap {
   position: relative; display: flex; align-items: center;
@@ -57,7 +57,7 @@
   padding: 7px 10px 7px 32px; font-size: 13px; color: var(--text);
   background: var(--card); font-family: inherit;
 }
-.searchInput:focus { outline: none; border-color: var(--navy); }
+.searchInput:focus { outline: none; border-color: var(--text); }
 
 /* Doc list */
 .docList { display: flex; flex-direction: column; gap: 0; }

@@ -13,7 +13,7 @@ import styles from './LeaveCalendar.module.css';
 const TYPE_META = {
   AL:  { fg: 'var(--blue)',   bg: 'var(--blue-bg)'   },
   MC:  { fg: 'var(--green)',  bg: 'var(--green-bg)'  },
-  CCL: { fg: 'var(--navy)',   bg: 'var(--navy-bg)'   },
+  CCL: { fg: 'var(--cyan)',   bg: 'var(--cyan-bg)'   },
   HL:  { fg: 'var(--red)',    bg: 'var(--red-light)' },
   NPL: { fg: 'var(--amber)',  bg: 'var(--amber-bg)'  },
   OIL: { fg: 'var(--purple)', bg: 'var(--purple-bg)' },

@@ -35,5 +35,5 @@
   color: var(--text-sec);
   cursor: pointer;
 }
-.clearBtn:hover { color: var(--text); border-color: var(--navy); }
+.clearBtn:hover { color: var(--text); border-color: var(--text); }
 .clearBtn:disabled { opacity: 0.4; cursor: default; }

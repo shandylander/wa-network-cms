@@ -173,7 +173,7 @@
   padding: 7px 12px;
 }
 
-.stepChipActive { color: #fff; background: var(--navy); border-color: var(--navy); }
+.stepChipActive { color: #fff; background: var(--navy); border-color: var(--text); }
 .stepChipDone   { color: var(--green); background: var(--green-bg); border-color: var(--green); }
 
 /* ── Camera flow ── */
@@ -439,7 +439,7 @@
   box-sizing: border-box;
 }
 
-.bigInput:focus { outline: none; border-color: var(--navy); }
+.bigInput:focus { outline: none; border-color: var(--text); }
 
 .amountWrap {
   display: flex;
@@ -451,7 +451,7 @@
   padding: 0 14px;
 }
 
-.amountWrap:focus-within { border-color: var(--navy); }
+.amountWrap:focus-within { border-color: var(--text); }
 
 .amountPrefix { font-size: 24px; font-weight: 800; color: var(--text-sec); }
 
@@ -512,7 +512,7 @@
   border: 2px dashed var(--navy);
   border-radius: 16px;
   background: var(--card);
-  color: var(--navy);
+  color: var(--text);
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
@@ -534,7 +534,7 @@
   object-fit: contain;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
 }
 
 .pdfBadge {

@@ -15,7 +15,7 @@ const fmtDate = (iso) => {
   return `${d}/${m}/${y}`;
 };
 
-const TYPE_COLOR = { AL: 'blue', MC: 'green', CCL: 'navy', HL: 'red', NPL: 'amber', OIL: 'purple' };
+const TYPE_COLOR = { AL: 'blue', MC: 'green', CCL: 'cyan', HL: 'red', NPL: 'amber', OIL: 'purple' };
 
 const CSV_COLUMNS = [
   { key: 'name',       label: 'Name'         },

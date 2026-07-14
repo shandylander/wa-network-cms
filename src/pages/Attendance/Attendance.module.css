@@ -69,7 +69,7 @@
 .attTable th   { background: var(--surface); color: var(--text-sec); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
 .attTable td   { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .attTable tr:hover td { background: var(--surface); }
-.flaggedRow td { background: #fff8f0 !important; }
+.flaggedRow td { background: var(--amber-bg) !important; }
 .editedBadge   { margin-left: 6px; font-size: 9px; font-weight: 600; background: var(--amber-bg); color: var(--amber); padding: 2px 5px; border-radius: 4px; text-transform: uppercase; }
 .mapPin        { color: var(--blue); margin-left: 4px; vertical-align: middle; }
 .statusPill    { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
@@ -77,7 +77,7 @@
 .pillAmber     { background: var(--amber-bg); color: var(--amber); }
 .actionsCell   { display: flex; gap: 4px; align-items: center; }
 .iconBtn       { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 4px 7px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; }
-.iconBtn:hover { border-color: var(--navy); color: var(--navy); }
+.iconBtn:hover { border-color: var(--text); color: var(--text); }
 .flagActive    { color: var(--red) !important; border-color: var(--red) !important; }
 .empty         { color: var(--text-sec); padding: 40px 0; text-align: center; font-size: 14px; }
 
@@ -87,7 +87,7 @@
 .modalTitle    { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
 .editRow       { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .editLbl       { font-size: 12px; font-weight: 600; color: var(--text-sec); }
-.editInput     { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fff; }
+.editInput     { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--card); }
 .editTextarea  { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); resize: vertical; font-family: inherit; }
 .editActions   { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .cancelBtn     { background: none; border: 1px solid var(--border); color: var(--text-sec); padding: 8px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
@@ -106,8 +106,8 @@
 .selectorDivider     { color: var(--border); font-size: 12px; }
 .staffChips          { display: flex; flex-wrap: wrap; gap: 6px; }
 .staffChip           { border: 1px solid var(--border); background: var(--card); color: var(--text-sec); font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; cursor: pointer; transition: all .15s; }
-.staffChip:hover     { border-color: var(--navy); color: var(--navy); }
-.staffChipActive     { background: var(--navy); border-color: var(--navy); color: #fff; }
+.staffChip:hover     { border-color: var(--text); color: var(--text); }
+.staffChipActive     { background: var(--navy); border-color: var(--text); color: #fff; }
 .promptBox           { background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center; color: var(--text-sec); font-size: 13px; }
 .photoGrid       { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 16px; }
 .photoCard       { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
