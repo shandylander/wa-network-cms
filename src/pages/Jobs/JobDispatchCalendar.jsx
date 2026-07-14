@@ -12,6 +12,7 @@ import { db } from '../../firebase';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/helpers';
 import { STATUS_CONFIG } from './jobStatus';
+import { toAssignable, ROLE_TAG } from './jobUtils';
 import styles from './Jobs.module.css';
 
 // Date-only helpers. serviceJobs.scheduledDate is a plain 'YYYY-MM-DD' string
@@ -91,12 +92,13 @@ export default function JobDispatchCalendar({ canAssign, onOpen }) {
     return unsub;
   }, [toast]);
 
-  // Active staff-role technicians form the canonical rows (same query
-  // AssignJobModal uses to populate its technician picker).
+  // Active company people (owner/manager/supervisor/staff) form the canonical
+  // rows — same roster AssignJobModal uses so both surfaces agree on who can
+  // be assigned.
   useEffect(() => {
-    getDocs(query(collection(db, 'users'), where('role', '==', 'staff'), where('status', '==', 'active')))
-      .then(snap => setStaff(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => toast.error('Failed to load technicians'));
+    getDocs(query(collection(db, 'users'), where('status', '==', 'active')))
+      .then(snap => setStaff(toAssignable(snap.docs)))
+      .catch(() => toast.error('Failed to load staff'));
   }, [toast]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -113,15 +115,18 @@ export default function JobDispatchCalendar({ canAssign, onOpen }) {
   }, [staff, jobs]);
   const nameOf = (id) => namesById[id] ?? id;
 
-  // Rows: active staff first (by name), then any still-assigned technician not
-  // in that set.
+  // Rows: the active roster first (already staff-first, then by name — from
+  // toAssignable), then any still-assigned person not in that set (e.g. since
+  // deactivated), appended by name so they stay visible.
   const techRows = useMemo(() => {
     const ids = new Set(staff.map(s => s.id));
-    const rows = staff.map(s => ({ id: s.id, name: s.name }));
+    const rows = staff.map(s => ({ id: s.id, name: s.name, role: s.role }));
+    const extra = [];
     jobs.forEach(j => (j.assignedTo ?? []).forEach(id => {
-      if (!ids.has(id)) { ids.add(id); rows.push({ id, name: nameOf(id) }); }
+      if (!ids.has(id)) { ids.add(id); extra.push({ id, name: nameOf(id), role: null }); }
     }));
-    return rows.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    extra.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    return [...rows, ...extra];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staff, jobs]);
 
@@ -241,7 +246,7 @@ export default function JobDispatchCalendar({ canAssign, onOpen }) {
       >
         <div className={styles.calGridWrap}>
           <div className={styles.calGrid}>
-            <div className={styles.calCorner}>Technician</div>
+            <div className={styles.calCorner}>Staff</div>
             {days.map(d => (
               <div key={d} className={[styles.calDayHead, d === today ? styles.calDayToday : ''].join(' ')}>
                 <div className={styles.calDayName}>{dayFmt.format(parseISO(d))}</div>
@@ -250,12 +255,15 @@ export default function JobDispatchCalendar({ canAssign, onOpen }) {
             ))}
 
             {techRows.length === 0 && (
-              <div className={styles.calRowLbl} style={{ gridColumn: '1 / -1' }}>No active technicians.</div>
+              <div className={styles.calRowLbl} style={{ gridColumn: '1 / -1' }}>No active staff.</div>
             )}
 
             {techRows.map(row => (
               <React.Fragment key={row.id}>
-                <div className={styles.calRowLbl}>{row.name}</div>
+                <div className={styles.calRowLbl}>
+                  {row.name}
+                  {ROLE_TAG[row.role] ? <span className={styles.roleTag}>{ROLE_TAG[row.role]}</span> : null}
+                </div>
                 {days.map(day => (
                   <Cell key={day} techId={row.id} day={day} canAssign={canAssign}>
                     {cellJobs(row.id, day).map(job => (

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
+import { toAssignable, ROLE_TAG } from './jobUtils';
 import styles from './Jobs.module.css';
 
 const todaySG = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
@@ -34,10 +35,13 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
   const [scheduledDate, setScheduledDate] = useState(existingJob?.scheduledDate ?? todaySG());
   const [notes,         setNotes]         = useState(existingJob?.scheduledNotes ?? '');
 
+  // Anyone in the WA company (owner/manager/supervisor/staff) can be rostered
+  // onto a job — not just front-line staff. Subcontractors are excluded
+  // because they can't drive a job (see toAssignable / serviceJobs rules).
   useEffect(() => {
-    getDocs(query(collection(db, 'users'), where('role', '==', 'staff'), where('status', '==', 'active')))
-      .then(snap => setTechnicians(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => toast.error('Failed to load technicians'))
+    getDocs(query(collection(db, 'users'), where('status', '==', 'active')))
+      .then(snap => setTechnicians(toAssignable(snap.docs)))
+      .catch(() => toast.error('Failed to load staff'))
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -115,9 +119,9 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
           )}
 
           <div className={styles.field}>
-            <span className={styles.label}>Technician(s) — select all who'll be on site</span>
+            <span className={styles.label}>Assign to — select everyone who'll be on site</span>
             {technicians.length === 0 ? (
-              <p className={styles.readonlyVal}>No active staff-role technicians found.</p>
+              <p className={styles.readonlyVal}>No active company staff found.</p>
             ) : (
               <div className={styles.checkRow}>
                 {technicians.map(t => (
@@ -128,7 +132,9 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
                       disabled={isLocked(t.id)}
                       onChange={() => toggleTech(t.id)}
                     />
-                    {t.name}{isLocked(t.id) ? ' (checked in)' : ''}
+                    {t.name}
+                    {ROLE_TAG[t.role] ? <span className={styles.roleTag}>{ROLE_TAG[t.role]}</span> : ''}
+                    {isLocked(t.id) ? ' (checked in)' : ''}
                   </label>
                 ))}
               </div>

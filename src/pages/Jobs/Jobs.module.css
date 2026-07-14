@@ -37,6 +37,15 @@
 .checkOption { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; white-space: nowrap; }
 .checkOption input { cursor: pointer; flex-shrink: 0; }
 
+/* Small role pill beside non-staff assignees (supervisor/manager/owner) in the
+   assign picker and dispatch-calendar rows. */
+.roleTag {
+  margin-left: 6px; flex-shrink: 0;
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--blue); background: var(--blue-bg);
+  padding: 1px 6px; border-radius: 999px; white-space: nowrap;
+}
+
 .inlineInput {
   border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
   font-size: 12px; font-family: inherit; color: var(--text); margin-left: 4px; min-width: 140px;
