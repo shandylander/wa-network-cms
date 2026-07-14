@@ -29,8 +29,8 @@ export const ROLES = {
 };
 
 export const TEAMS = {
-  none:    'WA! Network',
-  own:     'WA! Network (Direct)',
+  none:    'No Team',
+  own:     'WA! Network',
   kvm:     'KVM',
   sree:    'Sree Ram',
   habibur: 'Habibur',

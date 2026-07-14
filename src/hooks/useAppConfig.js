@@ -26,11 +26,11 @@ export function useTeams() {
       .finally(() => setLoading(false));
   }, []);
 
-  const teams = { none: 'WA! Network', own: 'WA! Network (Direct)' };
+  const teams = { none: 'No Team', own: 'WA! Network' };
   groups.forEach(g => { teams[g.key] = g.label; });
 
   const teamOptions = [
-    { key: 'own', label: 'WA! Network (Direct)' },
+    { key: 'own', label: 'WA! Network' },
     ...groups.map(g => ({ key: g.key, label: g.label })),
   ];
 

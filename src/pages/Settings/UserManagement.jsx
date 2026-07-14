@@ -627,7 +627,7 @@ export default function UserManagement() {
 
   // Flat teams map: key → label (for selectors)
   const allTeams = useMemo(() => {
-    const map = { none: 'WA! Network', own: 'WA! Network (Direct)' };
+    const map = { none: 'No Team', own: 'WA! Network' };
     (subconGroups ?? DEFAULT_SUBCON_GROUPS).forEach(g => { map[g.key] = g.label; });
     return map;
   }, [subconGroups]);
