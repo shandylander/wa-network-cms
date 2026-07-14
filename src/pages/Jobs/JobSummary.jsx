@@ -5,7 +5,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import { formatDate, formatDateTime } from '../../utils/helpers';
+import { formatDate, formatDateTime, formatTime12 } from '../../utils/helpers';
 import { STATUS_CONFIG } from './jobStatus';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
@@ -44,6 +44,14 @@ function Chk({ on, children }) {
 
 const toDate = (s) => (s?.time ? (s.time.toDate ? s.time.toDate() : new Date(s.time)) : null);
 const fmtTime = (d) => (d ? d.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' }) : '—');
+
+// A job only has report content (action taken, remarks, signature) once the
+// technician taps "Complete Job & Sign Off" out in the field — before that,
+// the paper-form layout below would render as an empty template, which reads
+// as broken rather than "not done yet." Show a plain status panel instead
+// for these two statuses; the full report only makes sense from 'completed'
+// onward.
+const NOT_YET_DONE = ['scheduled', 'in-progress'];
 
 export default function JobSummary({ job, onClose, onUpdated }) {
   const { userProfile } = useAuth();
@@ -118,9 +126,58 @@ export default function JobSummary({ job, onClose, onUpdated }) {
   const hasEquipOthers = job.equipmentTypes?.includes('others');
   const hasJobOthers   = job.jobTypes?.includes('others');
   const chargeableYes  = job.chargeable === 'yes';
+  const notYetDone = NOT_YET_DONE.includes(job.status);
+  const stepIndex = job.status === 'in-progress' ? 2 : 0;
 
   return (
-    <Modal isOpen onClose={onClose} title="Service Report" size="xl">
+    <Modal isOpen onClose={onClose} title={notYetDone ? 'Job Status' : 'Service Report'} size="xl">
+      {notYetDone && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>{job.customerName}</h2>
+            <span className={[styles.pill, styles[sc.cls]].join(' ')}>{sc.label}</span>
+          </div>
+
+          <div className={styles.jdStatusTrack}>
+            {['Assigned', 'Checked In', 'In Progress', 'Closed'].map((label, i) => (
+              <React.Fragment key={label}>
+                {i > 0 && <div className={[styles.jdConnector, i <= stepIndex ? styles.jdConnectorDone : ''].join(' ')} />}
+                <div className={[styles.jdStep, i < stepIndex ? styles.jdStepDone : i === stepIndex ? styles.jdStepNow : ''].join(' ')}>
+                  <div className={styles.jdStepDot}>{i < stepIndex ? '✓' : i + 1}</div>
+                  <div className={styles.jdStepLbl}>{label}</div>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+
+          <div className={styles.infoCard}>
+            {job.projectName && <div className={styles.infoRow}><span className={styles.k}>Project</span><span>{job.projectName}</span></div>}
+            <div className={styles.infoRow}>
+              <span className={styles.k}>Scheduled for</span>
+              <span>{job.scheduledDate || '—'}{job.scheduledTime ? ` at ${formatTime12(job.scheduledTime)}` : ''}</span>
+            </div>
+            {job.address && <div className={styles.infoRow}><span className={styles.k}>Address</span><span>{job.address}{job.postalCode ? ` (${job.postalCode})` : ''}</span></div>}
+            {job.contactName && <div className={styles.infoRow}><span className={styles.k}>Contact</span><span>{job.contactName}{job.contactNo ? ` · ${job.contactNo}` : ''}</span></div>}
+          </div>
+
+          {crewEntries.length > 0 && (
+            <div className={styles.infoCard}>
+              {crewEntries.map(([uid, c]) => (
+                <div key={uid} className={styles.infoRow}>
+                  <span className={styles.k}>{c.name}</span>
+                  <span>{c.checkIn ? `Checked in ${fmtTime(toDate(c.checkIn))}` : 'Not checked in yet'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p style={{ fontSize: 13, color: 'var(--text-sec)', textAlign: 'center', margin: '20px 0 4px' }}>
+            The Service Report will appear here once {attendedBy !== '—' ? attendedBy : 'the technician'} taps
+            "Complete Job &amp; Sign Off" on site.
+          </p>
+        </div>
+      )}
+      {!notYetDone && (
       <div className={styles.printArea}>
 
         <div className={styles.rptHead}>
@@ -246,6 +303,7 @@ export default function JobSummary({ job, onClose, onUpdated }) {
           <img src={banner} alt="" className={styles.rptBanner} />
         </div>
       </div>
+      )}
 
       {/* Internal-only info — visible on screen, never printed */}
       {job.scheduledNotes && (
@@ -312,9 +370,11 @@ export default function JobSummary({ job, onClose, onUpdated }) {
             <PencilSquareIcon width={15} style={{ marginRight: 6 }} /> Edit / Reschedule
           </Button>
         )}
-        <Button onClick={() => window.print()}>
-          <PrinterIcon width={15} style={{ marginRight: 6 }} /> Print / Save as PDF
-        </Button>
+        {!notYetDone && (
+          <Button onClick={() => window.print()}>
+            <PrinterIcon width={15} style={{ marginRight: 6 }} /> Print / Save as PDF
+          </Button>
+        )}
       </div>
     </Modal>
   );

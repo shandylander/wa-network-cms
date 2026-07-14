@@ -7,6 +7,7 @@ import {
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useLang, LangSwitch } from '../../context/LanguageContext';
+import { formatTime12 } from '../../utils/helpers';
 import { STATUS_CONFIG } from '../Jobs/jobStatus';
 import styles from './Worker.module.css';
 import jobStyles from '../Jobs/Jobs.module.css';
@@ -73,7 +74,8 @@ export default function WorkerHome() {
               </div>
               {j.scheduledNotes && <p className={jobStyles.jobNotes}>{j.scheduledNotes}</p>}
               <div className={jobStyles.jobMeta}>
-                <span>{j.scheduledDate}</span>
+                <span>{j.scheduledDate}{j.scheduledTime ? ` · ${formatTime12(j.scheduledTime)}` : ''}</span>
+                {j.address && <span>📍 {j.address}</span>}
                 {teammates.length > 0 && <span>👥 with {teammates.join(', ')}</span>}
               </div>
             </button>

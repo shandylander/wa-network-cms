@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -33,7 +33,19 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
 
   const [selectedTechs, setSelectedTechs] = useState(existingJob?.assignedTo ?? []);
   const [scheduledDate, setScheduledDate] = useState(existingJob?.scheduledDate ?? todaySG());
+  const [scheduledTime, setScheduledTime] = useState(existingJob?.scheduledTime ?? '');
   const [notes,         setNotes]         = useState(existingJob?.scheduledNotes ?? '');
+
+  // Site details the technician needs before they leave the office — address,
+  // postal code, and who to ask for on site. Pre-filled from the Customer
+  // record (same fields JobCompletionForm already pre-fills for an ad-hoc
+  // job) but left editable here too, since a customer with several sites/
+  // contacts may need a different one for this particular visit.
+  const [contactName, setContactName] = useState(existingJob?.contactName ?? '');
+  const [contactNo,   setContactNo]   = useState(existingJob?.contactNo ?? '');
+  const [address,     setAddress]     = useState(existingJob?.address ?? '');
+  const [postalCode,  setPostalCode]  = useState(existingJob?.postalCode ?? '');
+  const [email,       setEmail]       = useState(existingJob?.email ?? '');
 
   // Anyone in the WA company (owner/manager/supervisor/staff) can be rostered
   // onto a job — not just front-line staff. Subcontractors are excluded
@@ -44,6 +56,22 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
       .catch(() => toast.error('Failed to load staff'))
       .finally(() => setLoading(false));
   }, [toast]);
+
+  useEffect(() => {
+    if (editing) return; // existing job's own site details already seeded above
+    getDoc(doc(db, 'customers', customerId))
+      .then(snap => {
+        if (!snap.exists()) return;
+        const c = snap.data();
+        setContactName(c.contactPerson ?? '');
+        setContactNo(c.phone ?? '');
+        setAddress(c.address ?? '');
+        setPostalCode(c.postalCode ?? '');
+        setEmail(c.email ?? '');
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId, editing]);
 
   // A technician who's already checked in can't be unselected — removing
   // them would silently discard their GPS check-in record.
@@ -64,11 +92,17 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
         crew[t.id] = existingJob?.crew?.[t.id] ?? { name: t.name, checkIn: null, checkOut: null };
       });
 
+      const siteFields = {
+        contactName: contactName.trim(), contactNo: contactNo.trim(),
+        address: address.trim(), postalCode: postalCode.trim(), email: email.trim(),
+      };
+
       if (editing) {
         const update = {
           assignedTo: picked.map(t => t.id),
           assignedToNames: picked.map(t => t.name),
-          scheduledDate, scheduledNotes: notes.trim(),
+          scheduledDate, scheduledTime: scheduledTime || null, scheduledNotes: notes.trim(),
+          ...siteFields,
           crew,
         };
         await updateDoc(doc(db, 'serviceJobs', existingJob.id), update);
@@ -82,7 +116,8 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
           assignedTo: picked.map(t => t.id),
           assignedToNames: picked.map(t => t.name),
           assignedBy: userProfile.userId,
-          scheduledDate, scheduledNotes: notes.trim(),
+          scheduledDate, scheduledTime: scheduledTime || null, scheduledNotes: notes.trim(),
+          ...siteFields,
           crew,
           vettedBy: null, vettedByName: null, vettedAt: null, vetNotes: null,
           createdBy: userProfile.userId, createdByName: userProfile.name,
@@ -144,9 +179,34 @@ export default function AssignJobModal({ customerId, customerName, projectId, pr
             </p>
           </div>
 
+          <div className={styles.grid2}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="aj-date">Scheduled date</label>
+              <input id="aj-date" type="date" className={styles.input} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="aj-time">Appointment time <span className={styles.opt}>(optional)</span></label>
+              <input id="aj-time" type="time" className={styles.input} value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} />
+            </div>
+          </div>
+
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="aj-date">Scheduled date</label>
-            <input id="aj-date" type="date" className={styles.input} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} />
+            <label className={styles.label} htmlFor="aj-address">Site address <span className={styles.opt}>(where the technician should go)</span></label>
+            <input id="aj-address" className={styles.input} value={address} onChange={e => setAddress(e.target.value)} placeholder="Auto-filled from the customer record — edit if this visit is elsewhere" />
+          </div>
+          <div className={styles.grid2}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="aj-postal">Postal code</label>
+              <input id="aj-postal" className={styles.input} value={postalCode} onChange={e => setPostalCode(e.target.value)} />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="aj-contactNo">Contact phone</label>
+              <input id="aj-contactNo" className={styles.input} value={contactNo} onChange={e => setContactNo(e.target.value)} />
+            </div>
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="aj-contactName">Point of contact <span className={styles.opt}>(who to ask for on site)</span></label>
+            <input id="aj-contactName" className={styles.input} value={contactName} onChange={e => setContactName(e.target.value)} />
           </div>
 
           <div className={styles.field}>

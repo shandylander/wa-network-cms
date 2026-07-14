@@ -11,6 +11,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { uploadToDropbox } from '../../utils/dropboxUpload';
+import { directionsUrl, formatTime12 } from '../../utils/helpers';
 import { stamp } from './jobUtils';
 import JobCompletionForm from './JobCompletionForm';
 import JobSummary from './JobSummary';
@@ -163,7 +164,23 @@ export default function JobDetail() {
       {!checkedIn ? (
         <>
           <div className={jobStyles.infoCard}>
-            <div className={jobStyles.infoRow}><span className={jobStyles.k}>Scheduled for</span><span>{job.scheduledDate}</span></div>
+            <div className={jobStyles.infoRow}>
+              <span className={jobStyles.k}>Scheduled for</span>
+              <span>{job.scheduledDate}{job.scheduledTime ? ` at ${formatTime12(job.scheduledTime)}` : ''}</span>
+            </div>
+            {job.address && (
+              <div className={jobStyles.infoRow}>
+                <span className={jobStyles.k}>Address</span>
+                <a href={directionsUrl(job.postalCode ? `${job.address}, Singapore ${job.postalCode}` : job.address)}
+                  target="_blank" rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--blue)', textAlign: 'right' }}>
+                  <MapPinIcon width={13} style={{ flexShrink: 0 }} /> {job.address}
+                </a>
+              </div>
+            )}
+            {job.contactName && (
+              <div className={jobStyles.infoRow}><span className={jobStyles.k}>Contact</span><span>{job.contactName}{job.contactNo ? ` · ${job.contactNo}` : ''}</span></div>
+            )}
             {job.scheduledNotes && <div className={jobStyles.infoRow}><span className={jobStyles.k}>Notes from office</span><span>{job.scheduledNotes}</span></div>}
             {job.assignedToNames?.length > 1 && (
               <div className={jobStyles.infoRow}><span className={jobStyles.k}>With</span><span>{job.assignedToNames.filter(n => n !== userProfile.name).join(', ')}</span></div>
