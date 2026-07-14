@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, writeBatch, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
 import { ArrowDownTrayIcon, ShieldCheckIcon, LockClosedIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -28,7 +28,6 @@ export default function ResourcesHome() {
   const { userProfile } = useAuth();
   const { toast }       = useToast();
   const { can }         = usePermissions();
-  const [projectId, setProjectId] = useState(null);
   const [docs,      setDocs]      = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -46,27 +45,36 @@ export default function ResourcesHome() {
   useEffect(() => {
     const load = async () => {
       try {
+        // Resources is a company-wide library that aggregates documents across
+        // ALL active projects — not one. (The old single-project limit(1) read
+        // silently hid documents once more than one project was active.)
         // Security rules only let subcon roles read projects assigned to their
         // team, and only let worker roles read documents their team can access.
         // Rules are not filters — the queries must match them exactly.
         const pSnap = await getDocs(isSubconRole
           ? query(collection(db, 'projects'),
               where('status', '==', 'active'),
-              where('assignedTeams', 'array-contains', myTeam),
-              limit(1))
-          : query(collection(db, 'projects'), where('status', '==', 'active'), limit(1)));
+              where('assignedTeams', 'array-contains', myTeam))
+          : query(collection(db, 'projects'), where('status', '==', 'active')));
         if (pSnap.empty) { setLoading(false); return; }
-        const pid = pSnap.docs[0].id;
-        setProjectId(pid);
-        const dSnap = await getDocs(isWorker
-          ? query(collection(db, 'projects', pid, 'documents'), where(`access.${accessTeam}`, '==', true))
-          : collection(db, 'projects', pid, 'documents'));
-        // Missing category defaults to 'hse' at read time — legacy docs
-        // predate this field and are never backfilled in Firestore.
-        setDocs(dSnap.docs.map(d => {
-          const data = d.data();
-          return { id: d.id, ...data, category: data.category ?? 'hse' };
-        }));
+        const projects = pSnap.docs.map(p => ({ id: p.id, name: p.data().name ?? '' }));
+        // Fetch each project's documents in parallel; one project failing (e.g.
+        // a rules edge case) must not blank the whole library.
+        const perProject = await Promise.all(projects.map(p =>
+          getDocs(isWorker
+            ? query(collection(db, 'projects', p.id, 'documents'), where(`access.${accessTeam}`, '==', true))
+            : collection(db, 'projects', p.id, 'documents'))
+            .then(dSnap => dSnap.docs.map(d => {
+              const data = d.data();
+              // Missing category defaults to 'hse' at read time — legacy docs
+              // predate this field and are never backfilled in Firestore.
+              return { id: d.id, projectId: p.id, projectName: p.name, ...data, category: data.category ?? 'hse' };
+            }))
+            .catch(() => [])
+        ));
+        const all = perProject.flat();
+        all.sort((a, b) => (b.uploadedAt?.toMillis?.() ?? 0) - (a.uploadedAt?.toMillis?.() ?? 0));
+        setDocs(all);
       } catch {
         toast.error('Failed to load Resources documents');
       } finally {
@@ -76,13 +84,13 @@ export default function ResourcesHome() {
     load();
   }, [isWorker, isSubconRole, accessTeam, myTeam]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggleAccess = async (docId, team, current) => {
-    if (!projectId) return;
+  const toggleAccess = async (docItem, team, current) => {
     try {
-      const ref = doc(db, 'projects', projectId, 'documents', docId);
+      const ref = doc(db, 'projects', docItem.projectId, 'documents', docItem.id);
       await updateDoc(ref, { [`access.${team}`]: !current });
       setDocs(prev => prev.map(d =>
-        d.id === docId ? { ...d, access: { ...d.access, [team]: !current } } : d
+        d.id === docItem.id && d.projectId === docItem.projectId
+          ? { ...d, access: { ...d.access, [team]: !current } } : d
       ));
     } catch {
       toast.error('Failed to update access');
@@ -91,13 +99,13 @@ export default function ResourcesHome() {
 
   const [grantingOwn, setGrantingOwn] = useState(false);
   const grantOwnAccess = async () => {
-    if (!projectId || docs.length === 0) return;
+    if (docs.length === 0) return;
     setGrantingOwn(true);
     try {
       const batch = writeBatch(db);
       docs.forEach(d => {
         if (!d.access?.own) {
-          batch.update(doc(db, 'projects', projectId, 'documents', d.id), { 'access.own': true });
+          batch.update(doc(db, 'projects', d.projectId, 'documents', d.id), { 'access.own': true });
         }
       });
       await batch.commit();
@@ -196,6 +204,7 @@ export default function ResourcesHome() {
                       <div>
                         <p className={styles.docName}>{d.name}</p>
                         <Badge color="blue">{CATEGORY_LABEL[d.category] ?? d.category?.toUpperCase() ?? 'DOC'}</Badge>
+                        {d.projectName && <span className={styles.docMeta}> · {d.projectName}</span>}
                         {d.revNote && <p className={styles.revNote}>{d.revNote}</p>}
                       </div>
                     </div>
@@ -206,7 +215,7 @@ export default function ResourcesHome() {
                           <button
                             key={t}
                             className={[styles.toggleBtn, d.access?.[t] ? styles.toggleOn : ''].join(' ')}
-                            onClick={() => toggleAccess(d.id, t, d.access?.[t])}
+                            onClick={() => toggleAccess(d, t, d.access?.[t])}
                             title={`${d.access?.[t] ? 'Revoke' : 'Grant'} access to ${TEAMS[t]}`}
                           >
                             {t === 'own' ? 'WA!' : TEAMS[t]?.split(' ')[0] ?? t}
