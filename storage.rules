@@ -15,6 +15,15 @@ service firebase.storage {
     function isInternal() {
       return callerRole() in ['owner', 'manager', 'supervisor'];
     }
+    function callerTeam() {
+      return firestore.get(/databases/(default)/documents/users/$(callerId())).data.team;
+    }
+    // Mirrors firestore.rules' assignedToProject() for the sitePhotos
+    // Firestore doc rule — a subcon can only touch a project's photo blobs
+    // if their team is actually assigned to that project.
+    function assignedToProject(projectId) {
+      return firestore.get(/databases/(default)/documents/projects/$(projectId)).data.assignedTeams.hasAny([callerTeam()]);
+    }
 
     // Attendance selfies — authenticated users can write their own folder;
     // owner/manager/supervisor can read all (PhotoReview/ApprovalQueue/audit
@@ -62,6 +71,39 @@ service firebase.storage {
                    && request.resource.size < 10 * 1024 * 1024
                    && (request.resource.contentType.matches('image/.*')
                        || request.resource.contentType == 'application/pdf');
+    }
+
+    // Site progress photos — mirrors firestore.rules' projects/{id}/sitePhotos
+    // doc rule (anyStaff() || assigned subcon). Never had a match block here,
+    // so every upload (camera capture or the Upload Photo fallback) and every
+    // read of an existing photo was silently denied.
+    match /sitePhotos/{projectId}/{fileName} {
+      allow read: if request.auth != null && (
+        isInternal() || callerRole() == 'staff'
+        || (callerRole() in ['subcon-admin', 'subcon'] && assignedToProject(projectId))
+      );
+      allow write: if request.auth != null && (
+        isInternal() || callerRole() == 'staff'
+        || (callerRole() in ['subcon-admin', 'subcon'] && assignedToProject(projectId))
+      )
+      && request.resource.size < 8 * 1024 * 1024
+      && request.resource.contentType.matches('image/.*');
+    }
+
+    // Snag/defect evidence photos — same scoping as the snags Firestore rule
+    // (anyStaff() || assigned subcon can read/attach; anyone who can report a
+    // defect can also photograph it).
+    match /snagPhotos/{projectId}/{fileName} {
+      allow read: if request.auth != null && (
+        isInternal() || callerRole() == 'staff'
+        || (callerRole() in ['subcon-admin', 'subcon'] && assignedToProject(projectId))
+      );
+      allow write: if request.auth != null && (
+        isInternal() || callerRole() == 'staff'
+        || (callerRole() in ['subcon-admin', 'subcon'] && assignedToProject(projectId))
+      )
+      && request.resource.size < 8 * 1024 * 1024
+      && request.resource.contentType.matches('image/.*');
     }
 
     // Deny everything else
