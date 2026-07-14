@@ -25,13 +25,17 @@ const CATEGORIES = [
 ];
 
 const STATUS_CHIP = {
-  pending:  { cls: 'chipAmber', Icon: ClockIcon,       tKey: 'statusPending'  },
-  approved: { cls: 'chipGreen', Icon: CheckCircleIcon, tKey: 'statusApproved' },
-  rejected: { cls: 'chipRed',   Icon: XCircleIcon,     tKey: 'statusRejected' },
+  pending:   { cls: 'chipAmber', Icon: ClockIcon,       tKey: 'statusPending'   },
+  approved:  { cls: 'chipGreen', Icon: CheckCircleIcon, tKey: 'statusApproved'  },
+  rejected:  { cls: 'chipRed',   Icon: XCircleIcon,     tKey: 'statusRejected'  },
+  cancelled: { cls: 'chipGrey',  Icon: XCircleIcon,     tKey: 'statusCancelled' },
 };
 
 const todaySG = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
 const fmtDate = (iso) => { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const fmtSubmitted = (ts) => ts?.toDate
+  ? new Intl.DateTimeFormat('en-SG', { day: '2-digit', month: 'short', timeZone: 'Asia/Singapore' }).format(ts.toDate())
+  : '—';
 const fmtAmt  = (n) => `$${Number(n ?? 0).toFixed(2)}`;
 const isISO   = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? '') && !Number.isNaN(Date.parse(s));
 
@@ -175,6 +179,16 @@ export default function WorkerClaims() {
       setEditingId(null);
     } catch { toast.error(t('uploadFailed')); }
     finally { setSubmitting(false); }
+  };
+
+  const cancelClaim = async (claim) => {
+    if (claim.status !== 'pending') return;
+    if (!window.confirm(t('confirmCancel'))) return;
+    try {
+      await updateDoc(doc(db, 'pettyCashClaims', claim.id), { status: 'cancelled' });
+      setClaims(c => c.map(x => x.id === claim.id ? { ...x, status: 'cancelled' } : x));
+      toast.success(t('done'));
+    } catch { toast.error(t('tryAgain')); }
   };
 
   if (loading) {
@@ -332,6 +346,7 @@ export default function WorkerClaims() {
               <div className={styles.appMain}>
                 <p className={styles.appTitle}>{c.description}</p>
                 <p className={styles.appSub}>{fmtDate(c.date)} · {t(CATEGORIES.find(x => x.value === c.category)?.tKey ?? 'catOther')}</p>
+                <p className={styles.appSub}>{t('submittedOn').replace('{date}', fmtSubmitted(c.createdAt))}</p>
                 {c.rejectionReason && <p className={styles.appReject}>{t('rejectedReason')}: {c.rejectionReason}</p>}
                 {c.status !== 'pending' && c.reviewedByName && (
                   <p className={styles.appSub} style={{ marginTop: 2 }}>
@@ -354,10 +369,15 @@ export default function WorkerClaims() {
                     </button>
                   )}
                   {c.status === 'pending' && (
-                    <button className={styles.cancelAppBtn} style={{ color: 'var(--navy)' }}
-                      onClick={() => openEdit(c)}>
-                      {t('edit')}
-                    </button>
+                    <>
+                      <button className={styles.cancelAppBtn} style={{ color: 'var(--navy)' }}
+                        onClick={() => openEdit(c)}>
+                        {t('edit')}
+                      </button>
+                      <button className={styles.cancelAppBtn} onClick={() => cancelClaim(c)}>
+                        {t('cancel')}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

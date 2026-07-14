@@ -20,7 +20,7 @@ const CATEGORIES = [
   { value: 'other',      label: 'Other' },
 ];
 
-const STATUS_STYLES = { pending: 'statusamber', approved: 'statusgreen', rejected: 'statusred' };
+const STATUS_STYLES = { pending: 'statusamber', approved: 'statusgreen', rejected: 'statusred', cancelled: 'statusdefault' };
 
 const fmtDate = (iso) => { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
 const fmtAmt  = (n)   => `$${Number(n ?? 0).toFixed(2)}`;
@@ -138,6 +138,16 @@ export default function PettyCash() {
     finally { setSaving(false); }
   };
 
+  const cancelClaim = async (claim) => {
+    if (claim.status !== 'pending') return;
+    if (!window.confirm('Cancel this claim? This cannot be undone.')) return;
+    try {
+      await updateDoc(doc(db, 'pettyCashClaims', claim.id), { status: 'cancelled' });
+      setClaims(c => c.map(x => x.id === claim.id ? { ...x, status: 'cancelled' } : x));
+      toast.success('Claim cancelled');
+    } catch { toast.error('Failed to cancel'); }
+  };
+
   const totalPending = claims.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0);
   const totalApproved = claims.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0);
 
@@ -184,6 +194,7 @@ export default function PettyCash() {
                     {tab === 'queue' && <p className={styles.pcClaimant}>{c.name}</p>}
                     <p className={styles.pcDesc}>{c.description}</p>
                     <p className={styles.pcMeta}>{fmtDate(c.date)} · {catLabel}</p>
+                    <p className={styles.pcMeta}>Submitted {formatDateTime(c.createdAt)}</p>
                     {c.receiptUrl && (
                       <a href={c.receiptUrl} target="_blank" rel="noreferrer" className={styles.mcLink}
                         onClick={e => { if (isImageUrl(c.receiptUrl)) { e.preventDefault(); setLightbox(c.receiptUrl); } }}>
@@ -206,9 +217,16 @@ export default function PettyCash() {
                       <button className={styles.rejectBtn} onClick={() => { setRejectId(c.id); setRejectNote(''); }} disabled={saving}><XMarkIcon width={13} /></button>
                     </div>
                   ) : (
-                    <span className={[styles.statusBadge, styles[STATUS_STYLES[c.status] ?? 'statusdefault']].join(' ')}>
-                      {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                    </span>
+                    <>
+                      <span className={[styles.statusBadge, styles[STATUS_STYLES[c.status] ?? 'statusdefault']].join(' ')}>
+                        {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                      </span>
+                      {c.status === 'pending' && (
+                        <button className={styles.rejectBtn} onClick={() => cancelClaim(c)} title="Cancel claim">
+                          <XMarkIcon width={13} />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

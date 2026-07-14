@@ -184,6 +184,7 @@ export default function MyLeave() {
 
   const handleCancel = async (app) => {
     if (app.status !== 'pending') return;
+    if (!window.confirm('Cancel this leave application? This cannot be undone.')) return;
     try {
       await updateDoc(doc(db, 'leaveApplications', app.id), { status: 'cancelled' });
       setApps(a => a.map(x => x.id === app.id ? { ...x, status: 'cancelled' } : x));

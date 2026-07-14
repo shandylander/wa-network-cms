@@ -10,6 +10,7 @@ const en = {
   statusPending: 'Waiting', statusApproved: 'Approved', statusRejected: 'Rejected', statusCancelled: 'Cancelled',
   day: 'day', days: 'days', hours: 'hours',
   fileTooBig: 'File is too big (max 10 MB)', uploadFailed: 'Upload failed. Try again.',
+  confirmCancel: 'Cancel this? This cannot be undone.', submittedOn: 'Submitted {date}',
 
   // Clock
   goodMorning: 'Good morning', goodAfternoon: 'Good afternoon', goodEvening: 'Good evening',
@@ -76,6 +77,7 @@ const bn = {
   statusPending: 'অপেক্ষায়', statusApproved: 'অনুমোদিত', statusRejected: 'প্রত্যাখ্যাত', statusCancelled: 'বাতিল',
   day: 'দিন', days: 'দিন', hours: 'ঘণ্টা',
   fileTooBig: 'ফাইল খুব বড় (সর্বোচ্চ ১০ MB)', uploadFailed: 'আপলোড ব্যর্থ। আবার চেষ্টা করুন।',
+  confirmCancel: 'এটি বাতিল করবেন? এটি ফেরানো যাবে না।', submittedOn: 'জমা দেওয়া হয়েছে {date}',
 
   goodMorning: 'শুভ সকাল', goodAfternoon: 'শুভ অপরাহ্ন', goodEvening: 'শুভ সন্ধ্যা',
   notWorkingYet: 'আজ এখনো ক্লক-ইন করেননি',
@@ -139,6 +141,7 @@ const ta = {
   statusPending: 'காத்திருக்கிறது', statusApproved: 'ஒப்புதல்', statusRejected: 'நிராகரிப்பு', statusCancelled: 'ரத்து',
   day: 'நாள்', days: 'நாட்கள்', hours: 'மணி',
   fileTooBig: 'கோப்பு மிகப் பெரியது (அதிகபட்சம் 10 MB)', uploadFailed: 'பதிவேற்றம் தோல்வி. மீண்டும் முயற்சிக்கவும்.',
+  confirmCancel: 'இதை ரத்து செய்யவா? இதை மீட்க முடியாது.', submittedOn: 'சமர்ப்பிக்கப்பட்டது {date}',
 
   goodMorning: 'காலை வணக்கம்', goodAfternoon: 'மதிய வணக்கம்', goodEvening: 'மாலை வணக்கம்',
   notWorkingYet: 'இன்று இன்னும் பதிவு செய்யவில்லை',

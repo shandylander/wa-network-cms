@@ -233,6 +233,7 @@ export default function WorkerLeave() {
 
   const cancelApp = async (app) => {
     if (app.status !== 'pending') return;
+    if (!window.confirm(t('confirmCancel'))) return;
     try {
       await updateDoc(doc(db, 'leaveApplications', app.id), { status: 'cancelled' });
       setApps(a => a.map(x => x.id === app.id ? { ...x, status: 'cancelled' } : x));
