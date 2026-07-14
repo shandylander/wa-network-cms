@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
-import { ArrowDownTrayIcon, ShieldCheckIcon, LockClosedIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, ShieldCheckIcon, LockClosedIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -8,6 +8,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { TEAMS } from '../../utils/permissions';
 import Card, { CardHeader } from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
+import DocumentViewerModal from '../../components/UI/DocumentViewerModal';
 import styles from './ResourcesHome.module.css';
 
 const TEAM_KEYS = ['own', 'kvm', 'sree', 'habibur', 'alamin'];
@@ -32,6 +33,7 @@ export default function ResourcesHome() {
   const [loading,   setLoading]   = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [search,         setSearch]         = useState('');
+  const [viewDoc,        setViewDoc]        = useState(null);
 
   const role    = userProfile?.role;
   const myTeam  = userProfile?.team;
@@ -224,15 +226,9 @@ export default function ResourcesHome() {
                       </div>
                     )}
 
-                    <a
-                      href={d.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.downloadBtn}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <ArrowDownTrayIcon width={15} /> Download
-                    </a>
+                    <button className={styles.downloadBtn} onClick={() => setViewDoc(d)}>
+                      <EyeIcon width={15} /> Open
+                    </button>
                   </div>
                 ))}
               </div>
@@ -243,13 +239,15 @@ export default function ResourcesHome() {
 
       <Card style={{ marginTop: 16 }}>
         <CardHeader title="RA Library" subtitle="Risk assessment documents" />
-        <RaLibrary canAdmin={canAdmin} toast={toast} />
+        <RaLibrary canAdmin={canAdmin} toast={toast} onOpen={setViewDoc} />
       </Card>
+
+      <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} />
     </div>
   );
 }
 
-function RaLibrary({ canAdmin, toast }) {
+function RaLibrary({ canAdmin, toast, onOpen }) {
   const [ras,     setRas]     = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -282,9 +280,9 @@ function RaLibrary({ canAdmin, toast }) {
               <span className={styles.docMeta}>{ra.ref} · Assessed: {ra.assessedDate}</span>
             </div>
           </div>
-          <a href={ra.url} target="_blank" rel="noreferrer" className={styles.downloadBtn}>
-            <ArrowDownTrayIcon width={15} /> Download
-          </a>
+          <button className={styles.downloadBtn} onClick={() => onOpen({ name: ra.title, url: ra.url })}>
+            <EyeIcon width={15} /> Open
+          </button>
         </div>
       ))}
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import {
-  PlusIcon, XMarkIcon, ArrowDownTrayIcon, TrashIcon,
+  PlusIcon, XMarkIcon, EyeIcon, TrashIcon,
   DocumentTextIcon, ExclamationTriangleIcon, CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
@@ -10,6 +10,7 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/helpers';
 import { uploadToDropbox } from '../../utils/dropboxUpload';
+import DocumentViewerModal from '../../components/UI/DocumentViewerModal';
 // Customer Documents is structurally simpler than Project Documents (no
 // per-team access flags — customers are internal-only, sub-cons never see
 // this at all) so it doesn't share ProjectDocuments.jsx's component, but
@@ -41,6 +42,7 @@ export default function CustomerDocuments({ customer }) {
   const [progress,  setProgress]  = useState(0);
   const [deleteId,  setDeleteId]  = useState(null);
   const [deleting,  setDeleting]  = useState(false);
+  const [viewDoc,   setViewDoc]   = useState(null);
   const fileRef = useRef();
 
   const [form, setForm] = useState({ name: '', category: 'general', file: null });
@@ -149,9 +151,9 @@ export default function CustomerDocuments({ customer }) {
               </div>
 
               <div className={styles.rowActions}>
-                <a href={d.url} target="_blank" rel="noreferrer" className={styles.downloadBtn}>
-                  <ArrowDownTrayIcon width={15} /> Download
-                </a>
+                <button className={styles.downloadBtn} onClick={() => setViewDoc(d)}>
+                  <EyeIcon width={15} /> Open
+                </button>
                 {canAdmin && (
                   <button className={styles.deleteBtn} title="Delete document" onClick={() => setDeleteId(d.id)}>
                     <TrashIcon width={14} />
@@ -233,6 +235,8 @@ export default function CustomerDocuments({ customer }) {
           </div>
         </div>
       )}
+
+      <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} />
     </div>
   );
 }

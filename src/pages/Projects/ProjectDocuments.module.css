@@ -55,6 +55,7 @@
   text-decoration: none; padding: 6px 14px;
   border: 1.5px solid var(--red); border-radius: var(--radius-sm);
   white-space: nowrap; transition: background 0.12s;
+  background: none; cursor: pointer; font-family: inherit;
 }
 .downloadBtn:hover { background: var(--red-light); }
 .deleteBtn {

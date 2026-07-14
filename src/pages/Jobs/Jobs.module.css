@@ -234,7 +234,7 @@
 .photoAdd:hover { border-color: var(--red); color: var(--red); }
 .photoAdd:disabled { opacity: .5; }
 
-.docRow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; text-decoration: none; color: inherit; }
+.docRow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; text-decoration: none; color: inherit; width: 100%; text-align: left; background: none; border-left: none; border-right: none; border-top: none; cursor: pointer; font-family: inherit; }
 .docRow:last-child { border-bottom: none; }
 .docIco { width: 30px; height: 30px; border-radius: 7px; background: var(--blue-bg); color: var(--blue); padding: 6px; flex-shrink: 0; box-sizing: border-box; }
 .docName { font-weight: 600; color: var(--text); }

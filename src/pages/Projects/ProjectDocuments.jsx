@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import {
-  PlusIcon, XMarkIcon, ArrowDownTrayIcon, TrashIcon,
+  PlusIcon, XMarkIcon, EyeIcon, TrashIcon,
   DocumentTextIcon, ExclamationTriangleIcon, CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
@@ -10,6 +10,7 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '../../utils/helpers';
 import { uploadToDropbox } from '../../utils/dropboxUpload';
+import DocumentViewerModal from '../../components/UI/DocumentViewerModal';
 import styles from './ProjectDocuments.module.css';
 
 // Superset of two overlapping needs: the project-specific document types a
@@ -56,6 +57,7 @@ export default function ProjectDocuments({ project }) {
   const [progress,  setProgress]  = useState(0);
   const [deleteId,  setDeleteId]  = useState(null);
   const [deleting,  setDeleting]  = useState(false);
+  const [viewDoc,   setViewDoc]   = useState(null);
   const fileRef = useRef();
 
   const [form, setForm] = useState({ name: '', category: 'general', revNote: '', file: null, access: emptyAccess() });
@@ -201,9 +203,9 @@ export default function ProjectDocuments({ project }) {
               )}
 
               <div className={styles.rowActions}>
-                <a href={d.url} target="_blank" rel="noreferrer" className={styles.downloadBtn}>
-                  <ArrowDownTrayIcon width={15} /> Download
-                </a>
+                <button className={styles.downloadBtn} onClick={() => setViewDoc(d)}>
+                  <EyeIcon width={15} /> Open
+                </button>
                 {canAdmin && (
                   <button className={styles.deleteBtn} title="Delete document" onClick={() => setDeleteId(d.id)}>
                     <TrashIcon width={14} />
@@ -310,6 +312,8 @@ export default function ProjectDocuments({ project }) {
           </div>
         </div>
       )}
+
+      <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} />
     </div>
   );
 }

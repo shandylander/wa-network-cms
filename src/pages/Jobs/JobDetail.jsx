@@ -14,6 +14,7 @@ import { uploadToDropbox } from '../../utils/dropboxUpload';
 import { stamp } from './jobUtils';
 import JobCompletionForm from './JobCompletionForm';
 import JobSummary from './JobSummary';
+import DocumentViewerModal from '../../components/UI/DocumentViewerModal';
 import styles from '../Worker/Worker.module.css';
 import jobStyles from './Jobs.module.css';
 
@@ -43,6 +44,7 @@ export default function JobDetail() {
   const [checkingIn, setCheckingIn] = useState(false);
   const [uploading,  setUploading]  = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [viewDoc,    setViewDoc]    = useState(null);
   const fileRef = React.useRef();
 
   const load = useCallback(async () => {
@@ -210,13 +212,13 @@ export default function JobDetail() {
               <p className={styles.sectionTitle}>Documents for this site</p>
               <div className={jobStyles.infoCard}>
                 {allDocs.map(d => (
-                  <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className={jobStyles.docRow}>
+                  <button key={d.id} className={jobStyles.docRow} onClick={() => setViewDoc(d)}>
                     <DocumentIcon width={18} className={jobStyles.docIco} />
                     <div>
                       <div className={jobStyles.docName}>{d.name}</div>
                       <div className={jobStyles.docSrc}>{d.source}</div>
                     </div>
-                  </a>
+                  </button>
                 ))}
               </div>
             </>
@@ -238,6 +240,8 @@ export default function JobDetail() {
           onSaved={(j) => { setJob(j); navigate(-1); }}
         />
       )}
+
+      <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} />
     </div>
   );
 }
