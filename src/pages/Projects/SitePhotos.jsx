@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, query, orderBy } from 'firebase/firestore';
-import { CameraIcon, CheckIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, CheckIcon, XMarkIcon, PlusIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +10,34 @@ import styles from './SitePhotos.module.css';
 
 const STAGES = ['fix1','fix2','fix3','fix4','general'];
 const STAGE_LABELS = { fix1:'Conduit (Fix 1)', fix2:'CAT6 Cable (Fix 2)', fix3:'Server Rack (Fix 3)', fix4:'Camera (Fix 4)', general:'General' };
+
+// Downscale + re-encode a picked image so submissions stay small and EXIF
+// orientation is baked into the pixels. Mirrors the live-camera path's output
+// (~jpeg 0.85). Used by the "Upload Photo" contingency for when getUserMedia
+// isn't available (many in-app / WebView browsers block the live camera).
+const MAX_DIM = 1600;
+async function fileToJpegBlob(file) {
+  let bitmap;
+  try {
+    // createImageBitmap honours EXIF orientation, so portrait photos stay upright.
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    bitmap = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('decode failed'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  const w = bitmap.width, h = bitmap.height;
+  const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  if (bitmap.close) bitmap.close();
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+}
 
 function useCamera() {
   const videoRef  = useRef(null);
@@ -50,6 +78,7 @@ export default function SitePhotos({ project }) {
   const [blob,     setBlob]     = useState(null);
   const [preview,  setPreview]  = useState(null);
   const { videoRef, start, stop, capture } = useCamera();
+  const fileRef = useRef(null);
 
   useEffect(() => {
     getDocs(query(collection(db, 'projects', project.id, 'sitePhotos'), orderBy('submittedAt', 'desc')))
@@ -68,6 +97,25 @@ export default function SitePhotos({ project }) {
   const handleCapture = async () => {
     const b = await capture(); stop();
     setBlob(b); setPreview(URL.createObjectURL(b)); setCamStep('preview');
+  };
+
+  // Contingency path: pick a photo from the device (gallery or the OS camera
+  // app, via accept="image/*") — works in browsers where the live camera
+  // (getUserMedia) is blocked. Downscale, then reuse the same preview→submit flow.
+  const handleFilePick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // reset so re-picking the same file still fires onChange
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file.'); return; }
+    setCamStep('uploading');
+    try {
+      const b = await fileToJpegBlob(file);
+      if (!b) throw new Error('encode failed');
+      setBlob(b); setPreview(URL.createObjectURL(b)); setCamStep('preview');
+    } catch {
+      toast.error('Could not read that image. Please try another photo.');
+      setCamStep('idle');
+    }
   };
 
   const handleRetake = async () => { setBlob(null); setPreview(null); await start(); setCamStep('camera'); };
@@ -173,6 +221,12 @@ export default function SitePhotos({ project }) {
                 <div className={styles.formRow}><label className={styles.formLbl}>Caption <span className={styles.opt}>(optional)</span></label>
                   <input className={styles.formInput} placeholder="Brief description" value={caption} onChange={e => setCaption(e.target.value)} /></div>
                 <button className={styles.cameraBtn} onClick={openCamera}><CameraIcon width={18} /> Open Camera</button>
+                <div className={styles.orDivider}><span>or</span></div>
+                <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFilePick} />
+                <button className={styles.uploadBtn} onClick={() => fileRef.current?.click()}>
+                  <ArrowUpTrayIcon width={18} /> Upload Photo
+                </button>
+                <p className={styles.uploadHint}>Camera not opening? Use "Upload Photo" to take a new one or pick from your gallery.</p>
               </>
             )}
 

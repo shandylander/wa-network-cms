@@ -39,6 +39,12 @@
 .formInput    { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--card); }
 .opt          { font-weight: 400; color: var(--text-sec); }
 .cameraBtn    { background: var(--navy); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-top: 4px; }
+.uploadBtn    { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; }
+.uploadBtn:hover { border-color: var(--text); }
+.uploadHint   { font-size: 11.5px; color: var(--text-sec); text-align: center; margin: 8px 0 0; line-height: 1.4; }
+.orDivider    { display: flex; align-items: center; text-align: center; color: var(--text-sec); font-size: 11px; margin: 10px 0; }
+.orDivider::before, .orDivider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+.orDivider span { padding: 0 10px; }
 .cameraWrap   { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .cameraVideo  { width: 100%; border-radius: 8px; background: #000; }
 .camBtns      { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
