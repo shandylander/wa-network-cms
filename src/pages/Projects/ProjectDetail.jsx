@@ -509,9 +509,12 @@ export default function ProjectDetail() {
 
   // Money data (claim rates, payments) is restricted to owner/manager
   const canViewMoney = can('view:claims');
-  // Materials/DO data is readable only by internal roles (see firestore.rules);
-  // hide the tab from field/subcon roles so they don't hit a load error.
-  const canViewMaterials = can('materials:view');
+  // Materials/DO data is readable by internal roles, plus staff who've been
+  // granted materials:submit-do (DO logging only — see firestore.rules and
+  // Materials.jsx, which scopes what a submit-only account actually sees
+  // inside the tab). Hide the tab entirely from everyone else so they don't
+  // hit a load error.
+  const canViewMaterials = can('materials:view') || can('materials:submit-do');
   // Incidents are internal/staff-only (see firestore.rules); hide the tab
   // from sub-con roles so they don't hit a load error.
   const workShape = getShape(project.projectType ?? 'pcs');

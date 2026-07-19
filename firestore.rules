@@ -194,7 +194,13 @@ service cloud.firestore {
       // access. Needs the read/write split decided deliberately, not
       // conflated by a mechanical conversion.
       match /materialOrders/{id} { allow read, write: if ownerOrManager() || isSupervisor(); }
-      match /deliveryOrders/{id} { allow read, write: if ownerOrManager() || isSupervisor(); }
+      // Staff can log a DO (materials:submit-do, Materials.jsx's Delivery
+      // Orders tab) — anyStaff() already covers owner/manager/supervisor too,
+      // so this is a pure widening from ownerOrManager()||isSupervisor().
+      // Verify-status is only exposed in the UI to materials:approve holders;
+      // like sitePhotos/notes elsewhere, that's a UI-level gate, not a
+      // separate rules-level write restriction.
+      match /deliveryOrders/{id} { allow read, write: if anyStaff(); }
       match /materials/{id}      { allow read, write: if ownerOrManager() || isSupervisor(); }
 
       // HSE / site subcollections — internal + assigned subcons

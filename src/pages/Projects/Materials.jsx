@@ -466,19 +466,26 @@ export default function Materials({ project, userRole }) {
   const { can }        = usePermissions();
   const canAdmin      = can('materials:approve');
   const canViewCosts  = can('materials:view-costs');
-  const [subTab, setSubTab] = useState('orders');
+  // materials:view sees both sub-tabs as before. An account that only has
+  // materials:submit-do (e.g. staff granted DO logging — see ProjectDetail.jsx)
+  // gets the Delivery Orders tab alone, with no Order Forms/procurement view.
+  const canFullView    = can('materials:view');
+  const visibleSubTabs = canFullView ? SUB_TABS : SUB_TABS.filter(t => t.id === 'dos');
+  const [subTab, setSubTab] = useState(canFullView ? 'orders' : 'dos');
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.subTabBar}>
-        {SUB_TABS.map(t => (
-          <button key={t.id} className={[styles.subTab, subTab === t.id ? styles.subTabActive : ''].join(' ')} onClick={() => setSubTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {visibleSubTabs.length > 1 && (
+        <div className={styles.subTabBar}>
+          {visibleSubTabs.map(t => (
+            <button key={t.id} className={[styles.subTab, subTab === t.id ? styles.subTabActive : ''].join(' ')} onClick={() => setSubTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {subTab === 'orders' && <OrdersTab project={project} canAdmin={canAdmin} canViewCosts={canViewCosts} />}
+      {subTab === 'orders' && canFullView && <OrdersTab project={project} canAdmin={canAdmin} canViewCosts={canViewCosts} />}
       {subTab === 'dos'    && <DeliveryOrdersTab project={project} canAdmin={canAdmin} />}
     </div>
   );

@@ -73,11 +73,12 @@ service firebase.storage {
     }
 
     // Delivery order scans — captured by internal roles (owner/manager/
-    // supervisor) when logging a DO in the Materials tab; matches the
-    // deliveryOrders Firestore rule.
+    // supervisor) or staff granted materials:submit-do, when logging a DO
+    // in the Materials tab; matches the deliveryOrders Firestore rule.
+    // Same self-scoped shape as receipts/{userId} — no isInternal() gate.
     match /deliveryOrders/{userId}/{fileName} {
       allow read:  if request.auth != null && (userId == callerId() || isInternal());
-      allow write: if request.auth != null && userId == callerId() && isInternal()
+      allow write: if request.auth != null && userId == callerId()
                    && request.resource.size < 10 * 1024 * 1024
                    && (request.resource.contentType.matches('image/.*')
                        || request.resource.contentType == 'application/pdf');
