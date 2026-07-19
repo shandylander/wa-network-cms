@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
-import { EyeIcon, ShieldCheckIcon, LockClosedIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, writeBatch, query, where, Timestamp } from 'firebase/firestore';
+import {
+  EyeIcon, ShieldCheckIcon, LockClosedIcon, MagnifyingGlassIcon,
+  PlusIcon, TrashIcon, XMarkIcon, CloudArrowUpIcon, DocumentTextIcon, ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { TEAMS } from '../../utils/permissions';
+import { uploadToDropbox } from '../../utils/dropboxUpload';
 import Card, { CardHeader } from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
 import DocumentViewerModal from '../../components/UI/DocumentViewerModal';
@@ -30,10 +34,19 @@ export default function ResourcesHome() {
   const { toast }       = useToast();
   const { can }         = usePermissions();
   const [docs,      setDocs]      = useState([]);
+  const [projects,  setProjects]  = useState([]); // active projects, for the Add Document target picker
   const [loading,   setLoading]   = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [search,         setSearch]         = useState('');
   const [viewDoc,        setViewDoc]        = useState(null);
+  const [showForm,       setShowForm]       = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [progress,       setProgress]       = useState(0);
+  const [deleteTarget,   setDeleteTarget]   = useState(null); // { id, projectId, name }
+  const [deleting,       setDeleting]       = useState(false);
+  const fileRef = useRef();
+  const emptyAccess = () => Object.fromEntries(TEAM_KEYS.map(t => [t, false]));
+  const [form, setForm] = useState({ projectId: '', name: '', category: 'hse', revNote: '', file: null, access: emptyAccess() });
 
   const role    = userProfile?.role;
   const myTeam  = userProfile?.team;
@@ -60,6 +73,7 @@ export default function ResourcesHome() {
           : query(collection(db, 'projects'), where('status', '==', 'active')));
         if (pSnap.empty) { setLoading(false); return; }
         const projects = pSnap.docs.map(p => ({ id: p.id, name: p.data().name ?? '' }));
+        setProjects(projects);
         // Fetch each project's documents in parallel; one project failing (e.g.
         // a rules edge case) must not blank the whole library.
         const perProject = await Promise.all(projects.map(p =>
@@ -122,6 +136,71 @@ export default function ResourcesHome() {
 
   const allOwnEnabled = docs.length > 0 && docs.every(d => d.access?.own);
 
+  const openForm = () => {
+    setForm(f => ({ ...f, projectId: f.projectId || projects[0]?.id || '' }));
+    setShowForm(true);
+  };
+  const closeForm = () => {
+    if (saving) return;
+    setShowForm(false);
+    setForm({ projectId: projects[0]?.id ?? '', name: '', category: 'hse', revNote: '', file: null, access: emptyAccess() });
+    if (fileRef.current) fileRef.current.value = '';
+  };
+  const onFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm(f => ({ ...f, file, name: f.name || file.name.replace(/\.[^.]+$/, '') }));
+  };
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.projectId)    { toast.error('Choose which project this document belongs to.'); return; }
+    if (!form.name.trim())  { toast.error('Please enter a document name.'); return; }
+    if (!form.file)         { toast.error('Please select a file to upload.'); return; }
+    setSaving(true);
+    setProgress(5);
+    try {
+      const project = projects.find(p => p.id === form.projectId);
+      const folder  = `/WA! Network Asia CMS/Projects/${project?.name ?? form.projectId}/Documents`;
+      const url     = await uploadToDropbox(form.file, folder, (pct) => setProgress(pct));
+      setProgress(90);
+      const payload = {
+        name: form.name.trim(), category: form.category, url,
+        ...(form.revNote.trim() ? { revNote: form.revNote.trim() } : {}),
+        fileName: form.file.name, fileSize: form.file.size,
+        access: form.access,
+        uploadedAt: Timestamp.now(), uploadedBy: userProfile.userId,
+      };
+      const ref = await addDoc(collection(db, 'projects', form.projectId, 'documents'), payload);
+      setDocs(prev => [{ id: ref.id, projectId: form.projectId, projectName: project?.name ?? '', ...payload }, ...prev]);
+      toast.success('Document uploaded to Dropbox');
+      closeForm();
+    } catch (err) {
+      console.error(err);
+      toast.error('Upload failed — check your connection and try again.');
+    } finally {
+      setSaving(false);
+      setProgress(0);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'projects', deleteTarget.projectId, 'documents', deleteTarget.id));
+      setDocs(prev => prev.filter(d => !(d.id === deleteTarget.id && d.projectId === deleteTarget.projectId)));
+      toast.success('Document removed');
+      setDeleteTarget(null);
+    } catch { toast.error('Failed to remove document'); }
+    finally { setDeleting(false); }
+  };
+
+  const changeCategory = async (docItem, category) => {
+    try {
+      await updateDoc(doc(db, 'projects', docItem.projectId, 'documents', docItem.id), { category });
+      setDocs(prev => prev.map(d => d.id === docItem.id && d.projectId === docItem.projectId ? { ...d, category } : d));
+    } catch { toast.error('Failed to move document'); }
+  };
+
   // Worker queries are already access-filtered server-side
   const visibleDocs = docs;
 
@@ -140,11 +219,16 @@ export default function ResourcesHome() {
           <h1 className={styles.title}>Resources</h1>
           <p className={styles.sub}>Safety forms, training manuals, standards and templates</p>
         </div>
-        {canAdmin && !allOwnEnabled && visibleDocs.length > 0 && (
-          <button className={styles.grantBtn} onClick={grantOwnAccess} disabled={grantingOwn}>
-            {grantingOwn ? 'Enabling…' : 'Enable for WA! Staff'}
-          </button>
-        )}
+        <div className={styles.headerActions}>
+          {canAdmin && !allOwnEnabled && visibleDocs.length > 0 && (
+            <button className={styles.grantBtn} onClick={grantOwnAccess} disabled={grantingOwn}>
+              {grantingOwn ? 'Enabling…' : 'Enable for WA! Staff'}
+            </button>
+          )}
+          {canAdmin && projects.length > 0 && (
+            <button className={styles.addBtn} onClick={openForm}><PlusIcon width={14} /> Add Document</button>
+          )}
+        </div>
       </div>
 
       {visibleDocs.length === 0 ? (
@@ -205,7 +289,18 @@ export default function ResourcesHome() {
                       <ShieldCheckIcon className={styles.docIcon} width={18} />
                       <div>
                         <p className={styles.docName}>{d.name}</p>
-                        <Badge color="blue">{CATEGORY_LABEL[d.category] ?? d.category?.toUpperCase() ?? 'DOC'}</Badge>
+                        {canAdmin ? (
+                          <select
+                            className={styles.catSelect}
+                            value={d.category}
+                            onChange={e => changeCategory(d, e.target.value)}
+                            title="Move to a different folder"
+                          >
+                            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                          </select>
+                        ) : (
+                          <Badge color="blue">{CATEGORY_LABEL[d.category] ?? d.category?.toUpperCase() ?? 'DOC'}</Badge>
+                        )}
                         {d.projectName && <span className={styles.docMeta}> · {d.projectName}</span>}
                         {d.revNote && <p className={styles.revNote}>{d.revNote}</p>}
                       </div>
@@ -226,9 +321,20 @@ export default function ResourcesHome() {
                       </div>
                     )}
 
-                    <button className={styles.downloadBtn} onClick={() => setViewDoc(d)}>
-                      <EyeIcon width={15} /> Open
-                    </button>
+                    <div className={styles.rowActions}>
+                      <button className={styles.downloadBtn} onClick={() => setViewDoc(d)}>
+                        <EyeIcon width={15} /> Open
+                      </button>
+                      {canAdmin && (
+                        <button
+                          className={styles.deleteBtn}
+                          title="Remove document"
+                          onClick={() => setDeleteTarget({ id: d.id, projectId: d.projectId, name: d.name })}
+                        >
+                          <TrashIcon width={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -241,6 +347,110 @@ export default function ResourcesHome() {
         <CardHeader title="RA Library" subtitle="Risk assessment documents" />
         <RaLibrary canAdmin={canAdmin} toast={toast} onOpen={setViewDoc} />
       </Card>
+
+      {/* Add Document modal */}
+      {showForm && (
+        <div className={styles.modalOverlay} onClick={closeForm}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHead}>
+              <h3 className={styles.modalTitle}>Add Document to Resources</h3>
+              <button className={styles.modalClose} onClick={closeForm} disabled={saving}><XMarkIcon width={18} /></button>
+            </div>
+            <form onSubmit={submit}>
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>File <span style={{ color: 'var(--red)' }}>*</span></label>
+                <div
+                  className={[styles.dropZone, form.file ? styles.dropZoneHasFile : ''].join(' ')}
+                  onClick={() => !saving && fileRef.current?.click()}
+                >
+                  <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={onFileChange} disabled={saving} />
+                  {form.file ? (
+                    <div className={styles.fileSelected}>
+                      <DocumentTextIcon width={20} />
+                      <div>
+                        <p className={styles.fileName}>{form.file.name}</p>
+                        <p className={styles.fileSize}>{(form.file.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.dropPrompt}>
+                      <CloudArrowUpIcon width={28} />
+                      <p>Click to select a file from your PC</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Document Name <span style={{ color: 'var(--red)' }}>*</span></label>
+                <input className={styles.formInput} placeholder="e.g. Toolbox Meeting Form" value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} disabled={saving} />
+              </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Folder</label>
+                <select className={styles.formInput} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} disabled={saving}>
+                  {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Belongs to Project <span className={styles.opt}>(Resources shows documents from every active project)</span></label>
+                <select className={styles.formInput} value={form.projectId} onChange={e => setForm(f => ({ ...f, projectId: e.target.value }))} disabled={saving}>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Revision Note <span className={styles.opt}>(optional)</span></label>
+                <input className={styles.formInput} placeholder="e.g. Rev 04 — updated" value={form.revNote}
+                  onChange={e => setForm(f => ({ ...f, revNote: e.target.value }))} disabled={saving} />
+              </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Team Access <span className={styles.opt}>(defaults to no access)</span></label>
+                <div className={styles.accessGrid}>
+                  {TEAM_KEYS.map(t => (
+                    <label key={t} className={styles.accessOption}>
+                      <input type="checkbox" checked={form.access[t]} disabled={saving}
+                        onChange={() => setForm(f => ({ ...f, access: { ...f.access, [t]: !f.access[t] } }))} />
+                      {t === 'own' ? 'WA! Staff' : TEAMS[t]}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {saving && (
+                <div className={styles.progressWrap}>
+                  <div className={styles.progressBar} style={{ width: `${progress}%` }} />
+                  <span className={styles.progressLabel}>{progress < 70 ? 'Uploading to Dropbox…' : 'Saving…'} {progress}%</span>
+                </div>
+              )}
+
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.cancelBtn} onClick={closeForm} disabled={saving}>Cancel</button>
+                <button type="submit" className={styles.submitBtn} disabled={saving}>
+                  {saving ? `Uploading… ${progress}%` : 'Upload & Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <div className={styles.modalOverlay} onClick={() => setDeleteTarget(null)}>
+          <div className={styles.modal} style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Remove "{deleteTarget.name}"</h3>
+            <p className={styles.confirmText}><ExclamationTriangleIcon width={14} /> This removes the record from the CMS. The file in Dropbox is not deleted.</p>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className={styles.deleteConfirmBtn} onClick={confirmDelete} disabled={deleting}>{deleting ? 'Removing…' : 'Yes, Remove'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} />
     </div>

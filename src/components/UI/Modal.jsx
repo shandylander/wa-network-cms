@@ -33,7 +33,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     // Modal.module.css's hashed class names directly. Any print stylesheet
     // can reset these three to escape the fixed/overflow-clipped screen
     // chrome, which otherwise silently truncates tall printed content.
-    <div className={`${styles.overlay} print-modal-overlay`} onClick={onClose}>
+    <div
+      className={`${styles.overlay} print-modal-overlay`}
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
+    >
       <div
         className={[styles.modal, styles[size], 'print-modal-shell'].join(' ')}
         onClick={(e) => e.stopPropagation()}

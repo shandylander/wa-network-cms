@@ -13,6 +13,7 @@ import { compressImage, uploadWorkerDoc, extractDocument } from '../../utils/wor
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
+import DocumentViewerModal from '../../components/UI/DocumentViewerModal';
 import styles from './WorkerModal.module.css';
 
 const EMPTY_CERT = { type: '', name: '', issueDate: '', expiry: '', url: '', fileName: '' };
@@ -47,6 +48,7 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
     photoUrl:    worker?.photoUrl    ?? '',
   });
   const [certs,        setCerts]        = useState(worker?.certs ?? []);
+  const [viewCert,     setViewCert]     = useState(null);
   const [newCert,       setNewCert]      = useState(EMPTY_CERT);
   const [showAdd,       setShowAdd]      = useState(false);
   const [saving,        setSaving]       = useState(false);
@@ -365,7 +367,11 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
                     <span className={styles.certName}>{c.name}</span>
                     <span className={styles.certExpiry}>
                       {c.issueDate ? `Issued: ${c.issueDate} · ` : ''}{c.expiry ? `Exp: ${c.expiry}` : 'No expiry'}
-                      {c.url && <a href={c.url} target="_blank" rel="noreferrer" className={styles.certFileLink}> · View file</a>}
+                      {c.url && (
+                        <button type="button" className={styles.certFileLink} onClick={() => setViewCert(c)}>
+                          · View file
+                        </button>
+                      )}
                     </span>
                   </div>
                   <Badge color={b.color}>{b.label}</Badge>
@@ -385,6 +391,8 @@ export default function WorkerModal({ mode, worker, onClose, onSaved, userRole, 
           {mode === 'add' ? 'Add Worker' : 'Save Changes'}
         </Button>
       </div>
+
+      <DocumentViewerModal doc={viewCert} onClose={() => setViewCert(null)} />
     </Modal>
   );
 }
