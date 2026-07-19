@@ -30,6 +30,7 @@ import UploadsAudit    from './pages/Admin/UploadsAudit';
 import Announcements   from './pages/Announcements/Announcements';
 import JobDetail       from './pages/Jobs/JobDetail';
 import JobsBoard       from './pages/Jobs/JobsBoard';
+import UserGuide       from './pages/Help/UserGuide';
 import Setup           from './pages/Setup/Setup';
 import './App.css';
 
@@ -82,6 +83,7 @@ function ProtectedRoutes() {
         <Route path="jobs"              element={<JobsBoard />} />
         <Route path="jobs/:id"          element={<JobDetail />} />
         <Route path="profile"           element={<Profile />} />
+        <Route path="help"              element={<UserGuide />} />
         <Route path="settings"          element={<Settings />} />
         <Route path="settings/users"       element={<UserManagement />} />
         <Route path="settings/permissions" element={<Permissions />} />

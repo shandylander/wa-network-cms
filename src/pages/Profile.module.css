@@ -43,6 +43,15 @@
 .docName { font-size: 13.5px; font-weight: 600; color: var(--text); }
 .docMeta { font-size: 11.5px; color: var(--text-muted); }
 
+/* Help card */
+.guideLink {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--red);
+  border: 1.5px solid var(--red); border-radius: var(--radius-sm);
+  padding: 7px 12px; text-decoration: none; white-space: nowrap;
+}
+.guideLink:hover { background: var(--red-light); color: var(--red-dark); }
+
 .name    { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .userId  { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
 .roleBadge { display: inline-flex; }

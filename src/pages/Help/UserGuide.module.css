@@ -1,0 +1,80 @@
+.page { max-width: 900px; }
+.page.wide { max-width: 1000px; }
+
+.intro { margin-bottom: 18px; }
+.introTitle { font-size: 22px; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+.introSub { font-size: 13.5px; color: var(--text-sec); line-height: 1.55; max-width: 62ch; }
+
+.pillbar {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 20px; position: sticky; top: 0; z-index: 5;
+  background: var(--surface); padding: 10px 0;
+}
+.pill {
+  font-size: 12px; font-weight: 600; color: var(--text-sec);
+  padding: 6px 12px; border-radius: 20px; background: var(--card);
+  border: 1px solid var(--border); text-decoration: none; white-space: nowrap;
+}
+.pill:hover { border-color: var(--red); color: var(--red); }
+
+.section { margin-bottom: 16px; scroll-margin-top: 56px; }
+
+.secHead { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+.secIcon {
+  width: 34px; height: 34px; border-radius: 9px; background: var(--red-light); color: var(--red);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.secIcon svg { width: 18px; height: 18px; }
+.secTitle { font-size: 17px; font-weight: 700; color: var(--text); margin: 0; }
+.secPath {
+  font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; color: var(--text-muted);
+  background: var(--surface); padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border);
+}
+.secDesc { color: var(--text-sec); font-size: 13.5px; margin: 6px 0 16px 46px; line-height: 1.55; max-width: 66ch; }
+
+.subhead { font-size: 13px; font-weight: 700; color: var(--text); margin: 18px 0 8px; }
+.subhead:first-of-type { margin-top: 2px; }
+
+.stepList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.step { display: flex; gap: 11px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 13px; }
+.stepNo {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff;
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.stepBody b { display: block; font-size: 13.5px; font-weight: 650; color: var(--text); margin-bottom: 1px; }
+.stepBody span { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+
+.refList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.refItem { font-size: 13.5px; line-height: 1.55; padding-left: 16px; position: relative; color: var(--text); }
+.refItem::before { content: "—"; position: absolute; left: 0; color: var(--text-muted); }
+.refItem b { font-weight: 650; }
+.refItem span { color: var(--text-sec); }
+
+.tableWrap { overflow-x: auto; margin-top: 4px; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th {
+  text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted); padding: 7px 9px; border-bottom: 2px solid var(--border); white-space: nowrap;
+}
+.table td { padding: 8px 9px; border-bottom: 1px solid var(--border-light); vertical-align: top; color: var(--text); }
+.table tr:last-child td { border-bottom: none; }
+
+.callout { display: flex; gap: 9px; border-radius: 9px; padding: 11px 13px; font-size: 13px; line-height: 1.55; margin-top: 14px; }
+.tip  { background: var(--blue-bg); color: var(--text); }
+.warn { background: var(--amber-bg); color: var(--text); }
+.calloutDot { width: 7px; height: 7px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.tip .calloutDot  { background: var(--blue); }
+.warn .calloutDot { background: var(--amber); }
+
+.qaGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
+@media (max-width: 560px) { .qaGrid { grid-template-columns: repeat(2, 1fr); } }
+.qaItem { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 14px 10px; text-align: center; }
+.qaItem svg { width: 20px; height: 20px; margin: 0 auto 6px; color: var(--red); }
+.qaItem span { font-size: 12px; font-weight: 600; color: var(--text-sec); }
+
+.audience {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+  color: var(--text-sec); background: var(--card); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 20px; margin-bottom: 14px;
+}

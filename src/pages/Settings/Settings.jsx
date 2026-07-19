@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UsersIcon, ShieldCheckIcon, KeyIcon, DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, ShieldCheckIcon, KeyIcon, DocumentMagnifyingGlassIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import { usePermissions } from '../../hooks/usePermissions';
 import styles from './Settings.module.css';
 
@@ -22,6 +22,12 @@ const SETTING_CARDS = [
     Icon: ShieldCheckIcon,
     title: 'Permissions',
     desc: 'Live matrix of what each Access Level grants.',
+  },
+  {
+    to: '/help',
+    Icon: BookOpenIcon,
+    title: 'User Guide',
+    desc: 'Full reference guide for every module in the admin panel.',
   },
 ];
 

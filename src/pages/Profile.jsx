@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -160,6 +161,19 @@ export default function Profile() {
               Update PIN
             </Button>
           </form>
+        </Card>
+
+        {/* Help */}
+        <Card style={{ gridColumn: '1 / -1' }}>
+          <CardHeader
+            title="Need help?"
+            subtitle="Step-by-step guide to using the app"
+            action={
+              <Link to="/help" className={styles.guideLink}>
+                <BookOpenIcon width={15} /> Open User Guide
+              </Link>
+            }
+          />
         </Card>
 
         {/* Appearance */}
