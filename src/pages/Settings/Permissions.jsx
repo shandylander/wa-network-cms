@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { useAccessLevels } from '../../hooks/useAccessLevels';
 import { PERMISSION_CATALOG, PERMISSION_AREAS } from '../../utils/permissionCatalog';
+import Tooltip from '../../components/UI/Tooltip';
 import styles from './Permissions.module.css';
 
 // Live matrix — rows are real permission keys from permissionCatalog.js,
@@ -51,7 +52,12 @@ export default function Permissions() {
                   </tr>
                   {PERMISSION_CATALOG.filter((p) => p.area === area).map((perm) => (
                     <tr key={perm.key} className={styles.dataRow}>
-                      <td className={styles.featureCell}>{perm.label}</td>
+                      <td className={styles.featureCell}>
+                        <span className={styles.featureLabel}>
+                          {perm.label}
+                          <Tooltip text={perm.description} side="right" />
+                        </span>
+                      </td>
                       {levels.map((l) => (
                         <td key={l.id} className={(l.permissions ?? []).includes(perm.key) ? styles.cellFull : styles.cellNone}>
                           {(l.permissions ?? []).includes(perm.key) && <CheckIcon className={styles.checkIcon} />}

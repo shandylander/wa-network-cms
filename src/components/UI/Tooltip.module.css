@@ -1,0 +1,74 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+}
+
+.infoIcon {
+  width: 14px; height: 14px;
+  color: var(--text-muted);
+  cursor: help;
+  flex-shrink: 0;
+}
+.wrap:hover .infoIcon,
+.wrap:focus .infoIcon { color: var(--red); }
+
+.bubble {
+  position: absolute;
+  z-index: 40;
+  width: max-content;
+  max-width: 240px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+
+.wrap:hover .bubble,
+.wrap:focus .bubble,
+.wrap:focus-within .bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* top (default): bubble above the trigger, left-aligned to it */
+.top {
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translate(-50%, 2px);
+}
+.wrap:hover .top,
+.wrap:focus .top,
+.wrap:focus-within .top { transform: translate(-50%, 0); }
+
+/* bottom: bubble below the trigger */
+.bottom {
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translate(-50%, -2px);
+}
+.wrap:hover .bottom,
+.wrap:focus .bottom,
+.wrap:focus-within .bottom { transform: translate(-50%, 0); }
+
+/* right: bubble to the right, vertically centred — used in dense checklists
+   where a left/top bubble would run off the panel edge. */
+.right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translate(-2px, -50%);
+}
+.wrap:hover .right,
+.wrap:focus .right,
+.wrap:focus-within .right { transform: translate(0, -50%); }

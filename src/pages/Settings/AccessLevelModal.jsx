@@ -6,6 +6,7 @@ import { useToast } from '../../context/ToastContext';
 import { PERMISSION_CATALOG, PERMISSION_AREAS } from '../../utils/permissionCatalog';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
+import Tooltip from '../../components/UI/Tooltip';
 import styles from './AccessLevels.module.css';
 
 const COLOR_PALETTE = [
@@ -138,6 +139,7 @@ export default function AccessLevelModal({ level, existingIds, onClose, onSaved,
                         onChange={() => togglePerm(p.key)}
                       />
                       <span>{p.label}</span>
+                      <Tooltip text={p.description} />
                     </label>
                   ))}
                 </div>
