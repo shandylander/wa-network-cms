@@ -203,6 +203,7 @@
 .progressLabel { display: block; font-size: 11px; color: var(--text-sec); margin-top: 4px; text-align: center; }
 
 /* RA Library */
+.raToolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 .raEmpty { padding: 24px 0; color: var(--text-muted); font-size: 13px; }
 .raEmpty p    { margin-bottom: 4px; font-weight: 500; }
 .raEmpty span { font-size: 12px; }

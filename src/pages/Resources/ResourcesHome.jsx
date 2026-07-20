@@ -345,7 +345,7 @@ export default function ResourcesHome() {
 
       <Card style={{ marginTop: 16 }}>
         <CardHeader title="RA Library" subtitle="Risk assessment documents" />
-        <RaLibrary canAdmin={canAdmin} toast={toast} onOpen={setViewDoc} />
+        <RaLibrary canAdmin={canAdmin} toast={toast} onOpen={setViewDoc} userId={userProfile?.userId} />
       </Card>
 
       {/* Add Document modal */}
@@ -457,44 +457,200 @@ export default function ResourcesHome() {
   );
 }
 
-function RaLibrary({ canAdmin, toast, onOpen }) {
+const EMPTY_RA_FORM = { ref: '', title: '', assessedDate: '', reviewDate: '', leader: '', file: null };
+
+function RaLibrary({ canAdmin, toast, onOpen, userId }) {
   const [ras,     setRas]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showForm,     setShowForm]     = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [progress,     setProgress]     = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, title }
+  const [deleting,     setDeleting]     = useState(false);
+  const [form,         setForm]         = useState(EMPTY_RA_FORM);
+  const fileRef = useRef();
 
   useEffect(() => {
     getDocs(collection(db, 'raLibrary'))
       .then(snap => setRas(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
       .catch(() => toast.error('Failed to load RA library'))
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const closeForm = () => {
+    if (saving) return;
+    setShowForm(false);
+    setForm(EMPTY_RA_FORM);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+  const onFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm(f => ({ ...f, file, title: f.title || file.name.replace(/\.[^.]+$/, '') }));
+  };
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.ref.trim())   { toast.error('Enter an RA reference (e.g. RA 2.0).'); return; }
+    if (!form.title.trim()) { toast.error('Enter a title.'); return; }
+    if (!form.file)         { toast.error('Select a file to upload.'); return; }
+    setSaving(true);
+    setProgress(5);
+    try {
+      const url = await uploadToDropbox(form.file, '/WA! Network Asia CMS/HSE Library/Risk Assessments', setProgress);
+      setProgress(90);
+      const payload = {
+        ref: form.ref.trim(), title: form.title.trim(),
+        assessedDate: form.assessedDate || null, reviewDate: form.reviewDate || null,
+        leader: form.leader.trim(), url, fileName: form.file.name, status: 'active',
+        createdAt: Timestamp.now(), createdBy: userId ?? null,
+      };
+      const ref = await addDoc(collection(db, 'raLibrary'), payload);
+      setRas(prev => [{ id: ref.id, ...payload }, ...prev]);
+      toast.success('Risk assessment added');
+      closeForm();
+    } catch (err) {
+      console.error(err);
+      toast.error('Upload failed — check your connection and try again.');
+    } finally {
+      setSaving(false);
+      setProgress(0);
+    }
+  };
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'raLibrary', deleteTarget.id));
+      setRas(prev => prev.filter(r => r.id !== deleteTarget.id));
+      toast.success('Risk assessment removed');
+      setDeleteTarget(null);
+    } catch { toast.error('Failed to remove'); }
+    finally { setDeleting(false); }
+  };
 
   if (loading) return <div className={styles.miniSpinner} />;
 
-  if (ras.length === 0) {
-    return (
-      <div className={styles.raEmpty}>
-        <p>No risk assessments uploaded yet.</p>
-        {canAdmin && <span>Add RA documents via the Dropbox folder and update the links here.</span>}
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.docList}>
-      {ras.map(ra => (
-        <div key={ra.id} className={styles.docRow}>
-          <div className={styles.docInfo}>
-            <ShieldCheckIcon className={styles.docIcon} width={18} />
-            <div>
-              <p className={styles.docName}>{ra.title}</p>
-              <span className={styles.docMeta}>{ra.ref} · Assessed: {ra.assessedDate}</span>
+    <>
+      {canAdmin && (
+        <div className={styles.raToolbar}>
+          <button className={styles.addBtn} onClick={() => setShowForm(true)}><PlusIcon width={14} /> Add RA</button>
+        </div>
+      )}
+
+      {ras.length === 0 ? (
+        <div className={styles.raEmpty}>
+          <p>No risk assessments uploaded yet.</p>
+          {canAdmin && <span>Click "Add RA" above to upload one.</span>}
+        </div>
+      ) : (
+        <div className={styles.docList}>
+          {ras.map(ra => (
+            <div key={ra.id} className={styles.docRow}>
+              <div className={styles.docInfo}>
+                <ShieldCheckIcon className={styles.docIcon} width={18} />
+                <div>
+                  <p className={styles.docName}>{ra.title}</p>
+                  <span className={styles.docMeta}>{ra.ref}{ra.assessedDate ? ` · Assessed: ${ra.assessedDate}` : ''}</span>
+                </div>
+              </div>
+              <div className={styles.rowActions}>
+                <button className={styles.downloadBtn} onClick={() => onOpen({ name: ra.title, fileName: ra.fileName, url: ra.url })}>
+                  <EyeIcon width={15} /> Open
+                </button>
+                {canAdmin && (
+                  <button className={styles.deleteBtn} title="Remove" onClick={() => setDeleteTarget({ id: ra.id, title: ra.title })}>
+                    <TrashIcon width={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className={styles.modalOverlay} onClick={closeForm}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHead}>
+              <h3 className={styles.modalTitle}>Add Risk Assessment</h3>
+              <button className={styles.modalClose} onClick={closeForm} disabled={saving}><XMarkIcon width={18} /></button>
+            </div>
+            <form onSubmit={submit}>
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>File <span style={{ color: 'var(--red)' }}>*</span></label>
+                <div className={[styles.dropZone, form.file ? styles.dropZoneHasFile : ''].join(' ')} onClick={() => !saving && fileRef.current?.click()}>
+                  <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={onFileChange} disabled={saving} />
+                  {form.file ? (
+                    <div className={styles.fileSelected}>
+                      <DocumentTextIcon width={20} />
+                      <div>
+                        <p className={styles.fileName}>{form.file.name}</p>
+                        <p className={styles.fileSize}>{(form.file.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.dropPrompt}>
+                      <CloudArrowUpIcon width={28} />
+                      <p>Click to select a file from your PC</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>RA Reference <span style={{ color: 'var(--red)' }}>*</span></label>
+                <input className={styles.formInput} placeholder="e.g. RA 2.0" value={form.ref}
+                  onChange={e => setForm(f => ({ ...f, ref: e.target.value }))} disabled={saving} />
+              </div>
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Title <span style={{ color: 'var(--red)' }}>*</span></label>
+                <input className={styles.formInput} placeholder="e.g. Working at Height" value={form.title}
+                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))} disabled={saving} />
+              </div>
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Team Leader</label>
+                <input className={styles.formInput} placeholder="Name" value={form.leader}
+                  onChange={e => setForm(f => ({ ...f, leader: e.target.value }))} disabled={saving} />
+              </div>
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Assessed Date</label>
+                <input type="date" className={styles.formInput} value={form.assessedDate}
+                  onChange={e => setForm(f => ({ ...f, assessedDate: e.target.value }))} disabled={saving} />
+              </div>
+              <div className={styles.formRow}>
+                <label className={styles.formLbl}>Review Date</label>
+                <input type="date" className={styles.formInput} value={form.reviewDate}
+                  onChange={e => setForm(f => ({ ...f, reviewDate: e.target.value }))} disabled={saving} />
+              </div>
+
+              {saving && (
+                <div className={styles.progressWrap}>
+                  <div className={styles.progressBar} style={{ width: `${progress}%` }} />
+                  <span className={styles.progressLabel}>{progress < 70 ? 'Uploading to Dropbox…' : 'Saving…'} {progress}%</span>
+                </div>
+              )}
+
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.cancelBtn} onClick={closeForm} disabled={saving}>Cancel</button>
+                <button type="submit" className={styles.submitBtn} disabled={saving}>{saving ? `Uploading… ${progress}%` : 'Upload & Save'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className={styles.modalOverlay} onClick={() => setDeleteTarget(null)}>
+          <div className={styles.modal} style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Remove "{deleteTarget.title}"</h3>
+            <p className={styles.confirmText}><ExclamationTriangleIcon width={14} /> This removes the record from the CMS. The file in Dropbox is not deleted.</p>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className={styles.deleteConfirmBtn} onClick={confirmDelete} disabled={deleting}>{deleting ? 'Removing…' : 'Yes, Remove'}</button>
             </div>
           </div>
-          <button className={styles.downloadBtn} onClick={() => onOpen({ name: ra.title, url: ra.url })}>
-            <EyeIcon width={15} /> Open
-          </button>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }
