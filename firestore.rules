@@ -387,7 +387,9 @@ service cloud.firestore {
       // Submitters may correct their own claim, or withdraw it, while it is
       // still pending — same shape as leaveApplications above — but cannot
       // change its owner, self-approve it, or touch it once reviewed.
-      allow update: if ownerOrManager()
+      // role-component matches pettycash:approve exactly (was ownerOrManager(),
+      // which silently denied supervisors an Approve button the UI showed them).
+      allow update: if hasPerm('pettycash:approve')
         || (resource.data.userId == uid()
             && resource.data.status == 'pending'
             && request.resource.data.status in ['pending', 'cancelled']
