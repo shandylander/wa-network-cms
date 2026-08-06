@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { PlusIcon, XMarkIcon, CheckIcon, ReceiptPercentIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { checkReceiptDuplicate } from '../../utils/workerDocs';
 import { formatDateTime } from '../../utils/helpers';
+import { downloadCsv } from '../../utils/exportUtils';
 import WorkerClaims from '../Worker/WorkerClaims';
 import FileLightbox, { isImageUrl } from '../../components/UI/FileLightbox';
 import styles from './HR.module.css';
@@ -35,12 +36,14 @@ export default function PettyCash() {
 
   const [claims,    setClaims]    = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [tab,       setTab]       = useState('my');      // 'my' | 'queue' (admin)
+  const [tab,       setTab]       = useState('my');      // 'my' | 'queue' | 'records' (admin)
   const [showForm,  setShowForm]  = useState(false);
   const [rejectId,  setRejectId]  = useState(null);
   const [rejectNote, setRejectNote] = useState('');
   const [saving,    setSaving]    = useState(false);
   const [lightbox,  setLightbox]  = useState(null);
+
+  const [filters, setFilters] = useState({ from: '', to: '', status: 'all', category: 'all', submitter: 'all' });
 
   const [form, setForm] = useState({
     date: todaySG(), category: 'transport', description: '', amount: '', receiptUrl: '',
@@ -52,6 +55,8 @@ export default function PettyCash() {
       let q;
       if (tab === 'queue' && isAdmin) {
         q = query(collection(db, 'pettyCashClaims'), where('status', '==', 'pending'));
+      } else if (tab === 'records' && isAdmin) {
+        q = query(collection(db, 'pettyCashClaims'));
       } else {
         q = query(collection(db, 'pettyCashClaims'), where('userId', '==', userProfile.userId));
       }
@@ -64,6 +69,24 @@ export default function PettyCash() {
   };
 
   useEffect(() => { if (!isWorker) loadClaims(); }, [tab]); // eslint-disable-line
+
+  const submitters = useMemo(() => {
+    const seen = new Map();
+    claims.forEach(c => { if (c.userId && !seen.has(c.userId)) seen.set(c.userId, c.name); });
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [claims]);
+
+  const filteredRecords = useMemo(() => {
+    if (tab !== 'records') return [];
+    return claims.filter(c => {
+      if (filters.from && c.date < filters.from) return false;
+      if (filters.to && c.date > filters.to) return false;
+      if (filters.status !== 'all' && c.status !== filters.status) return false;
+      if (filters.category !== 'all' && c.category !== filters.category) return false;
+      if (filters.submitter !== 'all' && c.userId !== filters.submitter) return false;
+      return true;
+    }).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [claims, filters, tab]);
 
   // Field workers get the simplified photo-first experience
   if (isWorker) {
@@ -150,36 +173,146 @@ export default function PettyCash() {
 
   const totalPending = claims.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0);
   const totalApproved = claims.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0);
+  const recordsTotal = filteredRecords.reduce((s, c) => s + (c.amount ?? 0), 0);
+
+  const exportRecords = () => {
+    downloadCsv(`petty-cash-claims-${todaySG()}`, [
+      { key: 'date', label: 'Date' },
+      { key: 'name', label: 'Submitted By' },
+      { key: 'team', label: 'Team' },
+      { key: 'category', label: 'Category' },
+      { key: 'description', label: 'Description' },
+      { key: 'amount', label: 'Amount (SGD)' },
+      { key: 'status', label: 'Status' },
+      { key: 'reviewedByName', label: 'Reviewed By' },
+      { key: 'rejectionReason', label: 'Rejection Reason' },
+    ], filteredRecords.map(c => ({
+      ...c,
+      category: CATEGORIES.find(x => x.value === c.category)?.label ?? c.category,
+      amount: (c.amount ?? 0).toFixed(2),
+    })));
+  };
 
   return (
     <div className={styles.pcWrap}>
       {/* Summary */}
-      <div className={styles.pcSummary}>
-        <div className={styles.pcSumCard}>
-          <p className={styles.pcSumLbl}>Pending</p>
-          <p className={styles.pcSumAmt} style={{ color: 'var(--amber)' }}>{fmtAmt(tab === 'my' ? totalPending : claims.reduce((s,c)=>s+c.amount,0))}</p>
+      {tab !== 'records' && (
+        <div className={styles.pcSummary}>
+          <div className={styles.pcSumCard}>
+            <p className={styles.pcSumLbl}>Pending</p>
+            <p className={styles.pcSumAmt} style={{ color: 'var(--amber)' }}>{fmtAmt(tab === 'my' ? totalPending : claims.reduce((s,c)=>s+c.amount,0))}</p>
+          </div>
+          {tab === 'my' && <div className={styles.pcSumCard}>
+            <p className={styles.pcSumLbl}>Approved (all time)</p>
+            <p className={styles.pcSumAmt} style={{ color: 'var(--green)' }}>{fmtAmt(totalApproved)}</p>
+          </div>}
         </div>
-        {tab === 'my' && <div className={styles.pcSumCard}>
-          <p className={styles.pcSumLbl}>Approved (all time)</p>
-          <p className={styles.pcSumAmt} style={{ color: 'var(--green)' }}>{fmtAmt(totalApproved)}</p>
-        </div>}
-      </div>
+      )}
 
       {/* Tabs */}
       <div className={styles.applyHeader}>
         <div style={{ display: 'flex', gap: 6 }}>
           <button className={[styles.queueFilter, tab === 'my' ? styles.queueFilterActive : ''].join(' ')} onClick={() => setTab('my')}>My Claims</button>
           {isAdmin && <button className={[styles.queueFilter, tab === 'queue' ? styles.queueFilterActive : ''].join(' ')} onClick={() => setTab('queue')}>Approval Queue</button>}
+          {isAdmin && <button className={[styles.queueFilter, tab === 'records' ? styles.queueFilterActive : ''].join(' ')} onClick={() => setTab('records')}>Records</button>}
         </div>
         {tab === 'my' && (
           <button className={styles.applyBtn} onClick={() => setShowForm(true)}>
             <PlusIcon width={14} /> New Claim
           </button>
         )}
+        {tab === 'records' && (
+          <button className={styles.applyBtn} onClick={exportRecords} disabled={filteredRecords.length === 0}>
+            Export CSV
+          </button>
+        )}
       </div>
+
+      {tab === 'records' && isAdmin && (
+        <div className={styles.formRowGroup} style={{ flexWrap: 'wrap', marginTop: 10 }}>
+          <div className={styles.formRow} style={{ minWidth: 130 }}>
+            <label className={styles.formLbl}>From</label>
+            <input type="date" className={styles.formInput} value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} />
+          </div>
+          <div className={styles.formRow} style={{ minWidth: 130 }}>
+            <label className={styles.formLbl}>To</label>
+            <input type="date" className={styles.formInput} value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} />
+          </div>
+          <div className={styles.formRow} style={{ minWidth: 150 }}>
+            <label className={styles.formLbl}>Submitted By</label>
+            <select className={styles.formInput} value={filters.submitter} onChange={e => setFilters(f => ({ ...f, submitter: e.target.value }))}>
+              <option value="all">All</option>
+              {submitters.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          </div>
+          <div className={styles.formRow} style={{ minWidth: 140 }}>
+            <label className={styles.formLbl}>Category</label>
+            <select className={styles.formInput} value={filters.category} onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}>
+              <option value="all">All</option>
+              {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className={styles.formRow} style={{ minWidth: 130 }}>
+            <label className={styles.formLbl}>Status</label>
+            <select className={styles.formInput} value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {tab === 'records' && !loading && (
+        <p className={styles.pcMeta} style={{ margin: '8px 0' }}>
+          {filteredRecords.length} claim{filteredRecords.length === 1 ? '' : 's'} · Total {fmtAmt(recordsTotal)}
+        </p>
+      )}
 
       {loading ? (
         <div className={styles.loading}><div className={styles.spinner} /></div>
+      ) : tab === 'records' ? (
+        filteredRecords.length === 0 ? (
+          <p className={styles.empty}>No claims match these filters.</p>
+        ) : (
+          <div className={styles.pcList}>
+            {filteredRecords.map(c => {
+              const catLabel = CATEGORIES.find(x => x.value === c.category)?.label ?? c.category;
+              return (
+                <div key={c.id} className={styles.pcCard}>
+                  <div className={styles.pcCardLeft}>
+                    <div className={styles.pcIconWrap}><ReceiptPercentIcon width={18} /></div>
+                    <div>
+                      <p className={styles.pcClaimant}>{c.name}{c.team ? ` · ${c.team}` : ''}</p>
+                      <p className={styles.pcDesc}>{c.description}</p>
+                      <p className={styles.pcMeta}>{fmtDate(c.date)} · {catLabel}</p>
+                      {c.receiptUrl && (
+                        <a href={c.receiptUrl} target="_blank" rel="noreferrer" className={styles.mcLink}
+                          onClick={e => { if (isImageUrl(c.receiptUrl)) { e.preventDefault(); setLightbox(c.receiptUrl); } }}>
+                          View receipt →
+                        </a>
+                      )}
+                      {c.rejectionReason && <p className={styles.appReject}>Rejected: {c.rejectionReason}</p>}
+                      {c.reviewedByName && (
+                        <p className={styles.pcMeta}>
+                          {c.status === 'approved' ? 'Approved' : 'Reviewed'} by {c.reviewedByName} · {formatDateTime(c.reviewedAt)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.pcCardRight}>
+                    <p className={styles.pcAmt}>{fmtAmt(c.amount)}</p>
+                    <span className={[styles.statusBadge, styles[STATUS_STYLES[c.status] ?? 'statusdefault']].join(' ')}>
+                      {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : claims.length === 0 ? (
         <p className={styles.empty}>{tab === 'queue' ? 'No pending claims.' : 'No claims submitted yet.'}</p>
       ) : (

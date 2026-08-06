@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
   CurrencyDollarIcon, BriefcaseIcon, WrenchScrewdriverIcon,
@@ -205,7 +206,10 @@ export default function Finance() {
               <p className={styles.pcSumAmt} style={{ color: 'var(--amber)' }}>{fmtSGD(petty.pending)}</p>
             </div>
           </div>
-          <p className={styles.sectionSub}>Manage individual claims under Employees → Petty Cash.</p>
+          <p className={styles.sectionSub}>
+            Approve claims, browse the full filterable history, and export CSV records under{' '}
+            <Link to="/petty-cash">Employees → Petty Cash → Records</Link>.
+          </p>
         </div>
       )}
     </div>
