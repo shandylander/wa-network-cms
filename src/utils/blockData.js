@@ -91,13 +91,13 @@ export const PROJECT_SEED = {
 };
 
 export const HSE_DOCS_SEED = [
-  { id: 'd1', name: 'General Permit-to-Work', category: 'hse', url: 'https://www.dropbox.com/scl/fi/1ypfdzxo38cxdtuqjbr68/General-Permit-to-Work-NEW-LATEST.pdf?rlkey=yvka98tp1fx6k08jj5yavmz6e&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
-  { id: 'd2', name: 'WAH Permit (Rev 04)', category: 'hse', url: 'https://www.dropbox.com/scl/fi/q40d272amsivm4w9tevyr/WAH-PERMIT-Rev-04-Latest.pdf?rlkey=u9ut38ebo00q6qm6yb67hil2o&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
-  { id: 'd3', name: 'Toolbox Meeting Form (Rev 7)', category: 'hse', url: 'https://www.dropbox.com/scl/fi/4p82jsc9iu6s740m7vkq6/Toolbox-Meeting-Form-Rev-7-LATEST.pdf?rlkey=3coy83ocgiax7wolz89668ict&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
-  { id: 'd4', name: 'Daily Safety Harness Checklist', category: 'hse', url: 'https://www.dropbox.com/scl/fi/ihyyqdry0v4djtfcae6up/SAFETY-HARNESS-CHECKLIST-Rev-01.pdf?rlkey=bpiz7p55h2i5k99edu2bsq7hw&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
-  { id: 'd5', name: 'Daily Boom/Scissor Lift Checklist', category: 'hse', url: 'https://www.dropbox.com/scl/fi/zw4dp1e7bzt22xxqudioh/Daily-Boom-Scissor-lift-Checklist-Rev.1.pdf?rlkey=lz5u9bogb0apjdwnhhe8cyi1m&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
-  { id: 'd6', name: 'Daily Ladder Inspection Tag', category: 'hse', url: 'https://www.dropbox.com/scl/fi/qoq94ma4mhp8re2q4yns0/Daily-Ladder-Inspection-Tag-Rev-02-LATEST.pdf?rlkey=anhjkx7zocbtopn2frlpt9ww4&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
-  { id: 'd7', name: 'Monthly Ladder Inspection Record', category: 'hse', url: 'https://www.dropbox.com/scl/fi/20eid3dcaqvfradnnb8hl/Monthly-Registration-and-Inspection-A-Frame-Ladder-Rev-04.pdf?rlkey=q04jn0qumiog3rlv48bmqzwhu&dl=1', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd1', name: 'General Permit-to-Work', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/General%20Permit-to-Work%20(NEW%20-%20LATEST).pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd2', name: 'WAH Permit (Rev 04)', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/WAH%20PERMIT%20(Rev%2004)%20-%20Latest.pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd3', name: 'Toolbox Meeting Form (Rev 7)', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/Toolbox%20Meeting%20Form%20Rev-7%20LATEST.pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd4', name: 'Daily Safety Harness Checklist', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/SAFETY%20HARNESS%20CHECKLIST%20(Rev%2001).pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd5', name: 'Daily Boom/Scissor Lift Checklist', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/Daily%20Boom%20%26%20Scissor%20lift%20Checklist%20Rev.1.pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd6', name: 'Daily Ladder Inspection Tag', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/Daily%20Ladder%20Inspection%20Tag%20(Rev%2002)%20LATEST.pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
+  { id: 'd7', name: 'Monthly Ladder Inspection Record', category: 'hse', url: '/files/Projects/PCS%20Batch%203/HSE%20Forms/Monthly%20Registration%20and%20Inspection%20A-Frame%20Ladder%20(Rev%2004).pdf', access: { kvm: false, sree: false, habibur: false, alamin: false, own: true } },
 ];
 
 export const USERS_SEED = [
