@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { startAutoUpdateCheck } from './utils/autoUpdate';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -95,6 +96,11 @@ function ProtectedRoutes() {
 }
 
 export default function App() {
+  // Auto-update check — reloads when a new build is deployed
+  useEffect(function() {
+    return startAutoUpdateCheck();
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>
