@@ -19,6 +19,13 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "**",
+        "destination": "https://app.wanetwork.asia",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "**",
