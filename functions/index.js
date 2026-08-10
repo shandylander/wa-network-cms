@@ -311,6 +311,127 @@ exports.uploadProjectDocument = onCall(
   }
 );
 
+// ── uploadUserFile — self-scoped/role-scoped uploads migrated off Firebase
+// Storage 2026-08-11 (attendance selfies, worker MC/certs/avatars/receipts/
+// delivery-order scans, site & snag photos). Same self-hosted upload API as
+// uploadProjectDocument above, but unlike that function these categories
+// used to be gated per-user or per-project by storage.rules — since nothing
+// reaches Storage for these anymore, that authorization is replicated here
+// server-side (mirrors storage.rules' callerId()/isInternal()/
+// assignedToProject() helpers, using the Admin SDK's unrestricted Firestore
+// access instead of the `firestore.get()` rules-language equivalent).
+
+const UPLOAD_CATEGORIES = {
+  attendance:     { folder: ({ userId, date }) => `attendance/${userId}/${date}`, maxBytes: 5 * 1024 * 1024, mime: ['image/'], scope: 'self' },
+  mc:             { folder: ({ userId }) => `mc/${userId}`,             maxBytes: 10 * 1024 * 1024, mime: ['image/', 'application/pdf'], scope: 'self' },
+  certs:          { folder: ({ userId }) => `certs/${userId}`,          maxBytes: 10 * 1024 * 1024, mime: ['image/', 'application/pdf'], scope: 'self' },
+  avatars:        { folder: ({ userId }) => `avatars/${userId}`,        maxBytes: 5  * 1024 * 1024, mime: ['image/'], scope: 'self-internal' },
+  receipts:       { folder: ({ userId }) => `receipts/${userId}`,       maxBytes: 10 * 1024 * 1024, mime: ['image/', 'application/pdf'], scope: 'self' },
+  deliveryOrders: { folder: ({ userId }) => `deliveryOrders/${userId}`, maxBytes: 10 * 1024 * 1024, mime: ['image/', 'application/pdf'], scope: 'self' },
+  sitePhotos:     { folder: ({ projectId }) => `sitePhotos/${projectId}`, maxBytes: 8 * 1024 * 1024, mime: ['image/'], scope: 'project' },
+  snagPhotos:     { folder: ({ projectId }) => `snagPhotos/${projectId}`, maxBytes: 8 * 1024 * 1024, mime: ['image/'], scope: 'project' },
+};
+
+function mimeAllowed(mimeType, allowed) {
+  const m = String(mimeType || '');
+  return allowed.some((p) => (p.endsWith('/') ? m.startsWith(p) : m === p));
+}
+
+const INTERNAL_ROLES = ['owner', 'manager', 'supervisor'];
+
+exports.uploadUserFile = onCall(
+  {
+    region: REGION,
+    secrets: [SERVER_UPLOAD_SECRET],
+    memory: '512MiB',
+    timeoutSeconds: 120,
+    maxInstances: 5,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+    const callerId = String(request.auth.token.email || '').split('@')[0].toUpperCase();
+
+    const { data, fileName, mimeType, category, userId, projectId, date } = request.data ?? {};
+    const cat = UPLOAD_CATEGORIES[category];
+    if (!cat) {
+      throw new HttpsError('invalid-argument', 'Unknown upload category.');
+    }
+    if (!data || typeof data !== 'string') {
+      throw new HttpsError('invalid-argument', 'Missing file data.');
+    }
+    if (data.length > Math.ceil((cat.maxBytes * 4) / 3) + 100) {
+      throw new HttpsError('invalid-argument', 'File too large.');
+    }
+    if (!fileName || typeof fileName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Missing file name.');
+    }
+    if (!mimeAllowed(mimeType, cat.mime)) {
+      throw new HttpsError('invalid-argument', 'File type not allowed.');
+    }
+    if (category === 'attendance' && !date) {
+      throw new HttpsError('invalid-argument', 'Missing date.');
+    }
+
+    const db = getFirestore();
+
+    // ── Authorization ──
+    if (cat.scope === 'self' || cat.scope === 'self-internal') {
+      if (!userId || userId !== callerId) {
+        throw new HttpsError('permission-denied', 'Cannot upload on behalf of another user.');
+      }
+      if (cat.scope === 'self-internal') {
+        const meSnap = await db.doc(`users/${callerId}`).get();
+        if (!INTERNAL_ROLES.includes(meSnap.data()?.role)) {
+          throw new HttpsError('permission-denied', 'Not permitted.');
+        }
+      }
+    } else if (cat.scope === 'project') {
+      if (!projectId || typeof projectId !== 'string') {
+        throw new HttpsError('invalid-argument', 'Missing projectId.');
+      }
+      const meSnap = await db.doc(`users/${callerId}`).get();
+      const me = meSnap.data() ?? {};
+      let allowed = INTERNAL_ROLES.includes(me.role) || me.role === 'staff';
+      if (!allowed && ['subcon-admin', 'subcon'].includes(me.role)) {
+        const projSnap = await db.doc(`projects/${projectId}`).get();
+        allowed = (projSnap.data()?.assignedTeams ?? []).includes(me.team);
+      }
+      if (!allowed) {
+        throw new HttpsError('permission-denied', 'Not assigned to this project.');
+      }
+    }
+
+    const safeName = fileName.replace(/[#%&{}\\<>*?/$!'":@+`|=]/g, '_');
+    const serverFolder = cat.folder({ userId, projectId, date });
+
+    let uploadRes;
+    try {
+      uploadRes = await fetch(SERVER_UPLOAD_URL, {
+        method:  'POST',
+        headers: {
+          Authorization:  `Bearer ${SERVER_UPLOAD_SECRET.value()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data, fileName: safeName, folder: serverFolder }),
+      });
+    } catch (err) {
+      console.error('[ServerUpload] Request failed:', err);
+      throw new HttpsError('unavailable', 'Upload server unreachable.');
+    }
+
+    if (!uploadRes.ok) {
+      const body = await uploadRes.text().catch(() => '');
+      console.error('[ServerUpload] Upload failed:', uploadRes.status, body.slice(0, 500));
+      throw new HttpsError('internal', 'Upload failed.');
+    }
+
+    const result = await uploadRes.json();
+    return { url: result.url };
+  }
+);
+
 // ── Access Levels — effective-permission recomputation ──────────────────
 // A user's effectivePermissions is the union of every assigned access
 // level's permissions. It is denormalized onto the user doc so Firestore

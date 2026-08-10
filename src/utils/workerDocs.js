@@ -1,6 +1,5 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
-import { storage, functions } from '../firebase';
+import { functions } from '../firebase';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // matches storage.rules
 
@@ -29,17 +28,6 @@ export const compressImage = (file) =>
     img.src = url;
   });
 
-/* Upload an MC or receipt to Firebase Storage; returns a download URL.
-   kind: 'mc' | 'receipts' */
-export const uploadWorkerDoc = async (file, kind, userId) => {
-  if (file.size > MAX_FILE_BYTES) throw new Error('file-too-big');
-  const safeName = file.name.replace(/[^\w.-]/g, '_');
-  const path     = `${kind}/${userId}/${Date.now()}-${safeName}`;
-  const fileRef  = ref(storage, path);
-  await uploadBytes(fileRef, file, { contentType: file.type || 'application/octet-stream' });
-  return getDownloadURL(fileRef);
-};
-
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -47,6 +35,22 @@ const fileToBase64 = (file) =>
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+/* Upload an MC/cert/avatar/receipt/delivery-order scan via the self-hosted
+   upload API (uploadUserFile Cloud Function); returns a public URL.
+   kind: 'mc' | 'certs' | 'avatars' | 'receipts' | 'deliveryOrders' —
+   matches the categories the Cloud Function and upload API expect. */
+export const uploadWorkerDoc = async (file, kind, userId) => {
+  if (file.size > MAX_FILE_BYTES) throw new Error('file-too-big');
+  const safeName = file.name.replace(/[^\w.-]/g, '_');
+  const data = await fileToBase64(file);
+  const callable = httpsCallable(functions, 'uploadUserFile', { timeout: 60000 });
+  const res = await callable({
+    data, mimeType: file.type || 'application/octet-stream', category: kind,
+    userId, fileName: `${Date.now()}-${safeName}`,
+  });
+  return res.data.url;
+};
 
 /* Send an MC / receipt to the extractDocument Cloud Function.
    docType: 'mc' | 'receipt'

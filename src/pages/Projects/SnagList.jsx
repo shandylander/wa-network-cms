@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, doc, setDoc, updateDoc, getDocs, Timestamp, query, where, arrayUnion } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
 import { PlusIcon, XMarkIcon, ChevronDownIcon, CameraIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
-import { db, storage } from '../../firebase';
+import { db, functions } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -25,6 +25,21 @@ const STATUSES = [
 ];
 
 const TEAMS = { own: 'WA Staff', kvm: 'KVM', sree: 'Sree Ram', habibur: 'Habibur', alamin: 'Alamin' };
+
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+const uploadSnagPhoto = async (blob, projectId, fileName) => {
+  const data = await blobToBase64(blob);
+  const callable = httpsCallable(functions, 'uploadUserFile', { timeout: 60000 });
+  const res = await callable({ data, mimeType: 'image/jpeg', category: 'snagPhotos', projectId, fileName });
+  return res.data.url;
+};
 
 // Common CCTV-installation defect types — a starting menu, not an exhaustive
 // enum. "type" is still stored as free text, so picking "Other" just swaps
@@ -144,10 +159,7 @@ export default function SnagList({ project }) {
       // in the same write as the snag itself (no second update round-trip).
       const newRef = doc(collection(db, 'projects', project.id, 'snags'));
       const photos = await Promise.all(stagedPhotos.map(async (p, i) => {
-        const path = `snagPhotos/${project.id}/${newRef.id}/${Date.now()}-${i}.jpg`;
-        const fileRef = ref(storage, path);
-        await uploadBytes(fileRef, p.blob, { contentType: 'image/jpeg' });
-        const url = await getDownloadURL(fileRef);
+        const url = await uploadSnagPhoto(p.blob, project.id, `${newRef.id}-${Date.now()}-${i}.jpg`);
         return { url, uploadedBy: userProfile.userId, uploadedAt: Timestamp.now() };
       }));
       const payload = {
@@ -179,10 +191,7 @@ export default function SnagList({ project }) {
     try {
       const blob = await fileToJpegBlob(file);
       if (!blob) throw new Error('encode failed');
-      const path = `snagPhotos/${project.id}/${snagId}/${Date.now()}.jpg`;
-      const fileRef = ref(storage, path);
-      await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
-      const url = await getDownloadURL(fileRef);
+      const url = await uploadSnagPhoto(blob, project.id, `${snagId}-${Date.now()}.jpg`);
       const photo = { url, uploadedBy: userProfile.userId, uploadedAt: Timestamp.now() };
       await updateDoc(doc(db, 'projects', project.id, 'snags', snagId), { photos: arrayUnion(photo) });
       setSnags(s => s.map(x => x.id === snagId ? { ...x, photos: [...(x.photos ?? []), photo] } : x));

@@ -1,5 +1,13 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
+
+const fileToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 /* ── GPS ─────────────────────────────────────────────────────────── */
 
@@ -30,10 +38,13 @@ export const reverseGeocode = async (lat, lng) => {
 /* ── Photo upload ────────────────────────────────────────────────── */
 
 export const uploadSelfie = async (blob, userId, date, type) => {
-  const path     = `attendance/${userId}/${date}/${type}-${Date.now()}.jpg`;
-  const fileRef  = ref(storage, path);
-  await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
-  return getDownloadURL(fileRef);
+  const data = await fileToBase64(blob);
+  const callable = httpsCallable(functions, 'uploadUserFile', { timeout: 60000 });
+  const res = await callable({
+    data, mimeType: 'image/jpeg', category: 'attendance',
+    userId, date, fileName: `${type}-${Date.now()}.jpg`,
+  });
+  return res.data.url;
 };
 
 /* ── Time helpers ────────────────────────────────────────────────── */

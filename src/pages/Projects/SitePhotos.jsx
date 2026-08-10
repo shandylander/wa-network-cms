@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, query, orderBy } from 'firebase/firestore';
 import { CameraIcon, CheckIcon, XMarkIcon, PlusIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -17,6 +17,14 @@ const ddmmSG = (date = new Date()) => {
   const month = parts.find(p => p.type === 'month').value;
   return `${day}${month}`;
 };
+
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 export default function SitePhotos({ project }) {
   const { userProfile } = useAuth();
@@ -97,10 +105,13 @@ export default function SitePhotos({ project }) {
     if (!blob) { toast.error('Please take a photo first.'); return; }
     setCamStep('uploading');
     try {
-      const path    = `sitePhotos/${project.id}/${Date.now()}.jpg`;
-      const fileRef = ref(storage, path);
-      await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
-      const photoUrl = await getDownloadURL(fileRef);
+      const data = await blobToBase64(blob);
+      const callable = httpsCallable(functions, 'uploadUserFile', { timeout: 60000 });
+      const res = await callable({
+        data, mimeType: 'image/jpeg', category: 'sitePhotos',
+        projectId: project.id, fileName: `${Date.now()}.jpg`,
+      });
+      const photoUrl = res.data.url;
       const payload  = {
         caption: caption.trim() || nextAutoName(),
         photoUrl, submittedBy: userProfile.userId, submittedByName: userProfile.name,
