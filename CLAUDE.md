@@ -67,6 +67,55 @@ across both businesses on this server).
   entire data layer, which was explicitly out of scope for this round.
   Only "eliminate the Dropbox cost" was the stated goal.
 
+## Firebase Storage migration (2026-08-11) — the second, separate upload path
+The 2026-08-10 migration above only covered the **Dropbox** path
+(`uploadProjectDocument`). A second, entirely separate upload path existed
+in parallel: attendance selfies, worker MC/certs/avatars/receipts/
+delivery-order scans, and site/snag photos went **directly from the
+browser to Firebase Storage** via `uploadBytes`/`getDownloadURL` — never
+touched Dropbox, so it wasn't in scope for that round. This was
+deliberately deferred on 2026-08-10 ("keep it as is for now") and closed
+on 2026-08-11 using the same proven pattern.
+
+**New Cloud Function:** `uploadUserFile` (functions/index.js, next to
+`uploadProjectDocument`) — a single generic callable parameterized by
+`category` (`attendance`, `mc`, `certs`, `avatars`, `receipts`,
+`deliveryOrders`, `sitePhotos`, `snagPhotos`), not 8 near-duplicate
+functions. Forwards to the same local upload API as
+`uploadProjectDocument`, same secret.
+
+**Why this one needed more than a find-and-replace:** these 8 categories
+are per-user or per-project scoped, previously enforced by `storage.rules`
+(self-ownership checks, `isInternal()`/`assignedToProject()` role checks).
+Moving off Storage means that enforcement layer is gone unless rebuilt —
+`uploadUserFile` replicates it server-side via the Admin SDK (unrestricted
+Firestore access) instead of the rules-language `firestore.get()`
+equivalent. **If a 9th category is ever added to this pattern, it needs
+its own entry in `UPLOAD_CATEGORIES` with the correct `scope` — don't
+assume "self" is safe by default; check what `storage.rules` used to say
+for that path first.**
+
+**Frontend call sites changed (4 files):** `src/utils/attendanceUtils.js`
+(`uploadSelfie`), `src/utils/workerDocs.js` (`uploadWorkerDoc`, handles 5
+of the 8 categories via its `kind` param), `src/pages/Projects/
+SitePhotos.jsx`, `src/pages/Projects/SnagList.jsx` (2 call sites). All
+now base64-encode + call `uploadUserFile` instead of `uploadBytes`.
+
+**`storage.rules` was NOT changed** — historical Firebase-Storage-hosted
+files (old attendance selfies, old worker docs, etc.) keep their existing
+URLs and keep working via the existing read rules. Only new uploads move.
+The write rules in `storage.rules` are now dead code (nothing calls
+`uploadBytes` for these paths anymore) but harmless to leave — a
+candidate for a future cleanup pass, not done here.
+
+**Verified 2026-08-11** via 5 end-to-end tests against the deployed
+function using minted test tokens (`ADMIN`/owner, `TESTSUB1`/subcon):
+self-scoped upload succeeds, cross-user upload rejected
+(`permission-denied`), unknown category rejected, project-assigned subcon
+upload succeeds, unassigned-project upload rejected. Confirmed files
+land on disk and the returned URL is fetchable before cleaning up test
+artifacts.
+
 ## Split-brain bug audit (2026-08-10) — related to the Astee incident
 After a data-loss bug was found and fixed in the sibling Astee app (a
 stale PWA session kept writing to an abandoned old database because its
@@ -111,11 +160,20 @@ port 8080, bypassing its own tunnel) — that one really was dead weight.
 Not every "extra open port" is the same kind of finding; verify each one
 against its tunnel's actual ingress rule individually.
 
-## Current Status (as of 2026-08-10)
-Storage migration and hardening considered complete. Owner has asked to
-hold all further app work (features and infra cleanup alike, e.g.
-deleting old Dropbox secrets / cancelling the subscription) for a few
-days to let both this app and Astee run stable before resuming.
+## Current Status (as of 2026-08-11)
+Both storage migrations (Dropbox 2026-08-10, direct Firebase Storage
+2026-08-11) are complete and deployed — see the two sections above for
+what changed. The 2026-08-10 hold on "further app work" was explicitly
+lifted by the owner for this specific piece (file storage cost-cutting is
+the core motivation for the whole lab-1 project), but otherwise still
+applies — don't take that as a general green light for unrelated feature
+work without checking with the owner first. Still outstanding: deleting
+old Dropbox secrets from Firebase and cancelling the Dropbox subscription
+(safe to do now — nothing in the app depends on Dropbox anymore, this was
+already true after the first migration). One thing this migration doesn't
+cover: historical Firebase-Storage-hosted files aren't retroactively
+moved, so Firebase Storage usage won't drop to zero immediately — it'll
+taper as old files age out of relevance, not disappear on deploy day.
 
 ---
 
