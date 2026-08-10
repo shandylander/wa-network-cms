@@ -43,6 +43,7 @@ export default function SitePhotos({ project }) {
   const [camStep,  setCamStep]  = useState('idle'); // idle|camera|preview|uploading
   const [blob,     setBlob]     = useState(null);
   const [preview,  setPreview]  = useState(null);
+  const [bulkProgress, setBulkProgress] = useState(null); // { done, total } while uploading multiple files
   const { setVideoRef, start, stop, capture } = useCamera();
   const fileRef = useRef(null);
 
@@ -65,23 +66,80 @@ export default function SitePhotos({ project }) {
     setBlob(b); setPreview(URL.createObjectURL(b)); setCamStep('preview');
   };
 
-  // Contingency path: pick a photo from the device (gallery or the OS camera
-  // app, via accept="image/*") — works in browsers where the live camera
-  // (getUserMedia) is blocked. Downscale, then reuse the same preview→submit flow.
+  // Contingency path: pick photo(s) from the device (gallery or the OS
+  // camera app, via accept="image/*") — works in browsers where the live
+  // camera (getUserMedia) is blocked. A single pick reuses the existing
+  // preview→submit flow; picking multiple skips the per-photo preview
+  // (impractical for a batch) and uploads them all straight away.
   const handleFilePick = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // reset so re-picking the same file still fires onChange
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file.'); return; }
-    setCamStep('uploading');
-    try {
-      const b = await fileToJpegBlob(file);
-      if (!b) throw new Error('encode failed');
-      setBlob(b); setPreview(URL.createObjectURL(b)); setCamStep('preview');
-    } catch {
-      toast.error('Could not read that image. Please try another photo.');
-      setCamStep('idle');
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // reset so re-picking the same file(s) still fires onChange
+    if (!files.length) return;
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (!imageFiles.length) { toast.error('Please choose image file(s).'); return; }
+
+    if (imageFiles.length === 1) {
+      setCamStep('uploading');
+      try {
+        const b = await fileToJpegBlob(imageFiles[0]);
+        if (!b) throw new Error('encode failed');
+        setBlob(b); setPreview(URL.createObjectURL(b)); setCamStep('preview');
+      } catch {
+        toast.error('Could not read that image. Please try another photo.');
+        setCamStep('idle');
+      }
+      return;
     }
+
+    await handleBulkUpload(imageFiles);
+  };
+
+  // Uploads a batch of picked photos back-to-back, each as its own
+  // sitePhotos doc, auto-numbered off the caption (or the usual auto-name).
+  const handleBulkUpload = async (files) => {
+    setCamStep('uploading');
+    setBulkProgress({ done: 0, total: files.length });
+    const namePrefix = caption.trim();
+    let seq = (() => {
+      const ddmm = ddmmSG();
+      return photos.filter(p => { const d = p.submittedAt?.toDate?.(); return d && ddmmSG(d) === ddmm; }).length;
+    })();
+
+    const uploaded = [];
+    for (const file of files) {
+      try {
+        const b = await fileToJpegBlob(file);
+        if (!b) throw new Error('encode failed');
+        const data = await blobToBase64(b);
+        const callable = httpsCallable(functions, 'uploadUserFile', { timeout: 60000 });
+        const res = await callable({
+          data, mimeType: 'image/jpeg', category: 'sitePhotos',
+          projectId: project.id, fileName: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`,
+        });
+        const photoUrl = res.data.url;
+        seq += 1;
+        const seqLabel = String(seq).padStart(2, '0');
+        const payload = {
+          caption: namePrefix ? `${namePrefix} - ${seqLabel}` : `${project.name} - ${ddmmSG()} - ${seqLabel}`,
+          photoUrl, submittedBy: userProfile.userId, submittedByName: userProfile.name,
+          status: 'pending', reviewedBy: null, reviewComment: null,
+          submittedAt: Timestamp.now(),
+        };
+        const docRef = await addDoc(collection(db, 'projects', project.id, 'sitePhotos'), payload);
+        uploaded.push({ id: docRef.id, ...payload });
+      } catch (err) {
+        console.error(err);
+      }
+      setBulkProgress(p => ({ ...p, done: p.done + 1 }));
+    }
+
+    setPhotos(p => [...uploaded.slice().reverse(), ...p]);
+    if (uploaded.length === files.length) toast.success(`${uploaded.length} photos submitted`);
+    else if (uploaded.length > 0) toast.error(`${uploaded.length}/${files.length} uploaded — some failed`);
+    else toast.error('Failed to upload photos.');
+
+    setShowForm(false); setCamStep('idle'); setBlob(null); setPreview(null);
+    setCaption(''); setBulkProgress(null);
   };
 
   const handleRetake = async () => { setBlob(null); setPreview(null); await start(); setCamStep('camera'); };
@@ -196,14 +254,14 @@ export default function SitePhotos({ project }) {
               <>
                 <div className={styles.formRow}><label className={styles.formLbl}>Photo Name <span className={styles.opt}>(optional)</span></label>
                   <input className={styles.formInput} placeholder="e.g. Front entrance" value={caption} onChange={e => setCaption(e.target.value)} />
-                  <p className={styles.nameHint}>Leave blank to auto-name it "{nextAutoName()}"</p></div>
+                  <p className={styles.nameHint}>Leave blank to auto-name it "{nextAutoName()}". Selecting multiple photos numbers them automatically.</p></div>
                 <button className={styles.cameraBtn} onClick={openCamera}><CameraIcon width={18} /> Open Camera</button>
                 <div className={styles.orDivider}><span>or</span></div>
-                <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFilePick} />
+                <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={handleFilePick} />
                 <button className={styles.uploadBtn} onClick={() => fileRef.current?.click()}>
-                  <ArrowUpTrayIcon width={18} /> Upload Photo
+                  <ArrowUpTrayIcon width={18} /> Upload Photo(s)
                 </button>
-                <p className={styles.uploadHint}>Camera not opening? Use "Upload Photo" to take a new one or pick from your gallery.</p>
+                <p className={styles.uploadHint}>Camera not opening? Use "Upload Photo(s)" to take a new one or pick multiple from your gallery.</p>
               </>
             )}
 
@@ -228,7 +286,9 @@ export default function SitePhotos({ project }) {
             )}
 
             {camStep === 'uploading' && (
-              <div className={styles.loading}><div className={styles.spinner} /><p>Uploading…</p></div>
+              <div className={styles.loading}><div className={styles.spinner} />
+                <p>{bulkProgress ? `Uploading ${bulkProgress.done}/${bulkProgress.total}…` : 'Uploading…'}</p>
+              </div>
             )}
           </div>
         </div>

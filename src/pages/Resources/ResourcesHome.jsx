@@ -172,7 +172,7 @@ export default function ResourcesHome() {
       };
       const ref = await addDoc(collection(db, 'projects', form.projectId, 'documents'), payload);
       setDocs(prev => [{ id: ref.id, projectId: form.projectId, projectName: project?.name ?? '', ...payload }, ...prev]);
-      toast.success('Document uploaded to Dropbox');
+      toast.success('Document uploaded successfully');
       closeForm();
     } catch (err) {
       console.error(err);

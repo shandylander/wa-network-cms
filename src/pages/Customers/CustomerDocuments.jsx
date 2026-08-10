@@ -81,7 +81,7 @@ export default function CustomerDocuments({ customer }) {
       };
       const ref = await addDoc(collection(db, 'customers', customer.id, 'documents'), payload);
       setDocsList(d => [{ id: ref.id, ...payload }, ...d]);
-      toast.success('Document uploaded to Dropbox');
+      toast.success('Document uploaded successfully');
       setShowForm(false);
       setForm({ name: '', category: 'general', file: null });
       if (fileRef.current) fileRef.current.value = '';
