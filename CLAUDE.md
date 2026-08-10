@@ -7,9 +7,23 @@
 
 This is a production React + Firebase web application for **WA! Network Asia**, a main contractor managing CCTV installation projects in Singapore. The app replaces manual Excel/WhatsApp/PDF workflows with a centralised digital management system.
 
-**Live URL (target):** `app.wanetwork.asia`  
-**Firebase Project:** `wa-network-cms`  
-**Dropbox:** Used for file storage (no Firebase Storage)
+**Live URL:** `app.wanetwork.asia` — self-hosted on lab-1, served by Nginx
+from `/opt/apps/wa-network-cms/build`, **on port 3001** (not 80/443).
+The Cloudflare Tunnel's ingress rule maps `app.wanetwork.asia` directly to
+`http://localhost:3001` — this is the real production path, confirmed via
+the tunnel's own ingress config (`journalctl --user -u
+cloudflared-wanetwork.service`), not an assumption from the nginx file
+layout. **Do not change this port** without also updating the tunnel's
+ingress rule on the Cloudflare dashboard, or the app will go dark even
+though nginx looks fine locally. A leftover port-80 `server{}` block for
+this app was removed 2026-08-11 after being misidentified as the "real"
+path — port 80 was actually never in the tunnel's routing table for this
+app, only nginx's own unrelated `default_server` placeholder answers on
+80 now. See "Firewall/exposure audit" below for full context.
+**Firebase Project:** `wa-network-cms`
+**File storage:** migrated off Dropbox 2026-08-10 — see "Storage
+migration" section below. Firestore/Auth remain on Firebase, deliberately
+not migrated (see reasoning below).
 
 ---
 
@@ -17,12 +31,91 @@ This is a production React + Firebase web application for **WA! Network Asia**, 
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React (create-react-app) |
-| Database | Firebase Firestore |
-| Authentication | Firebase Auth (Email/Password) |
-| Hosting | Firebase Hosting |
-| File Storage | Dropbox (links stored in Firestore) |
-| Domain | GoDaddy — app.wanetwork.asia |
+| Frontend | React (create-react-app), self-hosted build served by Nginx on lab-1 |
+| Database | Firebase Firestore (unchanged, not self-hosted) |
+| Authentication | Firebase Auth — Email/Password (unchanged, not self-hosted) |
+| Hosting | Self-hosted (lab-1, Cloudflare Tunnel) at app.wanetwork.asia. Firebase Hosting (`wa-network-cms.web.app`/`.firebaseapp.com`) still exists but now just 301-redirects here — do not rely on it serving current content. |
+| File Storage | Self-hosted on lab-1 disk (`/mnt/storage/wanetwork/`), served via Nginx `/files/` alias. Uploads go through a local upload API (port 9097) called from a Firebase Cloud Function. Dropbox is fully decommissioned as of 2026-08-10 (subscription may still be active — check before assuming it's cancelled). |
+| Domain | Cloudflare (migrated off GoDaddy) — app.wanetwork.asia |
+
+## Storage migration (2026-08-10) — read before touching upload/file code
+Original design used Dropbox for all file storage, links stored in
+Firestore. Migrated to self-hosted storage as part of the broader lab-1
+cost-cutting effort (goal: eliminate recurring Dropbox subscription cost
+across both businesses on this server).
+- `functions/index.js`'s `uploadProjectDocument` Cloud Function now calls
+  a local upload API (`https://app.wanetwork.asia/api/upload`, proxied by
+  Nginx to `127.0.0.1:9097`) instead of the Dropbox API. Folder allowlist
+  validation logic is unchanged. New Firebase secret: `SERVER_UPLOAD_SECRET`
+  (replaces the old `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET`/
+  `DROPBOX_REFRESH_TOKEN` secrets — those should be deleted from Firebase
+  once confirmed unused).
+- New service: `/opt/apps/wa-network-cms-upload-api/server.js` on lab-1,
+  systemd unit `wa-network-cms-upload-api.service`, port 9097.
+- Files stored under `/mnt/storage/wanetwork/`, served publicly at
+  `/files/<relative-path>` via Nginx. **All file URLs are relative paths**
+  (not baked-in absolute origins) — this was a deliberate design choice
+  that turned out to make the app structurally resilient to the kind of
+  stale-build bug that hit Astee (see below).
+- `src/utils/docViewer.js` still contains legacy Dropbox `dl=`/`raw=1` URL
+  param handling — harmless no-op now since no stored URLs contain
+  "dropbox" anymore, but safe to remove in a future cleanup pass.
+- Why Firestore/Auth stayed on Firebase: unlike Astee (which has its own
+  Node/Express backend that could just be pointed at a new DB), this app
+  talks to Firestore directly from the frontend with no backend
+  abstraction layer — migrating off Firestore would mean rebuilding the
+  entire data layer, which was explicitly out of scope for this round.
+  Only "eliminate the Dropbox cost" was the stated goal.
+
+## Split-brain bug audit (2026-08-10) — related to the Astee incident
+After a data-loss bug was found and fixed in the sibling Astee app (a
+stale PWA session kept writing to an abandoned old database because its
+API URL was baked in at build time), this app was audited for the same
+class of issue. Findings:
+- Lower risk by design: relative file paths mean an open session
+  automatically benefits from backend/origin changes, no build-time
+  baked absolute URL to go stale.
+- No service worker/asset caching (this app has none at all), so no
+  caching-related staleness risk either.
+- One real gap found and fixed: `wa-network-cms.web.app` (the raw
+  Firebase Hosting URL) was still serving an old, different build,
+  never redeployed after this app moved to self-hosting — anyone
+  landing there directly would've hit broken `/files/` links. Fixed
+  with a permanent 301 redirect in `firebase.json` to
+  `https://app.wanetwork.asia`.
+- Belt-and-suspenders fix also added: `src/utils/autoUpdate.js`, wired
+  into `App.js`, polls `/asset-manifest.json` every 3 minutes and
+  force-reloads on a build-hash change — same mechanism as Astee's fix,
+  ported here even though the specific failure mode doesn't really apply
+  to this app's architecture.
+
+## Firewall/exposure audit (2026-08-11)
+A UFW audit found `3001/tcp` open to "Anywhere" (the whole internet), not
+just needed for the tunnel. Investigated assuming it was a redundant
+leftover duplicate of a port-80 path — **this assumption was wrong**;
+port 3001 is the actual production path (see Live URL note above).
+What was actually fixed: the UFW rule allowing **direct external**
+access to 3001 was removed (`sudo ufw delete allow 3001/tcp`) — this
+closes the ability for anyone to hit the app directly over raw HTTP,
+bypassing Cloudflare's protection, while leaving the tunnel itself
+completely unaffected, since cloudflared reaches nginx over loopback
+(127.0.0.1), which UFW's external-facing rules never governed. Lesson
+for future audits: check the Cloudflare Tunnel's actual ingress config
+(`journalctl --user -u <tunnel-service> | grep ingress`) before assuming
+which port is "the real one" from file layout alone — the same mistake
+was almost made here twice.
+
+The same audit correctly identified and removed a genuinely redundant
+duplicate in the sibling Astee app (a forgotten system-level backend on
+port 8080, bypassing its own tunnel) — that one really was dead weight.
+Not every "extra open port" is the same kind of finding; verify each one
+against its tunnel's actual ingress rule individually.
+
+## Current Status (as of 2026-08-10)
+Storage migration and hardening considered complete. Owner has asked to
+hold all further app work (features and infra cleanup alike, e.g.
+deleting old Dropbox secrets / cancelling the subscription) for a few
+days to let both this app and Astee run stable before resuming.
 
 ---
 
