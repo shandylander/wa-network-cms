@@ -67,6 +67,37 @@ across both businesses on this server).
   entire data layer, which was explicitly out of scope for this round.
   Only "eliminate the Dropbox cost" was the stated goal.
 
+## Cloud Functions now auto-deploy too (2026-08-11)
+Previously only the frontend build was automated on push — any change to
+`functions/index.js` needed a manual `firebase deploy --only functions`
+with a human-generated CI token, which is exactly the kind of thing that
+gets forgotten (this was reported by the user as "server not updating"
+when it was actually just the Functions half of a push that never
+deployed). Fixed: `/opt/apps/wa-network-cms-deploy-webhook/server.js` now
+diffs the pulled commit range for anything under `functions/` (excluding
+`functions/scripts/`, which are one-off utility scripts, not part of the
+deployed bundle) and runs the Functions deploy automatically when it
+finds a match, using `GOOGLE_APPLICATION_CREDENTIALS` pointed at
+`/home/shandylander/.secrets/wa-network-cms-firebase-adminsdk.json` — no
+token needed anymore.
+
+**This required granting 6 IAM roles to that service account**
+(`firebase-adminsdk-fbsvc@wa-network-cms.iam.gserviceaccount.com`) in
+Google Cloud Console, discovered one at a time by hitting the actual
+deploy error each was blocking (Firebase's CLI doesn't pre-flight-check
+the whole permission set — it stops at the first missing one, so each
+fix just reveals the next). **If this is ever redone for another
+project, grant all 6 at once instead of iterating:**
+- `Firebase Admin` — base role for most Functions/Hosting/Firestore operations
+- `Service Account User` — needed to "act as" the runtime service account (`<project>@appspot.gserviceaccount.com`) — separate IAM check Google enforces regardless of other roles
+- `Secret Manager Secret Accessor` — reads secret *values* (`defineSecret()` calls at runtime) — this is the same gap that originally forced the manual-CI-token workflow
+- `Secret Manager Viewer` — reads secret *metadata*, a distinct permission from the above, needed during the deploy's pre-checks even though Secret Accessor sounds like it should cover it
+- `Cloud Scheduler Admin` — only needed because this project has a scheduled function (`reconcileAllPermissions`, an `onSchedule` trigger) — onSchedule functions manage a Cloud Scheduler job under the hood requiring its own separate permission
+
+Verified 2026-08-11 via a real simulated push through the actual webhook
+(not just the manual command) — frontend build + Functions deploy both
+completed successfully end-to-end.
+
 ## Firebase Storage migration (2026-08-11) — the second, separate upload path
 The 2026-08-10 migration above only covered the **Dropbox** path
 (`uploadProjectDocument`). A second, entirely separate upload path existed
