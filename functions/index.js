@@ -8,7 +8,7 @@ const { getMessaging } = require('firebase-admin/messaging');
 
 initializeApp();
 
-const REGION = 'asia-southeast1';
+const REGION = 'asia-southeast1'; // Singapore — keep functions co-located with Firestore
 
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
