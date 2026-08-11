@@ -25,3 +25,22 @@ export const viewableUrl = (url) => {
   if (!url || !url.includes('dropbox')) return url;
   return url.replace(/([?&])dl=[01]/, '$1raw=1');
 };
+
+// Renders a PDF inline via Google's viewer service rather than a raw
+// iframe src. Plenty of mobile browsers don't reliably render a PDF
+// natively inside an iframe (blank/stuck frame, no visible error) — this
+// offloads rendering to a service that works consistently everywhere,
+// instead of depending on the visiting browser's own PDF support.
+export const pdfEmbedUrl = (url) => {
+  if (!url) return '';
+  // Google Drive already has a dedicated, reliably same-origin-embeddable
+  // preview endpoint — no need to proxy it through the viewer below.
+  if (url.includes('drive.google.com')) {
+    return url.replace(/\/(view|edit)(\?|$)/, '/preview$2');
+  }
+  // Stored document URLs are relative paths (e.g. "/files/...") — Google's
+  // viewer fetches the file server-side and needs a real absolute URL.
+  const absolute = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+  const raw = /[?&]dl=[01]/.test(absolute) ? absolute.replace(/([?&])dl=[01]/, '$1raw=1') : absolute;
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(raw)}&embedded=true`;
+};

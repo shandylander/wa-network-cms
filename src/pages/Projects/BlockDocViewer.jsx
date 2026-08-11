@@ -1,30 +1,11 @@
 import React, { useState } from 'react';
 import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { pdfEmbedUrl } from '../../utils/docViewer';
 import styles from './BlockTracker.module.css';
 
 // Shared by BlockTracker (desktop table's document icon) and BlockModal (the
 // quick-link buttons, which are the only path to this on mobile — the
 // table's own document column is CSS-hidden below the desktop breakpoint).
-
-/* ── PDF embed URL converter ──────────────────────────────────────── */
-export function toEmbedUrl(url) {
-  if (!url) return '';
-  // Google Drive: /view or /edit → /preview (Google allows same-origin embed)
-  if (url.includes('drive.google.com')) {
-    return url.replace(/\/(view|edit)(\?|$)/, '/preview$2');
-  }
-  // Dropbox blocks cross-origin iframes via X-Frame-Options: SAMEORIGIN.
-  // Route through Google Docs Viewer which fetches & serves the PDF itself.
-  // (Kept for any legacy Dropbox-hosted surveyUrl/floorplanUrl values —
-  // new uploads are self-hosted and embed directly via the fallback below.)
-  if (url.includes('dropbox.com')) {
-    const raw = /[?&]dl=\d/.test(url)
-      ? url.replace(/dl=\d/, 'raw=1')
-      : url + (url.includes('?') ? '&' : '?') + 'raw=1';
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(raw)}&embedded=true`;
-  }
-  return url;
-}
 
 /* ── In-app document viewer ───────────────────────────────────────── */
 export function DocViewerModal({ block, onClose }) {
@@ -81,7 +62,7 @@ export function DocViewerModal({ block, onClose }) {
           )}
           <iframe
             key={current.url}
-            src={toEmbedUrl(current.url)}
+            src={pdfEmbedUrl(current.url)}
             title={current.label}
             className={[styles.viewerFrame, loaded ? styles.viewerFrameVisible : ''].join(' ')}
             onLoad={() => setLoaded(true)}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowDownTrayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import Modal from './Modal';
-import { docKind, viewableUrl } from '../../utils/docViewer';
+import { docKind, viewableUrl, pdfEmbedUrl } from '../../utils/docViewer';
 import styles from './DocumentViewerModal.module.css';
 
 // Shared in-app previewer for a document row's "Open" action — used by
@@ -13,7 +13,9 @@ import styles from './DocumentViewerModal.module.css';
 // a blank frame.
 export default function DocumentViewerModal({ doc, onClose }) {
   const kind = doc ? docKind(doc.fileName ?? doc.name, doc.url) : null;
-  const src  = doc ? viewableUrl(doc.url) : null;
+  // Images embed directly; PDFs go through Google's viewer (see pdfEmbedUrl)
+  // since a raw iframe src doesn't render reliably on plenty of mobile browsers.
+  const src  = doc ? (kind === 'pdf' ? pdfEmbedUrl(doc.url) : viewableUrl(doc.url)) : null;
 
   return (
     <Modal isOpen={!!doc} onClose={onClose} title={doc?.name ?? 'Document'} size="xl">
