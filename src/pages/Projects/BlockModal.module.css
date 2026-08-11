@@ -40,11 +40,11 @@
   color: var(--red);
   font-size: 13px;
   font-weight: 600;
+  font-family: inherit;
   text-decoration: none;
   cursor: pointer;
 }
 .docQuickLink:active { background: var(--red); color: #fff; }
-.docQuickLinkExt { margin-left: auto; opacity: 0.7; flex-shrink: 0; }
 
 .section { margin-bottom: 20px; }
 .sectionTitle {

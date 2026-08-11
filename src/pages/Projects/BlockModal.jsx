@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { doc, addDoc, updateDoc, deleteDoc, collection } from 'firebase/firestore';
-import { ExclamationTriangleIcon, LockClosedIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, LockClosedIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -9,6 +9,7 @@ import { useTeams } from '../../hooks/useAppConfig';
 import { formatDate } from '../../utils/helpers';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
+import { DocViewerModal } from './BlockDocViewer';
 import styles from './BlockModal.module.css';
 
 const QUICK          = [0, 25, 50, 75, 100];
@@ -86,6 +87,7 @@ export default function BlockModal({
   const [delStep,   setDelStep]   = useState(false); // two-step delete
   const [deleting,  setDeleting]  = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [viewDoc,   setViewDoc]   = useState(false); // in-app PDF viewer — this is the only path to it on mobile
 
   const set    = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
   const setE   = (key) => (e)   => setForm(f => ({ ...f, [key]: e.target.value }));
@@ -161,26 +163,29 @@ export default function BlockModal({
         </div>
       )}
 
-      {/* Quick-open document links — visible to everyone who can open this block
-          (not just canAssign editors), since field staff on site need this most. */}
+      {/* Quick-open document buttons — visible to everyone who can open this
+          block (not just canAssign editors), since field staff on site need
+          this most. Opens the same in-app PDF viewer as the desktop table's
+          document icon — this is the only path to it on mobile, since that
+          table column is hidden below the desktop breakpoint. */}
       {!isAdd && (block.surveyUrl || block.floorplanUrl) && (
         <div className={styles.docQuickLinks}>
           {block.surveyUrl && (
-            <a href={block.surveyUrl} target="_blank" rel="noreferrer" className={styles.docQuickLink}>
+            <button type="button" onClick={() => setViewDoc(true)} className={styles.docQuickLink}>
               <DocumentTextIcon width={17} />
               Survey Report
-              <ArrowTopRightOnSquareIcon width={13} className={styles.docQuickLinkExt} />
-            </a>
+            </button>
           )}
           {block.floorplanUrl && (
-            <a href={block.floorplanUrl} target="_blank" rel="noreferrer" className={styles.docQuickLink}>
+            <button type="button" onClick={() => setViewDoc(true)} className={styles.docQuickLink}>
               <DocumentTextIcon width={17} />
               Floor Plan
-              <ArrowTopRightOnSquareIcon width={13} className={styles.docQuickLinkExt} />
-            </a>
+            </button>
           )}
         </div>
       )}
+
+      {viewDoc && <DocViewerModal block={block} onClose={() => setViewDoc(false)} />}
 
       {isAdd && (
         <div className={styles.section}>
